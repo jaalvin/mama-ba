@@ -25,6 +25,9 @@ export default function Logistics() {
   const [bookingConfirmation, setBookingConfirmation] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
 
+  // Emergency Drawer State
+  const [showEmergencyDrawer, setShowEmergencyDrawer] = useState(false);
+
   useEffect(() => {
     async function loadPharmacies() {
       setLoadingPharm(true);
@@ -79,16 +82,25 @@ export default function Logistics() {
   };
 
   return (
-    <div className="px-4 py-6 max-w-md mx-auto flex flex-col gap-6 text-[#2D231E]">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-2xl">📍</span>
-          <h1 className="font-bold text-xl text-[#2D231E]">Care Access &amp; Logistics</h1>
+    <div className="px-4 py-6 max-w-md mx-auto flex flex-col gap-5 text-[#2D231E]">
+      {/* Header & Emergency Contacts Drawer Trigger */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-2xl">🏥</span>
+            <h1 className="font-bold text-xl text-[#2D231E]">Care Access &amp; Logistics</h1>
+          </div>
+          <p className="text-xs text-[#7A6B63]">
+            Accredited Pharmacies, Hospital Booking &amp; Emergency Hub.
+          </p>
         </div>
-        <p className="text-xs text-[#7A6B63]">
-          Accredited GHS Community Pharmacy Finder and Hospital Appointment Booking.
-        </p>
+
+        <button
+          onClick={() => setShowEmergencyDrawer(true)}
+          className="px-3 py-1.5 bg-red-600 text-white font-extrabold rounded-full text-xs shadow-md animate-pulse shrink-0"
+        >
+          🚨 Hotlines
+        </button>
       </div>
 
       {/* Main Tab Switcher */}
@@ -118,23 +130,21 @@ export default function Logistics() {
       {/* TAB 1: Accredited Pharmacy Finder */}
       {activeTab === "pharmacy" && (
         <div className="flex flex-col gap-4">
-          {/* Region / District Filter */}
           <div className="flex items-center gap-2">
             <select
               value={regionFilter}
               onChange={(e) => setRegionFilter(e.target.value)}
-              className="w-full h-11 px-3 rounded-xl bg-white border border-[#EBE3D7] text-xs font-semibold text-[#2D231E] focus:outline-none focus:border-[#E07A5F]"
+              className="w-full h-11 px-3 rounded-xl bg-white border border-[#EBE3D7] text-xs font-semibold text-[#2D231E]"
             >
-              <option value="">All Ghana Regions (Greater Accra, Ashanti, Northern...)</option>
+              <option value="">All Regions (Greater Accra, Ashanti, Northern...)</option>
               <option value="Greater Accra">Greater Accra Region</option>
               <option value="Ashanti">Ashanti Region (Kumasi)</option>
               <option value="Northern">Northern Region (Tamale)</option>
             </select>
           </div>
 
-          {/* Pharmacy Cards List */}
           {loadingPharm ? (
-            <p className="text-center text-xs text-[#7A6B63] py-6">Loading Accredited Community Pharmacies...</p>
+            <p className="text-center text-xs text-[#7A6B63] py-6">Loading Accredited Pharmacies...</p>
           ) : (
             <div className="flex flex-col gap-3">
               {pharmacies.map((p) => (
@@ -155,7 +165,7 @@ export default function Logistics() {
                     </span>
                     {p.hasDelivery && (
                       <span className="text-[10px] bg-amber-50 text-amber-800 px-2 py-0.5 rounded font-semibold">
-                        🚚 Home Delivery Available
+                        🚚 Home Delivery
                       </span>
                     )}
                   </div>
@@ -163,14 +173,13 @@ export default function Logistics() {
                   <div className="flex items-center gap-2 mt-2 pt-2 border-t border-[#EBE3D7]">
                     <a
                       href={`tel:${p.phoneNumber}`}
-                      className="flex-1 py-2 rounded-xl bg-[#FAF7F2] border border-[#EBE3D7] text-center font-bold text-xs text-[#2D231E] hover:bg-gray-100"
+                      className="flex-1 py-2 rounded-xl bg-[#FAF7F2] border border-[#EBE3D7] text-center font-bold text-xs text-[#2D231E]"
                     >
                       📞 Call {p.phoneNumber}
                     </a>
-
                     <button
                       onClick={() => setSelectedPharmacy(p)}
-                      className="flex-1 py-2 rounded-xl bg-[#E07A5F] text-white font-bold text-xs hover:bg-[#d5694e]"
+                      className="flex-1 py-2 rounded-xl bg-[#E07A5F] text-white font-bold text-xs"
                     >
                       Order Delivery
                     </button>
@@ -179,75 +188,24 @@ export default function Logistics() {
               ))}
             </div>
           )}
-
-          {/* Prescription Delivery Modal */}
-          {selectedPharmacy && (
-            <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-              <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-[#EBE3D7] shadow-2xl flex flex-col gap-4 text-[#2D231E]">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-base">Order Delivery: {selectedPharmacy.name}</h3>
-                  <button onClick={() => { setSelectedPharmacy(null); setOrderNotice(null); }} className="text-gray-400 font-bold">✕</button>
-                </div>
-
-                {orderNotice ? (
-                  <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs font-semibold">
-                    {orderNotice}
-                  </div>
-                ) : (
-                  <form onSubmit={handleOrderSubmit} className="flex flex-col gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-[#7A6B63] mb-1">Prescription Items / Vitamins:</label>
-                      <textarea
-                        required
-                        rows={2}
-                        value={prescriptionDetails}
-                        onChange={(e) => setPrescriptionDetails(e.target.value)}
-                        placeholder="e.g. Iron & Folic Acid 30-day supply, Paracetamol 500mg..."
-                        className="w-full p-2.5 rounded-xl border border-[#EBE3D7] text-xs bg-[#FAF7F2]"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-[#7A6B63] mb-1">Delivery Address:</label>
-                      <input
-                        required
-                        type="text"
-                        value={deliveryAddress}
-                        onChange={(e) => setDeliveryAddress(e.target.value)}
-                        placeholder="House / Street, Neighborhood, Town"
-                        className="w-full p-2.5 rounded-xl border border-[#EBE3D7] text-xs bg-[#FAF7F2]"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full py-3 bg-[#E07A5F] text-white font-bold rounded-2xl text-sm shadow-md active:scale-95 transition-transform"
-                    >
-                      Submit Prescription Order →
-                    </button>
-                  </form>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       )}
 
       {/* TAB 2: Hospital Appointment Booking */}
       {activeTab === "booking" && (
         <div className="flex flex-col gap-4">
-          <form onSubmit={handleBookSubmit} className="bg-white p-5 rounded-2xl border border-[#EBE3D7] shadow-sm flex flex-col gap-4">
+          <form onSubmit={handleBookSubmit} className="bg-white p-5 rounded-2xl border border-[#EBE3D7] shadow-sm flex flex-col gap-3.5">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#7A6B63] mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#7A6B63] mb-1">
                 Select GHS Healthcare Facility:
               </label>
               <select
                 value={facilityName}
                 onChange={(e) => setFacilityName(e.target.value)}
-                className="w-full h-12 px-3 rounded-xl bg-[#FAF7F2] border border-[#EBE3D7] font-semibold text-xs text-[#2D231E]"
+                className="w-full h-11 px-3 rounded-xl bg-[#FAF7F2] border border-[#EBE3D7] font-semibold text-xs text-[#2D231E]"
               >
-                <option value="Ridge Hospital / Greater Accra Regional Hospital">Ridge Hospital (Greater Accra Regional Hospital)</option>
-                <option value="Korle Bu Teaching Hospital - Maternity Wing">Korle Bu Teaching Hospital - Maternity</option>
+                <option value="Ridge Hospital / Greater Accra Regional Hospital">Ridge Hospital (Greater Accra Regional)</option>
+                <option value="Korle Bu Teaching Hospital - Maternity Wing">Korle Bu Teaching Hospital</option>
                 <option value="Komfo Anokye Teaching Hospital (KATH) - Kumasi">Komfo Anokye Teaching Hospital (KATH)</option>
                 <option value="Tamale Teaching Hospital - Maternal Care">Tamale Teaching Hospital</option>
                 <option value="Local District CHPS Compound / Health Center">Local District CHPS Compound</option>
@@ -255,69 +213,145 @@ export default function Logistics() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#7A6B63] mb-2">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#7A6B63] mb-1.5">
                 Consultation Type:
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setAppointmentType("IN_PERSON")}
-                  className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
-                    appointmentType === "IN_PERSON"
-                      ? "bg-[#3D405B] text-white border-[#3D405B]"
-                      : "bg-[#FAF7F2] text-[#2D231E] border-[#EBE3D7]"
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                    appointmentType === "IN_PERSON" ? "bg-[#3D405B] text-white border-[#3D405B]" : "bg-[#FAF7F2] text-[#2D231E] border-[#EBE3D7]"
                   }`}
                 >
-                  🏥 In-Person Clinic Visit
+                  🏥 In-Person Visit
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setAppointmentType("VIRTUAL")}
-                  className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
-                    appointmentType === "VIRTUAL"
-                      ? "bg-[#3D405B] text-white border-[#3D405B]"
-                      : "bg-[#FAF7F2] text-[#2D231E] border-[#EBE3D7]"
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all ${
+                    appointmentType === "VIRTUAL" ? "bg-[#3D405B] text-white border-[#3D405B]" : "bg-[#FAF7F2] text-[#2D231E] border-[#EBE3D7]"
                   }`}
                 >
-                  💻 Telehealth Virtual
+                  💻 Virtual Consult
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#7A6B63] mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-[#7A6B63] mb-1">
                 Requested Date:
               </label>
               <input
                 type="date"
                 value={requestedDate}
                 onChange={(e) => setRequestedDate(e.target.value)}
-                className="w-full h-12 px-3 rounded-xl bg-[#FAF7F2] border border-[#EBE3D7] font-semibold text-xs text-[#2D231E]"
+                className="w-full h-11 px-3 rounded-xl bg-[#FAF7F2] border border-[#EBE3D7] font-semibold text-xs text-[#2D231E]"
               />
             </div>
 
             <button
               type="submit"
               disabled={bookingLoading}
-              className="w-full h-12 rounded-2xl bg-[#E07A5F] text-white font-bold text-sm shadow-md active:scale-95 transition-transform"
+              className="w-full h-11 rounded-xl bg-[#E07A5F] text-white font-bold text-xs shadow-md active:scale-95 transition-transform"
             >
-              {bookingLoading ? "Confirming Appointment..." : "Book Hospital Appointment →"}
+              {bookingLoading ? "Confirming Booking..." : "Book Hospital Appointment →"}
             </button>
           </form>
 
           {bookingConfirmation && (
-            <div className="p-5 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-950 flex flex-col gap-2">
+            <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-950 flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <span className="font-extrabold text-sm uppercase">Booking Confirmation</span>
-                <span className="text-xs bg-emerald-200 px-2 py-0.5 rounded font-bold">{bookingConfirmation.bookingId}</span>
+                <span className="font-extrabold text-xs uppercase">Booking Confirmation</span>
+                <span className="text-[10px] bg-emerald-200 px-2 py-0.5 rounded font-bold">{bookingConfirmation.bookingId}</span>
               </div>
               <p className="text-xs font-bold">{bookingConfirmation.confirmationMessage}</p>
-              <p className="text-[11px] text-emerald-800">
-                Type: {bookingConfirmation.appointmentType === "IN_PERSON" ? "In-Person Clinic Visit" : "Virtual Consultation"}
-              </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Prescription Order Modal */}
+      {selectedPharmacy && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-5 max-w-sm w-full border border-[#EBE3D7] shadow-2xl flex flex-col gap-3 text-[#2D231E]">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm">Order Delivery: {selectedPharmacy.name}</h3>
+              <button onClick={() => { setSelectedPharmacy(null); setOrderNotice(null); }} className="text-gray-400 font-bold">✕</button>
+            </div>
+
+            {orderNotice ? (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl text-xs font-semibold">
+                {orderNotice}
+              </div>
+            ) : (
+              <form onSubmit={handleOrderSubmit} className="flex flex-col gap-2.5">
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#7A6B63] mb-1">Prescription Items / Vitamins:</label>
+                  <textarea
+                    required
+                    rows={2}
+                    value={prescriptionDetails}
+                    onChange={(e) => setPrescriptionDetails(e.target.value)}
+                    placeholder="e.g. Iron & Folic Acid 30-day supply..."
+                    className="w-full p-2.5 rounded-xl border border-[#EBE3D7] text-xs bg-[#FAF7F2]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#7A6B63] mb-1">Delivery Address:</label>
+                  <input
+                    required
+                    type="text"
+                    value={deliveryAddress}
+                    onChange={(e) => setDeliveryAddress(e.target.value)}
+                    placeholder="House / Street, Neighborhood, Town"
+                    className="w-full p-2.5 rounded-xl border border-[#EBE3D7] text-xs bg-[#FAF7F2]"
+                  />
+                </div>
+
+                <button type="submit" className="w-full py-2.5 bg-[#E07A5F] text-white font-bold rounded-2xl text-xs shadow-md">
+                  Submit Prescription Order →
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Emergency Contacts Drawer (Hotline Hub) */}
+      {showEmergencyDrawer && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-red-200 shadow-2xl flex flex-col gap-4 text-[#2D231E]">
+            <div className="flex items-center justify-between border-b border-red-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">🚨</span>
+                <h3 className="font-extrabold text-base text-red-700">Emergency Hotlines Hub</h3>
+              </div>
+              <button onClick={() => setShowEmergencyDrawer(false)} className="text-gray-400 font-bold text-lg">✕</button>
+            </div>
+
+            <p className="text-xs text-[#7A6B63] leading-relaxed">
+              Immediate direct dial access for maternal emergencies, ambulance dispatch, and Ghana Health Service regional desks.
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+              <a href="tel:112" className="p-3.5 bg-red-600 text-white rounded-2xl font-extrabold text-sm flex items-center justify-between shadow-md">
+                <span>🚑 National Ambulance Service</span>
+                <span className="bg-white text-red-600 px-2 py-0.5 rounded-lg text-xs">112</span>
+              </a>
+
+              <a href="tel:193" className="p-3.5 bg-amber-500 text-white rounded-2xl font-extrabold text-sm flex items-center justify-between shadow-md">
+                <span>🏥 Emergency Dispatch Center</span>
+                <span className="bg-white text-amber-700 px-2 py-0.5 rounded-lg text-xs">193</span>
+              </a>
+
+              <a href="tel:+233302684265" className="p-3.5 bg-[#3D405B] text-white rounded-2xl font-extrabold text-xs flex items-center justify-between">
+                <span>🏢 GHS Maternal Health Desk</span>
+                <span className="text-[10px] opacity-80">Accra HQ</span>
+              </a>
+            </div>
+          </div>
         </div>
       )}
     </div>
