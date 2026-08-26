@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lily Guided Health Companion - Developer Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0b0f19;
+      --card-bg: rgba(22, 30, 49, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --primary: #10b981;
+      --primary-glow: rgba(16, 185, 129, 0.25);
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --code-bg: #050811;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
+      padding: 2rem;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 2rem auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .status-badge {
+      font-size: 0.85rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 500;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      backdrop-filter: blur(10px);
+    }
+
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .endpoint-btn {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--card-border);
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.75rem;
+      border-radius: 8px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+    }
+
+    .endpoint-btn:hover {
+      background: var(--primary-glow);
+      border-color: var(--primary);
+      transform: translateX(4px);
+    }
+
+    .method {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 0.75rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      margin-right: 0.5rem;
+    }
+
+    .method.post { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .method.get { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+
+    pre {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      padding: 1rem;
+      border-radius: 8px;
+      color: #34d399;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      max-height: 480px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.4rem 0.8rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🩺 Lily Health API Developer Playground</h1>
+    <div class="status-badge">● Backend Online (Offline-First Ready)</div>
+  </header>
+
+  <div class="container">
+    <!-- Left Column: Interactive Endpoints -->
+    <div class="card">
+      <h2>⚡ Interactive Endpoints</h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+        Click any endpoint to test live execution and inspect JSON payloads:
+      </p>
+
+      <button class="endpoint-btn" onclick="testEndpoint('health')">
+        <span class="method get">GET</span> /api/v1/health — System Status
+      </button>
+
+      <button class="endpoint-btn" onclick="testEndpoint('herbal')">
+        <span class="method post">POST</span> /api/v1/herbal-safety/check — Herbal Safety (Nibima vs Iron)
+      </button>
+
+      <button class="endpoint-btn" onclick="testEndpoint('triage')">
+        <span class="method post">POST</span> /api/v1/triage/evaluate — Red-Flag Triage (Vaginal Bleeding)
+      </button>
+
+      <button class="endpoint-btn" onclick="testEndpoint('chat')">
+        <span class="method post">POST</span> /api/v1/chat/query — RAG Chatbot (Twi/English Nutrition)
+      </button>
+
+      <button class="endpoint-btn" onclick="testEndpoint('anc')">
+        <span class="method post">POST</span> /api/v1/maternal/anc-schedule — GHS ANC Visit Timeline
+      </button>
+
+      <button class="endpoint-btn" onclick="testEndpoint('vitals')">
+        <span class="method post">POST</span> /api/v1/vitals/log — Log Vitals (High BP Test)
+      </button>
+
+      <button class="endpoint-btn" onclick="testEndpoint('bundle')">
+        <span class="method get">GET</span> /api/v1/sync/bundle — Export Offline SQLite Bundle
+      </button>
+
+      <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--card-border);">
+        <a href="/openapi.json" target="_blank" style="color: #60a5fa; text-decoration: none; font-size: 0.85rem; font-weight: 500;">
+          📄 Download OpenAPI 3.0 Specification (openapi.json) &rarr;
+        </a>
+      </div>
+    </div>
+
+    <!-- Right Column: Live Output & Code Snippet -->
+    <div class="card">
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-response-btn" onclick="switchTab('response')">Live JSON Response</button>
+        <button class="tab-btn" id="tab-sdk-btn" onclick="switchTab('sdk')">Frontend SDK Snippet</button>
+      </div>
+
+      <div id="view-response">
+        <pre id="json-output">Select an endpoint on the left to see live JSON response...</pre>
+      </div>
+
+      <div id="view-sdk" style="display: none;">
+        <pre id="sdk-snippet">// Import isolated SDK in your frontend app
+import { LilyApiClient } from './sdk/lilyClient';
+
+const client = new LilyApiClient('http://localhost:3000/api/v1');
+
+// 1. Herbal Safety Check
+const safety = await client.checkHerbalSafety({
+  herbName: 'Nibima',
+  pharmaDrugName: 'Iron Supplements'
+});
+
+// 2. Red-Flag Emergency Triage
+const triage = await client.evaluateTriage({
+  symptomKeys: ['severe_vaginal_bleeding']
+});
+
+// 3. RAG Twi Chatbot Query
+const answer = await client.askChatbot({
+  query: 'What local foods give iron during pregnancy?'
+});</pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function testEndpoint(type) {
+      const output = document.getElementById('json-output');
+      output.textContent = 'Loading live endpoint response...';
+
+      try {
+        let res, data;
+        if (type === 'health') {
+          res = await fetch('/api/v1/health');
+        } else if (type === 'herbal') {
+          res = await fetch('/api/v1/herbal-safety/check', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ herbName: 'Nibima', pharmaDrugName: 'Iron Supplements' })
+          });
+        } else if (type === 'triage') {
+          res = await fetch('/api/v1/triage/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ symptomKeys: ['severe_vaginal_bleeding'] })
+          });
+        } else if (type === 'chat') {
+          res = await fetch('/api/v1/chat/query', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query: 'What local Ghanaian foods give iron during pregnancy?' })
+          });
+        } else if (type === 'anc') {
+          res = await fetch('/api/v1/maternal/anc-schedule', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ gestationalWeeks: 10, dueDate: '2026-11-20' })
+          });
+        } else if (type === 'vitals') {
+          res = await fetch('/api/v1/vitals/log', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: 'demo-patient-001', systolicBp: 145, diastolicBp: 95 })
+          });
+        } else if (type === 'bundle') {
+          res = await fetch('/api/v1/sync/bundle');
+        }
+
+        data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = 'Error calling endpoint: ' + err.message;
+      }
+    }
+
+    function switchTab(tab) {
+      document.getElementById('view-response').style.display = tab === 'response' ? 'block' : 'none';
+      document.getElementById('view-sdk').style.display = tab === 'sdk' ? 'block' : 'none';
+      document.getElementById('tab-response-btn').classList.toggle('active', tab === 'response');
+      document.getElementById('tab-sdk-btn').classList.toggle('active', tab === 'sdk');
+    }
+  </script>
+</body>
+</html>

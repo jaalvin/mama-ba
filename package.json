@@ -1,0 +1,45 @@
+{
+  "name": "lily-guided-health-companion-backend",
+  "version": "1.0.0",
+  "description": "Offline-first & cloud-boosted backend for The Guided Health Companion (Patient App)",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "build:frontend": "npm --prefix frontend run build",
+    "start": "node dist/server.js",
+    "dev": "ts-node src/server.ts",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "seed": "ts-node database/seed.ts",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "health",
+    "ghana",
+    "offline-first",
+    "rag",
+    "twi",
+    "maternal-health"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "better-sqlite3": "^11.1.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.9",
+    "@types/supertest": "^6.0.2",
+    "supertest": "^7.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.2",
+    "vitest": "^1.6.0"
+  }
+}

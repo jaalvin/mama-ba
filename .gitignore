@@ -1,0 +1,10 @@
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+*.log
+lily_offline.db
+lily_offline.db-journal
+lily_offline.db-wal
+lily_offline.db-shm
+.env

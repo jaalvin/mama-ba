@@ -1,0 +1,68 @@
+[
+  {
+    "symptom_key": "severe_vaginal_bleeding",
+    "category": "maternal",
+    "symptom_name_english": "Severe Vaginal Bleeding",
+    "symptom_name_twi": "Mogya mmoa tumi firi obi barima/baa mu pii nyinsɛn mu",
+    "severity_level": "HIGH",
+    "is_red_flag": true,
+    "emergency_action_english": "RED FLAG EMERGENCY! Severe bleeding during pregnancy or post-delivery is a critical medical emergency. Proceed IMMEDIATELY to the nearest hospital or district health center.",
+    "emergency_action_twi": "KƆ ASIBITI NTEMPA! Mogya pii a ɛfiri wo mu nyinsɛn bere mu yɛ hu pa ara. Kɔ ayarsabea a ɛbɛn wo no seesei ara!",
+    "hospital_referral_required": true
+  },
+  {
+    "symptom_key": "high_infant_fever",
+    "category": "infant",
+    "symptom_name_english": "High Infant Fever (> 38.5°C)",
+    "symptom_name_twi": "Akwadaa kɛseɛ ho yɛ hye pa ara",
+    "severity_level": "HIGH",
+    "is_red_flag": true,
+    "emergency_action_english": "RED FLAG EMERGENCY! High fever in infants under 6 months can signal severe infection or malaria. Do not delay. Seek immediate clinical assessment at the clinic.",
+    "emergency_action_twi": "NTWƐN KORAA! Abofra a ne ho yɛ hye kyɛn 38.5°C no tumi firi asram (Malaria) anaa yareɛ kɛseɛ. Fa no kɔ asibiti ntɛm!",
+    "hospital_referral_required": true
+  },
+  {
+    "symptom_key": "severe_headache_blurred_vision",
+    "category": "maternal",
+    "symptom_name_english": "Severe Persistent Headache & Blurred Vision",
+    "symptom_name_twi": "Tiri yareɛ denden ne ani so a ɛyɛ wusuwusu",
+    "severity_level": "HIGH",
+    "is_red_flag": true,
+    "emergency_action_english": "RED FLAG EMERGENCY! Severe headache with vision changes during pregnancy is a classic sign of Pre-Eclampsia (dangerously high blood pressure). Requires urgent hospital care.",
+    "emergency_action_twi": "MOGYA MMOROSO HU! Tiri yareɛ denden ne ani so a ɛyɛ wusuwusu nyinsɛn mu kyerɛ sɛ wo mogya aforo kɔ soro pii (Pre-eclampsia). Kɔ asibiti ntem!",
+    "hospital_referral_required": true
+  },
+  {
+    "symptom_key": "reduced_fetal_movement",
+    "category": "maternal",
+    "symptom_name_english": "Reduced Fetal Movement / Kicking",
+    "symptom_name_twi": "Abofra a wosow gu yem mu a ne kɔ so ate ase",
+    "severity_level": "MODERATE",
+    "is_red_flag": false,
+    "emergency_action_english": "MODERATE WARNING: Lie down on your left side for 1 hour and count kicks. If you feel fewer than 3 movements in 2 hours, visit the health facility for a fetal heart rate check.",
+    "emergency_action_twi": "DƆ SI WO BEN KUM ONI MU: Da wo ben kum so dɔnhwerew baako na kan sɛ abofra no bɛwosow mu a. Sɛ abofra no ammwosow dɔnhwerew mmienu mu a, kɔ asibiti.",
+    "hospital_referral_required": false
+  },
+  {
+    "symptom_key": "mild_morning_sickness",
+    "category": "maternal",
+    "symptom_name_english": "Mild Morning Sickness & Nausea",
+    "symptom_name_twi": "Anopa ne ho a ɛyɛ no tan anaa ɛfete",
+    "severity_level": "MILD",
+    "is_red_flag": false,
+    "emergency_action_english": "MILD CONDITION: Common in the first trimester. Sip small amounts of water, eat small frequent meals, and rest. Take prescribed prenatal vitamins.",
+    "emergency_action_twi": "YAREƐ CHA: Ɛyɛ abodeɛ mu deɛ nyinsɛn hyɛaseɛ mu. Nom nsuo kakra kakra, di aduane feefe, na gye wo ho ahome.",
+    "hospital_referral_required": false
+  },
+  {
+    "symptom_key": "swollen_feet_mild",
+    "category": "maternal",
+    "symptom_name_english": "Swollen Feet (Mild Mild Edema)",
+    "symptom_name_twi": "Nan a ahon kakra",
+    "severity_level": "MODERATE",
+    "is_red_flag": false,
+    "emergency_action_english": "MODERATE: Elevate your feet when sitting. Avoid standing for long periods. If swelling suddenly spreads to hands or face, seek urgent blood pressure check.",
+    "emergency_action_twi": "MANGYE WO NAN SO: Ma wo nan so pɛpɛɛpɛ bere a woti ase. Sɛ nan ne anim hon ntɛm so a, kɔ asibiti kɔyɛ blood pressure examination.",
+    "hospital_referral_required": false
+  }
+]

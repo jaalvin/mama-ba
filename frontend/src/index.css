@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors */
+  --color-primary: #84250f;
+  --color-primary-container: #a43c24;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffcdc2;
+  --color-primary-fixed-dim: #ffb4a3;
+
+  --color-secondary: #994531;
+  --color-secondary-container: #fe947b;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #762b19;
+
+  --color-tertiary: #673e00;
+  --color-tertiary-container: #865305;
+
+  --color-background: #fdf9f3;
+  --color-on-background: #1c1c18;
+
+  --color-surface: #fdf9f3;
+  --color-surface-dim: #dddad4;
+  --color-surface-bright: #fdf9f3;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f7f3ed;
+  --color-surface-container: #f1ede7;
+  --color-surface-container-high: #ebe8e2;
+  --color-surface-container-highest: #e6e2dc;
+  --color-on-surface: #1c1c18;
+  --color-on-surface-variant: #57423d;
+
+  --color-outline: #8a716c;
+  --color-outline-variant: #dec0b9;
+
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+
+  --color-clay-red: #8c3b28;
+  --color-earthen-ochre: #b67b30;
+  --color-forest-green: #396753;
+  --color-charcoal-green: #12261e;
+
+  /* Border radius */
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* Spacing */
+  --spacing-gutter-md: 24px;
+  --spacing-section-gap: 80px;
+  --spacing-margin-mobile: 20px;
+  --spacing-margin-desktop: 64px;
+
+  /* Fonts */
+  --font-headline: "Montserrat", sans-serif;
+  --font-body: "Atkinson Hyperlegible Next", sans-serif;
+
+  /* Type scale */
+  --text-headline-xl: 48px;
+  --text-headline-xl--line-height: 56px;
+  --text-headline-xl--letter-spacing: -0.02em;
+  --text-headline-xl--font-weight: 700;
+
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 700;
+
+  --text-headline-lg-mobile: 28px;
+  --text-headline-lg-mobile--line-height: 36px;
+  --text-headline-lg-mobile--font-weight: 700;
+
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--font-weight: 600;
+
+  --text-body-lg: 20px;
+  --text-body-lg--line-height: 30px;
+  --text-body-lg--font-weight: 400;
+
+  --text-body-md: 18px;
+  --text-body-md--line-height: 28px;
+  --text-body-md--font-weight: 400;
+
+  --text-label-md: 16px;
+  --text-label-md--line-height: 24px;
+  --text-label-md--font-weight: 600;
+
+  --text-button: 18px;
+  --text-button--line-height: 24px;
+  --text-button--font-weight: 600;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}

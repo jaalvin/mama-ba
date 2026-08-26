@@ -1,0 +1,74 @@
+{
+  "anc_visits": [
+    {
+      "visit_number": 1,
+      "recommended_weeks": 8,
+      "title_english": "1st ANC Booking Visit",
+      "title_twi": "Asibiti Kɔ a Edi Kan (ANC Booking)",
+      "description_english": "Initial health assessment, blood pressure, urine test, hemoglobin check, and blood grouping.",
+      "description_twi": "Wo nipadua nhwehwɛmu a edi kan, mogya mmoroso, nsɔebua, ne anemia nhwehwɛmu."
+    },
+    {
+      "visit_number": 2,
+      "recommended_weeks": 20,
+      "title_english": "2nd ANC Visit (Ultrasound & Screening)",
+      "title_twi": "Asibiti Kɔ a Tɔ so Mmienu (Ultrasound Scan)",
+      "description_english": "Fetal growth scan, maternal wellness check, SP malaria prevention dose 1.",
+      "description_twi": "Abofra nyinsɛn scanning, ne SP asram aduru a edi kan."
+    },
+    {
+      "visit_number": 3,
+      "recommended_weeks": 28,
+      "title_english": "3rd ANC Visit (Third Trimester Setup)",
+      "title_twi": "Asibiti Kɔ a Tɔ so Mmiɛnsa",
+      "description_english": "Check fetal lie and heartbeat, iron supplement adjustment, SP malaria dose 2.",
+      "description_twi": "Abofra awoɛ gyinabea nhwehwɛmu ne iron supplement nhyehyɛeɛ."
+    },
+    {
+      "visit_number": 4,
+      "recommended_weeks": 36,
+      "title_english": "4th ANC Visit (Delivery Planning)",
+      "title_twi": "Asibiti Kɔ a Tɔ so Nan (Awoɛ Ahoboa)",
+      "description_english": "Final birth preparedness, emergency referral plan, hospital bag setup.",
+      "description_twi": "Awoɛ ho ahoboa, ne hospital bag ahoboa."
+    }
+  ],
+  "immunizations": [
+    {
+      "vaccine_code": "BCG_OPV0",
+      "age_description_english": "At Birth",
+      "age_description_twi": "Awoɛ Bere Mu",
+      "title_english": "BCG & OPV 0 (Tuberculosis & Polio)",
+      "title_twi": "BCG & Polio Nsuro (At Birth)",
+      "description_english": "Protects against Tuberculosis and Infant Polio.",
+      "description_twi": "Ɛbɔ abofra no ho ban firi Tuberculosis ne Polio yareɛ ho."
+    },
+    {
+      "vaccine_code": "PENTA1_ROTA1",
+      "age_description_english": "6 Weeks",
+      "age_description_twi": "Nnawɔtwe 6",
+      "title_english": "Penta 1, Rota 1, OPV 1, PCV 1",
+      "title_twi": "Penta 1 ne Rota 1 Nsuro",
+      "description_english": "Protects against Diphtheria, Tetanus, Pertussis, Hepatitis B, Hib, Rotavirus diarrhea, Pneumococcus.",
+      "description_twi": "Ɛbɔ abofra no ho ban firi ayaase yareɛ, kɔfe, ne ayamtu yareɛ ho."
+    },
+    {
+      "vaccine_code": "PENTA2_ROTA2",
+      "age_description_english": "10 Weeks",
+      "age_description_twi": "Nnawɔtwe 10",
+      "title_english": "Penta 2, Rota 2, OPV 2, PCV 2",
+      "title_twi": "Penta 2 ne Rota 2 Nsuro",
+      "description_english": "Second dose booster for infant immunity.",
+      "description_twi": "Dose a tɔ so mmienu de hyɛ abofra no nipadua den."
+    },
+    {
+      "vaccine_code": "MEASLES_RUBELLA1",
+      "age_description_english": "9 Months",
+      "age_description_twi": "Asram 9",
+      "title_english": "Measles-Rubella 1 & Yellow Fever",
+      "title_twi": "Ntoburo 1 ne Yellow Fever Nsuro",
+      "description_english": "Crucial 9-month immunization against measles and yellow fever.",
+      "description_twi": "Nsuro a ɛho hia pa ara de bɔ abofra no ho ban firi Ntoburo ne Yellow Fever ho."
+    }
+  ]
+}

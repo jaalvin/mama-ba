@@ -1,0 +1,68 @@
+[
+  {
+    "id": "herb-001",
+    "herb_name": "Nibima (Cryptolepis sanguinolenta)",
+    "herb_aliases": ["Nibima", "Yellow Dye Root", "Kadze"],
+    "pharma_drug_name": "Iron Supplements (Ferrous Sulfate)",
+    "food_item": null,
+    "severity": "CAUTION",
+    "interaction_details": "Nibima extracts contain alkaloids that bind to dietary iron minerals in the digestive tract, significantly reducing iron absorption in pregnant women.",
+    "cultural_advice_twi": "Sɛ worenom Nibima a, ntwɛn bɛyɛ dɔnhwerew mmienu (2 hours) ansa na wanom wo dadeɛ nnuru (Iron supplement) no na amma w'abobow enni nkɔnim.",
+    "cultural_advice_english": "If taking Nibima herbal tea, wait at least 2 hours before taking your prenatal Iron supplements to ensure full absorption and prevent anemia."
+  },
+  {
+    "id": "herb-002",
+    "herb_name": "Taabea Herbal Mixture",
+    "herb_aliases": ["Taabea", "Taabea Bitter"],
+    "pharma_drug_name": "Paracetamol / Acetaminophen",
+    "food_item": null,
+    "severity": "CAUTION",
+    "interaction_details": "Both Taabea mixture and high doses of paracetamol are metabolized by liver enzymes (CYP450). Concomitant high-dose usage can increase metabolic burden on the liver.",
+    "cultural_advice_twi": "Kɔsi sɛ wo dɔkta bekyerɛ wo kwan no, mmonom Taabea ne Paracetamol pii bere koro mu na amma w'abrabo enni hawm.",
+    "cultural_advice_english": "Avoid taking high doses of Taabea Bitters and Paracetamol at the exact same time to prevent liver strain."
+  },
+  {
+    "id": "herb-003",
+    "herb_name": "Moringa (Moringa oleifera)",
+    "herb_aliases": ["Moringa", "Zaangala", "Kpodjizo"],
+    "pharma_drug_name": "Antihypertensive Drugs (Amlodipine, Methyldopa)",
+    "food_item": null,
+    "severity": "CAUTION",
+    "interaction_details": "Moringa leaves possess natural blood pressure-lowering properties. Combining large quantities with prescribed blood pressure medication may cause mild hypotension (dizziness).",
+    "cultural_advice_twi": "Moringa boa ma mogya mmoroso te ase. Sɛ worenom mogya mmoroso duru a, hwɛ yie na wo mogya ammotɔ ampa.",
+    "cultural_advice_english": "Moringa naturally lowers blood pressure. Monitor your vitals closely if taking it along with prescribed blood pressure medicine."
+  },
+  {
+    "id": "herb-004",
+    "herb_name": "Neem Leaf Tea (Azadirachta indica)",
+    "herb_aliases": ["Neem", "Kingiodendron"],
+    "pharma_drug_name": "Prenatal Vitamins",
+    "food_item": null,
+    "severity": "DANGER",
+    "interaction_details": "High concentration Neem tea extracts have documented anti-fertility and uterine stimulation effects. Highly contraindicated during early pregnancy.",
+    "cultural_advice_twi": "Nyinsɛn bere a edi kan mu no, mmonom Neem nsuo koraa. Etumi ma emuyinsɛn gu dɔteɛ mu.",
+    "cultural_advice_english": "Avoid Neem leaf tea completely during pregnancy, especially in the first trimester, as it can cause uterine contractions."
+  },
+  {
+    "id": "herb-005",
+    "herb_name": "Koko (Fermented Corn Porridge)",
+    "herb_aliases": ["Hausa Koko", "Corn Porridge"],
+    "pharma_drug_name": "Ciprofloxacin / Tetracycline Antibiotics",
+    "food_item": "Milk / Milk Powder in Koko",
+    "severity": "CAUTION",
+    "interaction_details": "Adding heavy milk or dairy products to Hausa Koko creates calcium-drug chelates with fluoroquinolone or tetracycline antibiotics, reducing antibiotic efficacy by up to 50%.",
+    "cultural_advice_twi": "Sɛ worenom antibiotic nnuru a, mde nufusuo pii mefra Hausa Koko no bere a worenom aduru no.",
+    "cultural_advice_english": "When prescribed antibiotics, avoid adding heavy milk or condensed milk to Hausa Koko at the same time as taking your dose."
+  },
+  {
+    "id": "herb-006",
+    "herb_name": "Ginger & Lemon Infusion (Akpeteshie-free)",
+    "herb_aliases": ["Akoko-bese", "Ginger Tea"],
+    "pharma_drug_name": "Iron Supplements",
+    "food_item": "Citrus Foods / Orange Juice",
+    "severity": "SAFE",
+    "interaction_details": "Vitamin C in lemon and citrus enhances non-heme iron absorption in the gut. Safe and beneficial for pregnant women.",
+    "cultural_advice_twi": "Ginger ne Lemur nsuo papabi wɔ nyinsɛn mu. Yɛboa ma wo ho yɛ den na ɛma Iron nso yɛ adwuma yie.",
+    "cultural_advice_english": "Ginger and Lemon water is safe and Vitamin C in lemon actually enhances your body's absorption of iron supplements."
+  }
+]

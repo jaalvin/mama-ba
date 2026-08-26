@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Guided Health Companion - Ghanaian Patient App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+
+  <!-- App Sticky Header -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">🩺</span>
+      <span>Apomuden Health</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+      <!-- Language Mode Selector Switch -->
+      <div class="lang-toggle-bar">
+        <button id="toggle-lang-twi" class="lang-btn active">🎙️ Twi</button>
+        <button id="toggle-lang-eng" class="lang-btn">🗣️ English</button>
+        <button id="toggle-lang-both" class="lang-btn">🌐 Both</button>
+      </div>
+
+      <!-- Auto Speech Read-Aloud Toggle Button -->
+      <button id="btn-toggle-autospeak" class="btn btn-secondary" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; border-color: rgba(16, 185, 129, 0.4); color: var(--primary);" title="Toggle AI Auto Speech Read-Aloud">
+        🔊 AI Speaks Back: ON
+      </button>
+
+      <!-- Female / Male Voice Selector Button -->
+      <button id="btn-toggle-voice-gender" class="btn btn-secondary" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; border-color: rgba(59, 130, 246, 0.4); color: #60a5fa;" title="Switch Voice Gender (Female / Male)">
+        👩 Female Voice
+      </button>
+
+      <!-- Floating Offline Sync Status Pill -->
+      <div id="sync-status-pill" class="sync-pill online">
+        <div class="sync-dot"></div>
+        <span id="sync-status-text">Synced</span>
+      </div>
+
+      <!-- Settings / Onboarding -->
+      <button id="btn-onboarding-link" class="btn btn-secondary" style="padding: 0.35rem 0.6rem; font-size: 0.8rem;">
+        ⚙️ Profile
+      </button>
+    </div>
+  </header>
+
+  <!-- View Section Container -->
+  <main class="main-container">
+    <div id="view-container"></div>
+  </main>
+
+  <!-- Fixed Bottom Navigation Bar -->
+  <nav class="app-nav">
+    <button class="nav-item active" data-view="dashboard">
+      <span class="nav-icon">🏠</span>
+      <span>Home</span>
+    </button>
+    <button class="nav-item" data-view="chat">
+      <span class="nav-icon">🎙️</span>
+      <span>Twi Chat</span>
+    </button>
+    <button class="nav-item" data-view="triage">
+      <span class="nav-icon">🚨</span>
+      <span>Triage</span>
+    </button>
+    <button class="nav-item" data-view="herbal">
+      <span class="nav-icon">🌿</span>
+      <span>Herbal</span>
+    </button>
+    <button class="nav-item" data-view="vitals">
+      <span class="nav-icon">📊</span>
+      <span>Vitals</span>
+    </button>
+    <button class="nav-item" data-view="maternal">
+      <span class="nav-icon">🤰</span>
+      <span>Care</span>
+    </button>
+  </nav>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>

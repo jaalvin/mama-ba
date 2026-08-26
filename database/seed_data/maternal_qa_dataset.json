@@ -1,0 +1,47 @@
+[
+  {
+    "id": "qa-001",
+    "category": "Nutrition",
+    "tags": ["iron", "anemia", "food", "blood"],
+    "question_english": "What local Ghanaian foods boost blood count (iron) during pregnancy?",
+    "question_twi": "Ghana aduane bɛn na ɛma mogya (iron) kɔ soro wɔ nyinsɛn mu?",
+    "answer_english": "Local foods rich in iron include Kontomire (cocoyam leaves), Turkey berries (Abedru/Kwahu Nsoso), liver, dark leafy greens, and beans. Pair them with oranges or lemons (Vitamin C) for maximum iron absorption.",
+    "answer_twi": "Aduane a iron wom pii ne Kontomire, Abedru (Kwahu Nsoso), akoma/akuma, ne aboboi/beeni. Di mu ne lemur anaa ankaa nsuo na ama wo nipadua agye iron no pɛpɛɛpɛ."
+  },
+  {
+    "qa_id": "qa-002",
+    "category": "Maternal Safety",
+    "tags": ["bleeding", "emergency", "danger_signs"],
+    "question_english": "What are the early warning signs of pregnancy complications?",
+    "question_twi": "Nsɛnkyerɛneɛ bɛn na ɛkyerɛ sɛ haw wom wɔ nyinsɛn mu?",
+    "answer_english": "Key danger signs include vaginal bleeding, severe abdominal pain, persistent high fever, swelling of the face and hands, severe headaches with vision changes, and sudden reduction in fetal movement.",
+    "answer_twi": "Nsɛnkyerɛneɛ hu ne mogya a ɛfiri wo mu, ayaase yareɛ denden, ho hye denden, anim ne nsa a ɛhonntɛm, tiri yareɛ denden ne ani wusuwusu, ne abofra a wosow a ɛte ase."
+  },
+  {
+    "qa_id": "qa-003",
+    "category": "Infant Care",
+    "tags": ["breastfeeding", "newborn", "nutrition"],
+    "question_english": "How long should I exclusively breastfeed my newborn baby?",
+    "question_twi": "Mmerɛ ahe na ɛsɛ sɛ mekyɛ nufoɔ nko ara ma me ba?",
+    "answer_english": "Ghana Health Service and WHO recommend exclusive breastfeeding for the first 6 months of life. Do not give water, teas, or infant porridge during these first 6 months unless medically instructed.",
+    "answer_twi": "GHS ne WHO kyerɛ sɛ ma abofra no nufoɔ nko ara asram mmiensa ne mmiensa (6 months). Mma no nsuo, herbal tea, anaa koko wɔ saa asram 6 mu koraa."
+  },
+  {
+    "qa_id": "qa-004",
+    "category": "Herbal Safety",
+    "tags": ["nibima", "herbs", "malaria", "pregnancy"],
+    "question_english": "Can I drink Nibima or Taabea bitters for malaria while pregnant?",
+    "question_twi": "Metumi anom Nibima anaa Taabea bitters de asa asram (malaria) nyinsɛn mu?",
+    "answer_english": "Do not self-medicate with herbal bitters for malaria during pregnancy. Always visit the ANC clinic for approved malaria prophylaxis (like SP tablets) and prescription antimalarials tested for fetal safety.",
+    "answer_twi": "Mma wmma wo ho herbal bitters pii nyinsɛn mu. Kɔ ayarsabea clinic na wɔma wo SP aduru a agye din a ɛbɔ wo ne wo ba ho ban pɛpɛɛpɛ."
+  },
+  {
+    "qa_id": "qa-005",
+    "category": "Childhood Immunization",
+    "tags": ["vaccine", "schedule", "fever"],
+    "question_english": "Is it normal for a baby to develop mild fever after immunization?",
+    "question_twi": "Ɛyɛ krow na abofra ho yɛ hye kakra bere a wanya nsuro wie?",
+    "answer_english": "Yes, mild fever or soreness at the injection site is a normal sign that the baby's immune system is responding to the vaccine. Give prescribed paracetamol syrup if recommended by the nurse, and keep the infant hydrated.",
+    "answer_twi": "Aane, ho hye kakra anaa baabi a wɔwɔ no kɔ nsa yɛ abodeɛ mu kyerɛ sɛ abofra no immune system renyin. Ma no paracetamol syrup kakra sɛ nurse no hyɛɛ wo kwan a."
+  }
+]

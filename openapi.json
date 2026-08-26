@@ -1,0 +1,155 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "The Guided Health Companion API",
+    "description": "Offline-First & Cloud-Boosted Patient Health Companion Backend for Ghana AI Challenge.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Local Development Server"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health Check Endpoint",
+        "responses": {
+          "200": {
+            "description": "Server status"
+          }
+        }
+      }
+    },
+    "/herbal-safety/check": {
+      "post": {
+        "summary": "Check Ghanaian Herbal-Drug-Food Safety Matrix",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "herbName": { "type": "string", "example": "Nibima" },
+                  "pharmaDrugName": { "type": "string", "example": "Iron Supplements" },
+                  "foodItem": { "type": "string", "example": "Milk" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Safety evaluation result with cultural advice in Twi and English"
+          }
+        }
+      }
+    },
+    "/triage/evaluate": {
+      "post": {
+        "summary": "Evaluate Symptoms against Offline Red-Flag Decision Trees",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "symptomKeys": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "example": ["severe_vaginal_bleeding"]
+                  },
+                  "symptomText": { "type": "string", "example": "high fever and headache" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Triage result with emergency alerts"
+          }
+        }
+      }
+    },
+    "/maternal/anc-schedule": {
+      "post": {
+        "summary": "Generate GHS Antenatal Care (ANC) Visit Timeline",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "gestationalWeeks": { "type": "integer", "example": 10 },
+                  "dueDate": { "type": "string", "example": "2026-11-20" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Array of ANC visit schedule items" }
+        }
+      }
+    },
+    "/vitals/log": {
+      "post": {
+        "summary": "Log Vitals and Receive Status Warning Evaluation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": { "type": "string", "example": "demo-patient-001" },
+                  "systolicBp": { "type": "integer", "example": 120 },
+                  "diastolicBp": { "type": "integer", "example": 80 },
+                  "bodyTemperature": { "type": "number", "example": 36.8 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Vitals evaluation result" }
+        }
+      }
+    },
+    "/chat/query": {
+      "post": {
+        "summary": "Submit Conversational Multilingual Query to RAG Engine",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "query": { "type": "string", "example": "What local Ghanaian foods give iron during pregnancy?" },
+                  "language": { "type": "string", "example": "twi" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Dual language Twi/English answer" }
+        }
+      }
+    },
+    "/sync/bundle": {
+      "get": {
+        "summary": "Export Offline Seed Database Bundle",
+        "responses": {
+          "200": { "description": "Seed bundle object" }
+        }
+      }
+    }
+  }
+}
