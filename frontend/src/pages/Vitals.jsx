@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useLang } from "../context/LanguageContext.jsx";
 
 const VITALS_CONFIG = [

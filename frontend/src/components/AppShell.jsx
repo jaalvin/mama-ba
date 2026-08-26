@@ -1,3 +1,4 @@
+import React from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useLang } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { useLang } from "../context/LanguageContext.jsx";
 
 const PRESET_QUESTIONS = [

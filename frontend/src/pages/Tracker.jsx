@@ -1,3 +1,5 @@
+import React from "react";
+
 const visits = [
   { title: "ANC Visit 1", desc: "Initial registration, dating scan, and baseline labs.", status: "done" },
   { title: "ANC Visit 2", desc: "Anomaly scan, fetal heart rate check, second dose of TT.", status: "next", location: "Korle Bu Teaching Hospital", when: "Tomorrow, 09:00 AM" },
