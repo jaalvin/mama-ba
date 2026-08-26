@@ -1,5 +1,4 @@
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -16,7 +15,7 @@ import Vitals from "./pages/Vitals.jsx";
 import Maternal from "./pages/Maternal.jsx";
 import CareLogistics from "./pages/CareLogistics.jsx";
 import Profile from "./pages/Profile.jsx";
-import EmergencyContacts from "./pages/EmergencyContacts.jsx";
+import EmergencyContacts from "./pages/EmergencyContacts";
 
 export default function App() {
   return (
@@ -49,10 +48,8 @@ export default function App() {
             <Route path="vitals" element={<Vitals />} />
             <Route path="maternal" element={<Maternal />} />
             <Route path="care" element={<CareLogistics />} />
-            <Route path="emergency" element={<EmergencyContacts />} />
             <Route path="profile" element={<Profile />} />
           </Route>
-          <Route path="*" element={<Navigate to="/app" replace />} />
         </Routes>
       </AuthProvider>
     </LanguageProvider>

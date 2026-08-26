@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useLang } from "../context/LanguageContext.jsx";
 
 const ANC_VISITS = [
