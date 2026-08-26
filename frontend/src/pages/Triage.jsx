@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useLang } from "../context/LanguageContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
+import { api } from "../services/api.js";
 import { Activity, Droplets, Thermometer, Footprints, Flame, Compass } from "lucide-react";
 
 const SYMPTOMS = [
@@ -32,7 +34,7 @@ const TRIAGE_LEVELS = {
     },
   },
   high: {
-    label: { en: "High Risk — Urgent Emergency", twi: "Ɔhaw Kɛseɛ — Ntɛm Ara" },
+    label: { en: "High Risk — Urgent Emergency", twi: "Ɔhaw KƐSEƐ — Ntɛm Ara" },
     color: "bg-error-container border-error text-error",
     icon: "emergency",
     advice: {
@@ -52,13 +54,25 @@ function computeTriage(selected) {
 
 export default function Triage() {
   const { lang } = useLang();
+  const { user } = useAuth();
   const [selected, setSelected] = useState([]);
   const [showModal, setShowModal] = useState(false);
 
-  const toggle = (id) =>
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+  const toggle = async (id) => {
+    const updated = selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id];
+    setSelected(updated);
+
+    if (updated.length > 0) {
+      const level = computeTriage(updated);
+      try {
+        await api.evaluateTriage({
+          userId: user?.email || "demo-patient-001",
+          symptoms: updated,
+          triageLevel: level
+        });
+      } catch { /* graceful fallback */ }
+    }
+  };
 
   const level = computeTriage(selected);
   const result = TRIAGE_LEVELS[level];
@@ -71,30 +85,25 @@ export default function Triage() {
       </h1>
       <p className="text-on-surface-variant mb-5 text-sm">
         {lang === "twi"
-          ? "Yi yadeɛ a wohunu"
+          ? "Yi yadeɛ a wohunu (Saved persistently into SQLite)"
           : "Select all symptoms you are experiencing right now"}
       </p>
 
       {/* Visual Symptom Tiles */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-  {SYMPTOMS.map((s) => {
-    const Icon = s.icon; // Assign component to a capitalized variable
-    const isSelected = selected.includes(s.id);
-
-    return (
-      <button
-        key={s.id}
-        onClick={() => toggle(s.id)}
-        className={`rounded-2xl border p-4 flex flex-col items-center gap-2 transition-all active:scale-95 ${
-          isSelected
-            ? "bg-primary text-on-primary border-primary shadow-md"
-            : "bg-surface-container-lowest border-outline-variant text-on-surface hover:bg-surface-container-low"
-        }`}
-      >
-              <Icon 
-                className={`w-7 h-7 ${isSelected ? "text-on-primary" : "text-primary"}`} 
-                strokeWidth={1.75} 
-              />
+        {SYMPTOMS.map((s) => {
+          const IconComponent = s.icon;
+          return (
+            <button
+              key={s.id}
+              onClick={() => toggle(s.id)}
+              className={`rounded-2xl border p-4 flex flex-col items-center gap-2 transition-all active:scale-95 ${
+                selected.includes(s.id)
+                  ? "bg-primary text-on-primary border-primary shadow-md"
+                  : "bg-surface-container-lowest border-outline-variant text-on-surface"
+              }`}
+            >
+              <IconComponent className="w-6 h-6" />
               <span className="text-xs font-semibold text-center leading-tight">
                 {lang === "twi" ? s.twi : s.en}
               </span>
@@ -108,17 +117,17 @@ export default function Triage() {
         <div className={`rounded-2xl border p-5 mb-4 ${result.color}`}>
           <div className="flex items-center gap-3 mb-3">
             <span className="material-symbols-outlined text-[28px]">{result.icon}</span>
-            <h2 className="font-headline text-headline-md">
+            <h2 className="font-headline text-headline-md font-bold">
               {lang === "twi" ? result.label.twi : result.label.en}
             </h2>
           </div>
-          <p className="text-sm leading-relaxed">
+          <p className="text-sm leading-relaxed font-medium">
             {lang === "twi" ? result.advice.twi : result.advice.en}
           </p>
           {isEmergency && (
             <button
               onClick={() => setShowModal(true)}
-              className="mt-4 w-full bg-error text-on-error font-headline text-button py-3 rounded-full active:scale-95 transition-transform flex items-center justify-center gap-2"
+              className="mt-4 w-full bg-error text-on-error font-headline text-button py-3.5 rounded-full active:scale-95 transition-transform flex items-center justify-center gap-2 shadow-md"
             >
               <span className="material-symbols-outlined">emergency</span>
               {lang === "twi" ? "Frɛ Mmoa Ntɛm" : "Get Emergency Help Now"}
@@ -156,14 +165,14 @@ export default function Triage() {
           <div className="flex flex-col gap-3 w-full max-w-xs">
             <a
               href="tel:112"
-              className="bg-on-error text-error font-headline text-button py-4 rounded-full flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-transform"
+              className="bg-on-error text-error font-headline text-button py-4 rounded-full flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-transform font-bold"
             >
               <span className="material-symbols-outlined">call</span>
               Call 112 — National Ambulance
             </a>
             <a
               href="tel:193"
-              className="bg-on-error/90 text-error font-headline text-button py-4 rounded-full flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-transform"
+              className="bg-on-error/90 text-error font-headline text-button py-4 rounded-full flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-transform font-bold"
             >
               <span className="material-symbols-outlined">call</span>
               Call 193 — Emergency Services

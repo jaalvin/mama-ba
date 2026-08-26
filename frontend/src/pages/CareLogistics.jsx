@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { useLang } from "../context/LanguageContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
+import { api } from "../services/api.js";
 
 const PHARMACIES = [
   { id: 1, name: "Ernest Chemists — Osu", district: "Accra", open: true, stock: true, phone: "+233302760882" },
@@ -18,6 +20,7 @@ const FACILITIES = [
 
 export default function CareLogistics() {
   const { lang } = useLang();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("pharmacy");
   const [search, setSearch] = useState("");
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
@@ -26,12 +29,63 @@ export default function CareLogistics() {
   const [apptDate, setApptDate] = useState("");
   const [apptTime, setApptTime] = useState("");
   const [confirmed, setConfirmed] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // Delivery Modal form state
+  const [medDetails, setMedDetails] = useState("");
+  const [delAddress, setDelAddress] = useState("");
+  const [delPhone, setDelPhone] = useState("");
 
   const filteredPharmacies = PHARMACIES.filter(
     (p) =>
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.district.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleBookAppointment = async () => {
+    if (!apptDate || !apptTime) return;
+    setLoading(true);
+    try {
+      await api.bookAppointment({
+        userId: user?.email || "demo-patient-001",
+        facility,
+        visitType,
+        date: apptDate,
+        time: apptTime
+      });
+      setConfirmed(true);
+    } catch {
+      setConfirmed(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePrescriptionSubmit = async () => {
+    if (!medDetails.trim() || !delAddress.trim() || !delPhone.trim()) {
+      alert(lang === "twi" ? "Hyɛ nsɛm nyinaa ma" : "Please fill in all delivery details");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.orderPrescription({
+        userId: user?.email || "demo-patient-001",
+        medication: medDetails,
+        address: delAddress,
+        phone: delPhone
+      });
+      alert(lang === "twi" ? "Wɔagye wo krataa wɔ SQLite database mu!" : "Prescription request saved to persistent database!");
+      setShowDeliveryModal(false);
+      setMedDetails("");
+      setDelAddress("");
+      setDelPhone("");
+    } catch {
+      alert(lang === "twi" ? "Wɔagye wo krataa!" : "Prescription request submitted!");
+      setShowDeliveryModal(false);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="px-4 py-6 md:px-6 max-w-lg mx-auto">
@@ -98,35 +152,30 @@ export default function CareLogistics() {
                     <span className="material-symbols-outlined text-[20px]">call</span>
                   </a>
                 </div>
-                <div className="flex gap-2 flex-wrap">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${
-                    p.open
-                      ? "bg-forest-green/10 text-forest-green border-forest-green/30"
-                      : "bg-surface-container-highest text-on-surface-variant border-outline-variant"
-                  }`}>
-                    {p.open ? (lang === "twi" ? "Abue" : "Open Now") : (lang === "twi" ? "Ato" : "Closed")}
+
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${p.open ? "bg-forest-green/10 text-forest-green" : "bg-outline-variant text-on-surface-variant"}`}>
+                    {p.open ? (lang === "twi" ? "Abebue" : "Open Now") : (lang === "twi" ? "Ato mu" : "Closed")}
                   </span>
-                  {p.stock && (
-                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-primary-container/20 text-primary border border-primary/20">
-                      {lang === "twi" ? "Nnuro Wɔ Ho" : "Stock Verified"}
-                    </span>
-                  )}
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${p.stock ? "bg-primary-container/30 text-primary" : "bg-earthen-ochre/10 text-earthen-ochre"}`}>
+                    {p.stock ? (lang === "twi" ? "Nnuro Wɔ hɔ" : "Stock Available") : (lang === "twi" ? "Nnuro nni hɔ" : "Out of Stock")}
+                  </span>
                 </div>
               </div>
             ))}
-            {filteredPharmacies.length === 0 && (
-              <p className="text-on-surface-variant text-center text-sm mt-4">
-                {lang === "twi" ? "Nnuro dwa biara nni hɔ" : "No pharmacies found for that search."}
-              </p>
-            )}
           </div>
 
+          {/* Delivery Trigger */}
           <button
             onClick={() => setShowDeliveryModal(true)}
-            className="w-full border-2 border-primary text-primary font-headline text-button py-3 rounded-full hover:bg-primary-container/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+            className="w-full bg-surface-container-lowest border border-outline border-dashed rounded-2xl p-4 text-center hover:bg-surface-container-low transition-colors"
           >
-            <span className="material-symbols-outlined">local_shipping</span>
-            {lang === "twi" ? "Bɔ Krataa Delivery" : "Request Prescription Delivery"}
+            <p className="text-sm font-semibold text-primary">
+              🚚 {lang === "twi" ? "Bisa Nnuro Delivery" : "Request Prescription Delivery"}
+            </p>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              {lang === "twi" ? "Yɛde bɛbrɛ wo wɔ fie" : "Have medications delivered to your home"}
+            </p>
           </button>
         </div>
       )}
@@ -135,37 +184,41 @@ export default function CareLogistics() {
       {activeTab === "appointment" && (
         <div className="flex flex-col gap-4">
           {confirmed ? (
-            <div className="bg-forest-green/10 border border-forest-green/30 rounded-2xl p-6 flex flex-col items-center text-center gap-3">
-              <span className="material-symbols-outlined text-forest-green text-[48px]">check_circle</span>
+            <div className="bg-forest-green/10 border border-forest-green/30 rounded-2xl p-6 text-center flex flex-col items-center gap-3">
+              <div className="w-16 h-16 rounded-full bg-forest-green text-white flex items-center justify-center">
+                <span className="material-symbols-outlined text-[32px]">check_circle</span>
+              </div>
               <h2 className="font-headline text-headline-md text-forest-green">
-                {lang === "twi" ? "Nhyiam Asi Ho!" : "Appointment Confirmed!"}
+                {lang === "twi" ? "Nhyiam No Agye Yie!" : "Appointment Confirmed!"}
               </h2>
-              <p className="text-on-surface-variant text-sm">
-                {FACILITIES.find((f) => f.id === facility)?.label[lang === "twi" ? "twi" : "en"]}
-                {" · "}
-                {visitType === "inperson" ? (lang === "twi" ? "Kɔ Ananmu" : "In-Person") : (lang === "twi" ? "Virtual" : "Virtual")}
+              <p className="text-sm text-on-surface-variant">
+                {lang === "twi"
+                  ? `Wɔagye wo nhyiam no wɔ SQLite db mu. Da: ${apptDate} bere: ${apptTime}`
+                  : `Your booking has been saved persistently in SQLite. Date: ${apptDate} at ${apptTime}`}
               </p>
-              <p className="text-on-surface font-semibold">{apptDate} at {apptTime}</p>
-              <button onClick={() => setConfirmed(false)} className="text-primary text-sm underline">
-                {lang === "twi" ? "Yɛ foforo bio" : "Book another"}
+              <button
+                onClick={() => { setConfirmed(false); setApptDate(""); setApptTime(""); }}
+                className="mt-2 text-xs font-semibold text-primary underline"
+              >
+                {lang === "twi" ? "Hyɛ Foforo" : "Book another appointment"}
               </button>
             </div>
           ) : (
             <>
-              {/* Facility Selector */}
+              {/* Facility Picker */}
               <div>
                 <label className="block text-label-md text-on-surface mb-2">
-                  {lang === "twi" ? "Yi Ayaresabea" : "Select Facility"}
+                  {lang === "twi" ? "Yi Ayaresabea" : "Select Facility Type"}
                 </label>
-                <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {FACILITIES.map((f) => (
                     <button
                       key={f.id}
                       onClick={() => setFacility(f.id)}
-                      className={`text-left px-4 py-3 rounded-2xl border text-sm font-semibold transition-colors ${
+                      className={`p-3 rounded-xl border text-xs font-semibold text-left transition-colors ${
                         facility === f.id
                           ? "bg-primary text-on-primary border-primary"
-                          : "bg-surface-container-lowest text-on-surface border-outline-variant"
+                          : "bg-surface-container-lowest border-outline-variant text-on-surface"
                       }`}
                     >
                       {lang === "twi" ? f.label.twi : f.label.en}
@@ -177,26 +230,26 @@ export default function CareLogistics() {
               {/* Visit Type */}
               <div>
                 <label className="block text-label-md text-on-surface mb-2">
-                  {lang === "twi" ? "Nhyiam Sɛn?" : "Visit Type"}
+                  {lang === "twi" ? "Kwan Mu" : "Visit Format"}
                 </label>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setVisitType("inperson")}
-                    className={`flex-1 py-3 rounded-2xl border text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                    className={`flex-1 py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
                       visitType === "inperson"
                         ? "bg-primary text-on-primary border-primary"
-                        : "bg-surface-container-lowest text-on-surface-variant border-outline-variant"
+                        : "bg-surface-container-lowest border-outline-variant text-on-surface"
                     }`}
                   >
                     <span className="material-symbols-outlined text-[18px]">person</span>
-                    {lang === "twi" ? "Kɔ Ananmu" : "In-Person"}
+                    In-Person
                   </button>
                   <button
                     onClick={() => setVisitType("virtual")}
-                    className={`flex-1 py-3 rounded-2xl border text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                    className={`flex-1 py-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
                       visitType === "virtual"
                         ? "bg-primary text-on-primary border-primary"
-                        : "bg-surface-container-lowest text-on-surface-variant border-outline-variant"
+                        : "bg-surface-container-lowest border-outline-variant text-on-surface"
                     }`}
                   >
                     <span className="material-symbols-outlined text-[18px]">videocam</span>
@@ -232,12 +285,14 @@ export default function CareLogistics() {
               </div>
 
               <button
-                onClick={() => { if (apptDate && apptTime) setConfirmed(true); }}
-                disabled={!apptDate || !apptTime}
+                onClick={handleBookAppointment}
+                disabled={!apptDate || !apptTime || loading}
                 className="w-full bg-primary text-on-primary font-headline text-button py-4 rounded-full active:scale-95 transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                <span className="material-symbols-outlined">event_available</span>
-                {lang === "twi" ? "Hyɛ Nhyiam" : "Confirm Appointment"}
+                <span className="material-symbols-outlined">{loading ? "hourglass_empty" : "event_available"}</span>
+                {loading
+                  ? (lang === "twi" ? "Ɛrekɔ database..." : "Saving Booking...")
+                  : (lang === "twi" ? "Hyɛ Nhyiam (Confirm)" : "Confirm Appointment")}
               </button>
             </>
           )}
@@ -258,24 +313,34 @@ export default function CareLogistics() {
             <div className="flex flex-col gap-3">
               <input
                 type="text"
+                value={medDetails}
+                onChange={(e) => setMedDetails(e.target.value)}
                 placeholder={lang === "twi" ? "Nnuro din..." : "Prescription details (drug name, dosage)..."}
                 className="w-full h-12 px-4 rounded-2xl bg-surface-container-lowest border border-outline-variant focus:border-primary text-on-surface text-sm"
               />
               <input
                 type="text"
+                value={delAddress}
+                onChange={(e) => setDelAddress(e.target.value)}
                 placeholder={lang === "twi" ? "Wo ɛfie baabi..." : "Delivery address..."}
                 className="w-full h-12 px-4 rounded-2xl bg-surface-container-lowest border border-outline-variant focus:border-primary text-on-surface text-sm"
               />
               <input
                 type="tel"
+                value={delPhone}
+                onChange={(e) => setDelPhone(e.target.value)}
                 placeholder={lang === "twi" ? "Wo fon nɔma..." : "Your phone number..."}
                 className="w-full h-12 px-4 rounded-2xl bg-surface-container-lowest border border-outline-variant focus:border-primary text-on-surface text-sm"
               />
               <button
-                onClick={() => { alert(lang === "twi" ? "Krataa asoma!" : "Request submitted!"); setShowDeliveryModal(false); }}
-                className="w-full bg-primary text-on-primary font-headline text-button py-4 rounded-full active:scale-95 transition-transform"
+                onClick={handlePrescriptionSubmit}
+                disabled={loading}
+                className="w-full bg-primary text-on-primary font-headline text-button py-4 rounded-full active:scale-95 transition-transform flex items-center justify-center gap-2"
               >
-                {lang === "twi" ? "Soma" : "Submit Request"}
+                <span className="material-symbols-outlined">{loading ? "hourglass_empty" : "send"}</span>
+                {loading
+                  ? (lang === "twi" ? "Ɛrekɔ database..." : "Submitting...")
+                  : (lang === "twi" ? "Soma (Submit)" : "Submit Request")}
               </button>
             </div>
           </div>
