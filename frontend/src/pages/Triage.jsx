@@ -1,196 +1,170 @@
-import React, { useState } from "react";
-import { api } from "../services/api.js";
+import { useState } from "react";
+import { useLang } from "../context/LanguageContext.jsx";
+
+const SYMPTOMS = [
+  { id: "headache", emoji: "🤕", en: "Headache", twi: "Tiawa", risk: "moderate" },
+  { id: "bleeding", emoji: "🩸", en: "Bleeding", twi: "Mogya tu", risk: "high" },
+  { id: "fever", emoji: "🌡️", en: "High Fever", twi: "Hye boro", risk: "high" },
+  { id: "swollen", emoji: "🦶", en: "Swollen Ankles", twi: "Nan abɔ ntonton", risk: "moderate" },
+  { id: "abdominal", emoji: "😣", en: "Abdominal Pain", twi: "Yafunu yaw", risk: "high" },
+  { id: "dizziness", emoji: "😵", en: "Dizziness", twi: "Tibɔ", risk: "moderate" },
+];
+
+const TRIAGE_LEVELS = {
+  none: null,
+  mild: {
+    label: { en: "Mild — Self Care", twi: "Mmere — Wo Ho Adamfo" },
+    color: "bg-forest-green/10 border-forest-green/30 text-forest-green",
+    icon: "check_circle",
+    advice: {
+      en: "Your symptoms appear mild. Rest, hydrate, and monitor. Call your midwife if symptoms worsen.",
+      twi: "Wo yadeɛ yɛ mmerɛ. Home, nom nsuo, na hwɛ. Frɛ wo ɔwɔfoɔ sɛ ɛsɔ boro.",
+    },
+  },
+  moderate: {
+    label: { en: "Moderate — Book Clinic Visit", twi: "Ewiem — Kɔ Ayaresabea" },
+    color: "bg-earthen-ochre/10 border-earthen-ochre/30 text-earthen-ochre",
+    icon: "calendar_month",
+    advice: {
+      en: "Please book a clinic visit within 24 hours. Do not ignore these symptoms.",
+      twi: "Yɛ wo ara kɔ ayaresabea nnɔnhwerew 24 mu. Mma yadeɛ no nnye wo.",
+    },
+  },
+  high: {
+    label: { en: "High Risk — Urgent Emergency", twi: "Ɔhaw Kɛseɛ — Ntɛm Ara" },
+    color: "bg-error-container border-error text-error",
+    icon: "emergency",
+    advice: {
+      en: "This is an emergency. Go to the nearest clinic immediately.",
+      twi: "Ɔhaw kɛseɛ ni. Kɔ ayaresabea ntɛm ara.",
+    },
+  },
+};
+
+function computeTriage(selected) {
+  if (selected.length === 0) return "none";
+  const risks = selected.map((id) => SYMPTOMS.find((s) => s.id === id)?.risk);
+  if (risks.includes("high")) return "high";
+  if (risks.includes("moderate")) return "moderate";
+  return "mild";
+}
 
 export default function Triage() {
-  const [selectedSymptoms, setSelectedSymptoms] = useState([]);
-  const [evaluating, setEvaluating] = useState(false);
-  const [triageResult, setTriageResult] = useState(null);
-  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  const { lang } = useLang();
+  const [selected, setSelected] = useState([]);
+  const [showModal, setShowModal] = useState(false);
 
-  const symptomTiles = [
-    { key: "severe_bleeding", icon: "🩸", titleEn: "Vaginal Bleeding", titleTw: "Mmogya gu", category: "maternal", isEmergency: true },
-    { key: "severe_headache", icon: "🤯", titleEn: "Severe Headache / Blurred Vision", titleTw: "Tipyɛ den / Aniso biribiri", category: "maternal", isEmergency: true },
-    { key: "high_fever", icon: "🤒", titleEn: "High Fever (>38.5°C)", titleTw: "Huraeɛ kɛseɛ", category: "maternal", isEmergency: true },
-    { key: "swollen_ankles", icon: "🦶", titleEn: "Swollen Ankles & Face", titleTw: "Nan anaa anim a ɑhɔnohɔno", category: "maternal", isEmergency: false },
-    { key: "abdominal_pain", icon: "🤰", titleEn: "Severe Abdominal Pain / Cramps", titleTw: "Yafunu ya kɛseɛ", category: "maternal", isEmergency: true },
-    { key: "infant_fever", icon: "👶", titleEn: "Infant High Fever / Lethargy", titleTw: "Abofra huraeɛ kɛseɛ", category: "infant", isEmergency: true }
-  ];
-
-  const toggleSymptom = (key) => {
-    setSelectedSymptoms(prev =>
-      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+  const toggle = (id) =>
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
-  };
 
-  const runTriage = async () => {
-    if (selectedSymptoms.length === 0) return;
-    setEvaluating(true);
-
-    const res = await api.evaluateTriage({
-      symptomKeys: selectedSymptoms,
-      symptomText: selectedSymptoms.join(" ")
-    });
-
-    setEvaluating(false);
-
-    if (res && res.success && res.data) {
-      setTriageResult(res.data);
-      if (res.data.isRedFlag || res.data.highestSeverity === "HIGH" || res.data.hospitalReferralRequired) {
-        setShowEmergencyModal(true);
-      }
-    } else {
-      // Local fallback evaluation
-      const hasEmergency = selectedSymptoms.some(s => 
-        symptomTiles.find(t => t.key === s && t.isEmergency)
-      );
-
-      const fallback = {
-        highestSeverity: hasEmergency ? "HIGH" : "MODERATE",
-        isRedFlag: hasEmergency,
-        hospitalReferralRequired: hasEmergency,
-        emergencyNoticeEnglish: hasEmergency 
-          ? "CRITICAL RED-FLAG ALERT: Proceed immediately to the nearest Ghana Health Service clinic or hospital."
-          : "MONITOR & LOG: Rest, stay hydrated, and visit your local clinic if symptoms persist.",
-        emergencyNoticeTwi: hasEmergency
-          ? "ENERGENCY WARNING: Kɔ ayaresabea ntɛm ara! Ntwentwɛn wo nan aase."
-          : "Hwɛ wo ho so brɛoo na nom nsuo pii.",
-        recommendedAction: hasEmergency
-          ? "IMMEDIATE REFERRAL: Call 112 / 193 or proceed to the nearest emergency center immediately."
-          : "Visit your local GHS clinic for checkup."
-      };
-      setTriageResult(fallback);
-      if (hasEmergency) setShowEmergencyModal(true);
-    }
-  };
+  const level = computeTriage(selected);
+  const result = TRIAGE_LEVELS[level];
+  const isEmergency = level === "high";
 
   return (
-    <div className="px-4 py-6 max-w-md mx-auto flex flex-col gap-6 text-[#2D231E]">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-2xl">🚨</span>
-          <h1 className="font-bold text-xl text-[#2D231E]">Offline Symptom Triage</h1>
-        </div>
-        <p className="text-xs text-[#7A6B63]">
-          Select symptoms below to evaluate risk level using local GHS deterministic decision trees.
-        </p>
+    <div className="px-4 py-6 md:px-6 max-w-lg mx-auto">
+      <h1 className="font-headline text-headline-md text-on-background mb-1">
+        {lang === "twi" ? "Hwɛ Wo Yadeɛ" : "Check Symptoms"}
+      </h1>
+      <p className="text-on-surface-variant mb-5 text-sm">
+        {lang === "twi"
+          ? "Yi yadeɛ a wohunu"
+          : "Select all symptoms you are experiencing right now"}
+      </p>
+
+      {/* Visual Symptom Tiles */}
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {SYMPTOMS.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => toggle(s.id)}
+            className={`rounded-2xl border p-4 flex flex-col items-center gap-2 transition-all active:scale-95 ${
+              selected.includes(s.id)
+                ? "bg-primary text-on-primary border-primary shadow-md"
+                : "bg-surface-container-lowest border-outline-variant text-on-surface"
+            }`}
+          >
+            <span className="text-2xl">{s.emoji}</span>
+            <span className="text-xs font-semibold text-center leading-tight">
+              {lang === "twi" ? s.twi : s.en}
+            </span>
+          </button>
+        ))}
       </div>
 
-      {/* Visual Symptom Selector Grid */}
-      <section className="grid grid-cols-2 gap-3">
-        {symptomTiles.map(s => {
-          const selected = selectedSymptoms.includes(s.key);
-          return (
-            <button
-              key={s.key}
-              type="button"
-              onClick={() => toggleSymptom(s.key)}
-              className={`p-4 rounded-2xl border text-left flex flex-col items-start gap-2 transition-all shadow-xs ${
-                selected
-                  ? "bg-[#3D405B] text-white border-[#3D405B] ring-2 ring-[#E07A5F]"
-                  : "bg-white text-[#2D231E] border-[#EBE3D7]"
-              }`}
-            >
-              <span className="text-3xl">{s.icon}</span>
-              <div>
-                <p className="font-bold text-xs leading-snug">{s.titleEn}</p>
-                <p className={`text-[10px] mt-0.5 ${selected ? "text-white/80" : "text-[#7A6B63]"}`}>
-                  {s.titleTw}
-                </p>
-              </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold self-end mt-1 ${
-                s.isEmergency 
-                  ? (selected ? "bg-red-500 text-white" : "bg-red-100 text-red-700")
-                  : (selected ? "bg-amber-400 text-[#2D231E]" : "bg-gray-100 text-gray-700")
-              }`}>
-                {s.isEmergency ? "Red Flag" : "Watch"}
-              </span>
-            </button>
-          );
-        })}
-      </section>
-
-      {/* Action Button */}
-      <button
-        onClick={runTriage}
-        disabled={selectedSymptoms.length === 0 || evaluating}
-        className="w-full min-h-[52px] rounded-2xl bg-[#E07A5F] text-white font-bold text-base shadow-md active:scale-95 transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
-      >
-        {evaluating ? (
-          <span>Running Offline Decision Tree...</span>
-        ) : (
-          <span>Evaluate Symptoms &amp; Risk Level →</span>
-        )}
-      </button>
-
-      {/* Dynamic Triage Result Level Card */}
-      {triageResult && (
-        <section className={`p-5 rounded-2xl border shadow-sm ${
-          triageResult.isRedFlag || triageResult.highestSeverity === "HIGH"
-            ? "bg-red-50 border-red-200 text-red-900"
-            : triageResult.highestSeverity === "MODERATE"
-            ? "bg-amber-50 border-amber-200 text-amber-900"
-            : "bg-emerald-50 border-emerald-200 text-emerald-900"
-        }`}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="font-extrabold text-sm uppercase tracking-wider">
-              Triage Level: {triageResult.highestSeverity}
-            </span>
-            <span className="text-xl">
-              {triageResult.highestSeverity === "HIGH" ? "🚨" : triageResult.highestSeverity === "MODERATE" ? "⚠️" : "🟢"}
-            </span>
+      {/* Triage Result */}
+      {result && (
+        <div className={`rounded-2xl border p-5 mb-4 ${result.color}`}>
+          <div className="flex items-center gap-3 mb-3">
+            <span className="material-symbols-outlined text-[28px]">{result.icon}</span>
+            <h2 className="font-headline text-headline-md">
+              {lang === "twi" ? result.label.twi : result.label.en}
+            </h2>
           </div>
-
-          <p className="font-bold text-sm mb-1">{triageResult.emergencyNoticeEnglish}</p>
-          <p className="text-xs italic mb-3">{triageResult.emergencyNoticeTwi}</p>
-
-          <p className="text-xs font-semibold bg-white/80 p-3 rounded-xl border border-black/10">
-            📌 Action Plan: {triageResult.recommendedAction}
+          <p className="text-sm leading-relaxed">
+            {lang === "twi" ? result.advice.twi : result.advice.en}
           </p>
-        </section>
+          {isEmergency && (
+            <button
+              onClick={() => setShowModal(true)}
+              className="mt-4 w-full bg-error text-on-error font-headline text-button py-3 rounded-full active:scale-95 transition-transform flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined">emergency</span>
+              {lang === "twi" ? "Frɛ Mmoa Ntɛm" : "Get Emergency Help Now"}
+            </button>
+          )}
+        </div>
       )}
 
-      {/* Screen 4b: Urgent Red-Flag Emergency Modal */}
-      {showEmergencyModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-red-600 text-white rounded-3xl p-6 max-w-sm w-full border-4 border-white shadow-2xl flex flex-col items-center text-center animate-bounce-once">
-            <div className="w-16 h-16 rounded-full bg-white text-red-600 flex items-center justify-center text-3xl font-extrabold mb-3 shadow-lg">
-              ⚠️
-            </div>
+      {/* Clear */}
+      {selected.length > 0 && (
+        <button
+          onClick={() => setSelected([])}
+          className="w-full border border-outline-variant text-on-surface-variant py-3 rounded-full text-sm hover:bg-surface-container-low transition-colors"
+        >
+          {lang === "twi" ? "Tew nyinaa" : "Clear all symptoms"}
+        </button>
+      )}
 
-            <h2 className="text-xl font-extrabold uppercase tracking-wide">
-              URGENT RED-FLAG EMERGENCY
-            </h2>
-            <h3 className="text-lg font-bold text-yellow-300 mt-1 mb-4">
-              Kɔ ayaresabea ntɛm ara!
-            </h3>
+      {/* Emergency Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-error z-50 flex flex-col items-center justify-center px-6 text-center">
+          <span className="material-symbols-outlined text-on-error text-[72px] mb-4 animate-pulse">
+            emergency
+          </span>
+          <h2 className="font-headline text-headline-lg text-on-error mb-2">
+            {lang === "twi" ? "ƆHAW KƐSEƐ!" : "EMERGENCY!"}
+          </h2>
+          <p className="text-on-error text-lg font-semibold mb-2">
+            Kɔ ayaresabea ntɛm ara
+          </p>
+          <p className="text-on-error/90 mb-8">
+            Go to the nearest clinic immediately
+          </p>
 
-            <p className="text-sm text-white/90 leading-relaxed mb-6">
-              Critical maternal or infant warning signs detected. Please proceed to the nearest Ghana Health Service clinic or hospital emergency room immediately.
-            </p>
-
-            <div className="w-full flex flex-col gap-3">
-              <a
-                href="tel:112"
-                className="w-full py-3.5 px-4 bg-white text-red-600 font-extrabold rounded-2xl text-base shadow-lg flex items-center justify-center gap-2 active:scale-95"
-              >
-                <span>📞 Call National Ambulance (112)</span>
-              </a>
-
-              <a
-                href="tel:193"
-                className="w-full py-3.5 px-4 bg-yellow-400 text-red-900 font-extrabold rounded-2xl text-base shadow-lg flex items-center justify-center gap-2 active:scale-95"
-              >
-                <span>🚑 Call Emergency Dispatch (193)</span>
-              </a>
-
-              <button
-                onClick={() => setShowEmergencyModal(false)}
-                className="w-full py-2.5 bg-red-800 text-white font-semibold rounded-xl text-xs hover:bg-red-900"
-              >
-                Dismiss Warning
-              </button>
-            </div>
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <a
+              href="tel:112"
+              className="bg-on-error text-error font-headline text-button py-4 rounded-full flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-transform"
+            >
+              <span className="material-symbols-outlined">call</span>
+              Call 112 — National Ambulance
+            </a>
+            <a
+              href="tel:193"
+              className="bg-on-error/90 text-error font-headline text-button py-4 rounded-full flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-transform"
+            >
+              <span className="material-symbols-outlined">call</span>
+              Call 193 — Emergency Services
+            </a>
+            <button
+              onClick={() => setShowModal(false)}
+              className="text-on-error/70 text-sm mt-2 underline"
+            >
+              {lang === "twi" ? "Sane kɔ" : "Go back"}
+            </button>
           </div>
         </div>
       )}

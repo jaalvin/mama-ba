@@ -5,7 +5,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   plugins: [
-    react({ jsxRuntime: "automatic" }),
+    react(),
     tailwindcss(),
     VitePWA({
       registerType: "autoUpdate",
@@ -32,13 +32,4 @@ export default defineConfig({
       },
     }),
   ],
-  server: {
-    port: 5173,
-    proxy: {
-      "/api": {
-        target: "http://localhost:3000",
-        changeOrigin: true,
-      },
-    },
-  },
 });

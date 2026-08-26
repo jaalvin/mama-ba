@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -26,12 +26,12 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-margin-mobile py-section-gap">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 py-12 md:px-8">
       <Link to="/" className="font-headline text-headline-md font-bold text-primary mb-8">
         Mama Ba
       </Link>
 
-      <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm p-8">
+      <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-sm p-8">
         <h1 className="font-headline text-headline-md text-charcoal-green mb-2 text-center">
           Welcome back
         </h1>

@@ -15,19 +15,26 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("Mama Ba Frontend Error:", error, errorInfo);
+    console.error("Mama Ba React ErrorBoundary caught an error:", error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: 20, color: '#84250f', fontFamily: 'sans-serif' }}>
-          <h2>Mama Ba Application Rendering Error</h2>
-          <pre style={{ background: '#f7f3ed', padding: 16, borderRadius: 8, overflowX: 'auto' }}>
-            {this.state.error?.toString()}
-            {'\n'}
-            {this.state.error?.stack}
-          </pre>
+        <div style={{ padding: 24, fontFamily: "sans-serif", textAlign: "center", minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", backgroundColor: "#fdf9f3", color: "#84250f" }}>
+          <h2 style={{ fontSize: 24, fontWeight: "bold", marginBottom: 12 }}>Mama Ba Companion</h2>
+          <p style={{ fontSize: 14, color: "#57423d", marginBottom: 20 }}>
+            An unexpected error occurred. Tap below to reload the app.
+          </p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.href = "/app";
+            }}
+            style={{ padding: "12px 24px", backgroundColor: "#84250f", color: "#fff", border: "none", borderRadius: 24, fontWeight: "bold", fontSize: 14, cursor: "pointer" }}
+          >
+            Reload Mama Ba App
+          </button>
         </div>
       );
     }
