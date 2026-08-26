@@ -1,5 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useLang } from "../context/LanguageContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
+import { api } from "../services/api.js";
 
 const VITALS_CONFIG = [
   {
@@ -74,9 +76,8 @@ const VITALS_CONFIG = [
   },
 ];
 
-// Tiny sparkline SVG from an array of numbers
 function Sparkline({ values, color = "#84250f" }) {
-  if (values.length < 2) return null;
+  if (!values || values.length < 2) return null;
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
@@ -102,15 +103,40 @@ function getStatus(config, val) {
 
 export default function Vitals() {
   const { lang } = useLang();
+  const { user } = useAuth();
   const [values, setValues] = useState({});
   const [history, setHistory] = useState({ bp_sys: [118, 122, 120, 125], bp_dia: [78, 80, 79, 82], temp: [36.5, 36.7, 36.6], sugar: [5.4, 5.6, 5.5], weight: [63, 63.5, 64] });
   const [diary, setDiary] = useState("");
   const [diaryRecording, setDiaryRecording] = useState(false);
+  const [saving, setSaving] = useState(false);
   const recognitionRef = useRef(null);
+
+  // Load persistent vitals history from SQLite backend
+  useEffect(() => {
+    async function loadVitals() {
+      const res = await api.getVitalsHistory(user?.email || "demo-patient-001");
+      if (res.success && res.history && res.history.length > 0) {
+        const sys = res.history.map(h => h.bloodPressureSystolic).filter(Boolean);
+        const dia = res.history.map(h => h.bloodPressureDiastolic).filter(Boolean);
+        const tmp = res.history.map(h => h.temperature).filter(Boolean);
+        const sgr = res.history.map(h => h.bloodSugar).filter(Boolean);
+        const wgt = res.history.map(h => h.weight).filter(Boolean);
+        setHistory({
+          bp_sys: sys.length ? sys : [118, 122, 120, 125],
+          bp_dia: dia.length ? dia : [78, 80, 79, 82],
+          temp: tmp.length ? tmp : [36.5, 36.7, 36.6],
+          sugar: sgr.length ? sgr : [5.4, 5.6, 5.5],
+          weight: wgt.length ? wgt : [63, 63.5, 64]
+        });
+      }
+    }
+    loadVitals();
+  }, [user]);
 
   const handleChange = (id, val) => setValues((prev) => ({ ...prev, [id]: val }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setSaving(true);
     const updated = { ...history };
     VITALS_CONFIG.forEach(({ id }) => {
       const v = parseFloat(values[id]);
@@ -119,8 +145,27 @@ export default function Vitals() {
       }
     });
     setHistory(updated);
+
+    // Save persistently to SQLite database on backend
+    await api.logVitals({
+      userId: user?.email || "demo-patient-001",
+      bloodPressureSystolic: values.bp_sys ? parseFloat(values.bp_sys) : undefined,
+      bloodPressureDiastolic: values.bp_dia ? parseFloat(values.bp_dia) : undefined,
+      temperature: values.temp ? parseFloat(values.temp) : undefined,
+      bloodSugar: values.sugar ? parseFloat(values.sugar) : undefined,
+      weight: values.weight ? parseFloat(values.weight) : undefined
+    });
+
+    if (diary.trim()) {
+      await api.saveJournalEntry({
+        userId: user?.email || "demo-patient-001",
+        content: diary
+      });
+    }
+
     setValues({});
-    alert(lang === "twi" ? "Agye yie!" : "Vitals saved!");
+    setSaving(false);
+    alert(lang === "twi" ? "Apomuden nsɛm no akɔ SQLite database mu!" : "Vitals saved persistently to database!");
   };
 
   const startDiaryVoice = () => {
@@ -189,10 +234,13 @@ export default function Vitals() {
       {/* Save button */}
       <button
         onClick={handleSave}
+        disabled={saving}
         className="w-full bg-primary text-on-primary font-headline text-button py-4 rounded-full active:scale-95 transition-transform mb-6 flex items-center justify-center gap-2"
       >
-        <span className="material-symbols-outlined">save</span>
-        {lang === "twi" ? "Gye Nkae" : "Save Vitals"}
+        <span className="material-symbols-outlined">{saving ? "hourglass_empty" : "save"}</span>
+        {saving
+          ? (lang === "twi" ? "Ɛrekɔ database..." : "Saving to Database...")
+          : (lang === "twi" ? "Gye Nkae (Save)" : "Save Vitals (Persistent)")}
       </button>
 
       {/* Health Diary */}
