@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -55,16 +55,20 @@ export default function SignUpPage() {
       } else {
         // Real mode: hit the backend to send the email code
         const res = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL || "/api"}/auth/send-verification`,
+          `${import.meta.env.VITE_API_BASE_URL || "/api/v1"}/auth/send-verification`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: data.email }),
           }
         );
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.message || "Could not send verification email.");
+        const resData = await res.json().catch(() => ({}));
+        if (!res.ok || resData.success === false) {
+          throw new Error(resData.message || "Could not send verification email.");
+        }
+        if (resData.code) {
+          setDemoCode(resData.code);
+          window.__demoOtp = resData.code;
         }
       }
       setSubmittedData(data);
@@ -110,7 +114,7 @@ export default function SignUpPage() {
         if (code !== window.__demoOtp) throw new Error("Incorrect code. Please try again.");
       } else {
         const res = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL || "/api"}/auth/verify-email`,
+          `${import.meta.env.VITE_API_BASE_URL || "/api/v1"}/auth/verify-email`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -147,7 +151,7 @@ export default function SignUpPage() {
       setDemoCode(code);
       window.__demoOtp = code;
     } else {
-      await fetch(`${import.meta.env.VITE_API_BASE_URL || "/api"}/auth/send-verification`, {
+      await fetch(`${import.meta.env.VITE_API_BASE_URL || "/api/v1"}/auth/send-verification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: submittedData.email }),
@@ -186,10 +190,10 @@ export default function SignUpPage() {
             {submittedData?.email}
           </p>
 
-          {/* Demo mode hint */}
-          {DEMO_MODE && demoCode && (
+          {/* Demo/Local mode code hint */}
+          {demoCode && (
             <div className="mb-5 bg-earthen-ochre/10 border border-earthen-ochre/30 rounded-xl p-3 text-center">
-              <p className="text-xs text-earthen-ochre font-semibold mb-1">🧪 Demo Mode — your code is:</p>
+              <p className="text-xs text-earthen-ochre font-semibold mb-1">Verification Code:</p>
               <p className="font-headline text-headline-lg text-earthen-ochre tracking-widest">{demoCode}</p>
             </div>
           )}

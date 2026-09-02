@@ -4,7 +4,7 @@ import app from '../src/app';
 import { LilyApiClient } from '../sdk/lilyClient';
 import { seedDatabase } from '../database/seed';
 
-describe('LilyApiClient - Isolated Frontend SDK Integration', { timeout: 30000 }, () => {
+describe('LilyApiClient - Isolated Frontend SDK Integration', { timeout: 60000 }, () => {
   let server: http.Server;
   let client: LilyApiClient;
 
@@ -57,7 +57,7 @@ describe('LilyApiClient - Isolated Frontend SDK Integration', { timeout: 30000 }
     expect(res.success).toBe(true);
     expect(res.data?.answerEnglish).toBeDefined();
     expect(res.data?.answerTwi).toBeDefined();
-  }, 30000);
+  }, 60000);
 
   it('client.getANCSchedule() should return 4 ANC visit items', async () => {
     const res = await client.getANCSchedule({

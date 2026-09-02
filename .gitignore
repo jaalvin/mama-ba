@@ -8,3 +8,5 @@ lily_offline.db-journal
 lily_offline.db-wal
 lily_offline.db-shm
 .env
+scratch/
+*.zip

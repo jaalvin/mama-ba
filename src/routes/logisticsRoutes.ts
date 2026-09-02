@@ -69,4 +69,16 @@ router.post('/prescription/order', (req: Request, res: Response) => {
   }
 });
 
+// GET /api/v1/logistics/prescriptions/:userId
+router.get('/prescriptions/:userId', (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const orders = LogisticsService.getPrescriptionOrders(userId);
+    res.json({ success: true, count: orders.length, data: orders });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 export default router;
+

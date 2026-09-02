@@ -100,6 +100,23 @@ export const api = {
     });
   },
 
+  async synthesizeSpeech(params) {
+    try {
+      const response = await fetch('/api/v1/chat/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        return { success: true, blob };
+      }
+      return { success: false };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  },
+
   // 6. User Profile
   async getProfile(userId) {
     return apiFetch(`/auth/profile/${encodeURIComponent(userId)}`);

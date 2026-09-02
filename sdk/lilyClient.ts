@@ -34,7 +34,7 @@ export class LilyApiClient {
       };
 
       const response = await fetch(url, { ...options, headers });
-      const data = await response.json();
+      const data = (await response.json()) as any;
 
       if (!response.ok) {
         return {
@@ -134,7 +134,31 @@ export class LilyApiClient {
     });
   }
 
-  // 7. Offline Database Sync
+  // 7. Reminders & Notifications
+  async createReminder(params: { userId: string; title: string; reminderType?: string; scheduledTime: string; recurrence?: string; dosageInfo?: string }): Promise<ApiResponse<any>> {
+    return this.request<any>('/reminders', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+  }
+
+  async getReminders(userId: string): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>(`/reminders/${encodeURIComponent(userId)}`, { method: 'GET' });
+  }
+
+  // 8. Care Logistics & Prescription Orders
+  async orderPrescription(params: { userId: string; pharmacyId: string; prescriptionDetails: string; deliveryAddress: string; phone: string }): Promise<ApiResponse<any>> {
+    return this.request<any>('/logistics/prescription/order', {
+      method: 'POST',
+      body: JSON.stringify(params)
+    });
+  }
+
+  async getPrescriptionOrders(userId: string): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>(`/logistics/prescriptions/${encodeURIComponent(userId)}`, { method: 'GET' });
+  }
+
+  // 9. Offline Database Sync
   async getOfflineBundle(): Promise<ApiResponse<any>> {
     return this.request<any>('/sync/bundle', { method: 'GET' });
   }
@@ -145,6 +169,20 @@ export class LilyApiClient {
       body: JSON.stringify(payload)
     });
   }
+
+  // 10. Maternal Schedules
+  async saveUserSchedule(userId: string, items: any[]): Promise<ApiResponse<any>> {
+    return this.request<any>('/maternal/user-schedules', {
+      method: 'POST',
+      body: JSON.stringify({ userId, items })
+    });
+  }
+
+  async getUserSchedules(userId: string): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>(`/maternal/user-schedules/${encodeURIComponent(userId)}`, { method: 'GET' });
+  }
 }
 
 export default LilyApiClient;
+
+

@@ -1,21 +1,26 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 const AuthContext = createContext(null);
 
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE !== "false";
+// ─────────────────────────────────────────────────────────────
+//  Set VITE_DEMO_MODE=true in .env.local to bypass the backend.
+//  Remove or set it to false before attaching your real backend.
+// ─────────────────────────────────────────────────────────────
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 const API_BASE  = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 const STORAGE_KEY = "mama-ba-demo-user";
 
-async function mockDelay() { await new Promise((r) => setTimeout(r, 100)); }
+// ─── MOCK HELPERS (only used when DEMO_MODE is true) ─────────
+async function mockDelay() { await new Promise((r) => setTimeout(r, 450)); }
 
 function mockLogin({ email }) {
-  const user = { name: email ? email.split("@")[0] : "Abena Osei", email: email || "abena@example.com" };
+  const user = { name: email.split("@")[0], email };
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
   return { accessToken: "demo-token", user };
 }
 
 function mockSignup({ name, email }) {
-  const user = { name: name || "Abena Osei", email: email || "abena@example.com" };
+  const user = { name, email };
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
   return { accessToken: "demo-token", user };
 }
@@ -26,24 +31,18 @@ function mockLogout() {
 
 function mockRefresh() {
   const raw = sessionStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    const defaultUser = { name: "Abena Osei", email: "abena@example.com" };
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(defaultUser));
-    return { accessToken: "demo-token", user: defaultUser };
-  }
-  try {
-    return { accessToken: "demo-token", user: JSON.parse(raw) };
-  } catch {
-    const defaultUser = { name: "Abena Osei", email: "abena@example.com" };
-    return { accessToken: "demo-token", user: defaultUser };
-  }
+  if (!raw) return null;
+  try { return { accessToken: "demo-token", user: JSON.parse(raw) }; }
+  catch { return null; }
 }
+// ─────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }) {
   const [user, setUser]               = useState(null);
   const [accessToken, setAccessToken] = useState(null);
   const [isLoading, setIsLoading]     = useState(true);
 
+  // Restore session on mount
   const refresh = useCallback(async () => {
     try {
       if (DEMO_MODE) {
@@ -60,9 +59,8 @@ export function AuthProvider({ children }) {
         setUser(data.user);
       }
     } catch {
-      const data = mockRefresh();
-      setAccessToken(data.accessToken);
-      setUser(data.user);
+      setAccessToken(null);
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -78,24 +76,20 @@ export function AuthProvider({ children }) {
       setUser(data.user);
       return data.user;
     }
-    try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(credentials),
-      });
-      if (!res.ok) throw new Error("Invalid credentials");
-      const data = await res.json();
-      setAccessToken(data.accessToken);
-      setUser(data.user);
-      return data.user;
-    } catch {
-      const data = mockLogin(credentials);
-      setAccessToken(data.accessToken);
-      setUser(data.user);
-      return data.user;
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(credentials),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || "Invalid email or password");
     }
+    const data = await res.json();
+    setAccessToken(data.accessToken);
+    setUser(data.user);
+    return data.user;
   }, []);
 
   const signup = useCallback(async (credentials) => {
@@ -106,28 +100,30 @@ export function AuthProvider({ children }) {
       setUser(data.user);
       return data.user;
     }
-    try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(credentials),
-      });
-      if (!res.ok) throw new Error("Could not register");
-      const data = await res.json();
-      setAccessToken(data.accessToken);
-      setUser(data.user);
-      return data.user;
-    } catch {
-      const data = mockSignup(credentials);
-      setAccessToken(data.accessToken);
-      setUser(data.user);
-      return data.user;
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(credentials),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || "Couldn't create your account. Try again.");
     }
+    const data = await res.json();
+    setAccessToken(data.accessToken);
+    setUser(data.user);
+    return data.user;
   }, []);
 
   const logout = useCallback(async () => {
-    mockLogout();
+    if (DEMO_MODE) {
+      mockLogout();
+    } else {
+      try {
+        await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" });
+      } catch { /* ignore */ }
+    }
     setAccessToken(null);
     setUser(null);
   }, []);
@@ -136,7 +132,7 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       accessToken,
-      isAuthenticated: Boolean(accessToken || user),
+      isAuthenticated: Boolean(accessToken),
       isLoading,
       login,
       signup,

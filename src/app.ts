@@ -9,11 +9,12 @@ import chatRoutes from './routes/chatRoutes';
 import syncRoutes from './routes/syncRoutes';
 import authRoutes from './routes/authRoutes';
 import logisticsRoutes from './routes/logisticsRoutes';
+import remindersRoutes from './routes/remindersRoutes';
 
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -22,16 +23,16 @@ const frontendDistPath = path.join(__dirname, '../frontend/dist');
 const publicPath = path.join(__dirname, '../public');
 const appPath = path.join(__dirname, '../public/app');
 
-// Serve React Frontend SPA if built, otherwise fallback to public/app
 import fs from 'fs';
-const hasFrontendDist = fs.existsSync(frontendDistPath);
 
-if (hasFrontendDist) {
-  app.use(express.static(frontendDistPath));
-} else {
-  app.use('/app', express.static(appPath));
-  app.use('/', express.static(appPath));
-}
+// Dynamically serve static assets from frontend/dist if built, otherwise public/app
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (fs.existsSync(frontendDistPath)) {
+    return express.static(frontendDistPath)(req, res, next);
+  }
+  return express.static(appPath)(req, res, next);
+});
+
 app.use('/docs', express.static(publicPath));
 
 app.get('/docs', (_req: Request, res: Response) => {
@@ -67,10 +68,11 @@ app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/sync', syncRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/logistics', logisticsRoutes);
+app.use('/api/v1/reminders', remindersRoutes);
 
 // SPA Fallback Routing for React Router
 app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/docs') && hasFrontendDist) {
+  if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/docs') && fs.existsSync(frontendDistPath)) {
     return res.sendFile(path.join(frontendDistPath, 'index.html'));
   }
   next();

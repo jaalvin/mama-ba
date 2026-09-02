@@ -88,18 +88,34 @@ export class MaternalService {
   /**
    * Save maternal care schedule items into local SQLite database.
    */
-  static saveScheduleToLocalDb(userId: string, items: Array<{ type: 'anc_visit' | 'child_immunization'; titleEng: string; titleTwi: string; dueDate: string; vaccineCode?: string }>) {
+  static saveScheduleToLocalDb(userId: string, items: Array<{ id?: string; type: 'anc_visit' | 'child_immunization'; titleEng: string; titleTwi: string; dueDate: string; vaccineCode?: string; isCompleted?: boolean }>) {
     const db = getOfflineDb();
     const insertStmt = db.prepare(`
       INSERT OR REPLACE INTO maternal_schedules
-      (id, user_id, schedule_type, title_english, title_twi, due_date, vaccine_code)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (id, user_id, schedule_type, title_english, title_twi, due_date, vaccine_code, is_completed, completed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     for (const item of items) {
-      const id = `sched-${userId}-${item.type}-${item.dueDate}`;
-      insertStmt.run(id, userId, item.type, item.titleEng, item.titleTwi, item.dueDate, item.vaccineCode || null);
+      const id = item.id || `sched-${userId}-${item.type}-${item.vaccineCode || item.dueDate}`;
+      const completedAt = item.isCompleted ? new Date().toISOString() : null;
+      insertStmt.run(id, userId, item.type, item.titleEng, item.titleTwi, item.dueDate, item.vaccineCode || null, item.isCompleted ? 1 : 0, completedAt);
     }
+  }
+
+  /**
+   * Toggle completion status for a schedule item in SQLite database.
+   */
+  static toggleScheduleCompletion(userId: string, itemId: string, isCompleted: boolean) {
+    const db = getOfflineDb();
+    const completedAt = isCompleted ? new Date().toISOString() : null;
+    const stmt = db.prepare(`
+      UPDATE maternal_schedules 
+      SET is_completed = ?, completed_at = ?, sync_status = 'pending' 
+      WHERE id = ? AND user_id = ?
+    `);
+    stmt.run(isCompleted ? 1 : 0, completedAt, itemId, userId);
+    return { success: true, id: itemId, isCompleted };
   }
 
   /**

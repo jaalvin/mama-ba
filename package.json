@@ -2,11 +2,11 @@
   "name": "lily-guided-health-companion-backend",
   "version": "1.0.0",
   "description": "Offline-first & cloud-boosted backend for The Guided Health Companion (Patient App)",
-  "main": "dist/server.js",
+  "main": "dist/src/server.js",
   "scripts": {
     "build": "tsc",
     "build:frontend": "npm --prefix frontend run build",
-    "start": "node dist/server.js",
+    "start": "node dist/src/server.js",
     "dev": "ts-node src/server.ts",
     "dev:frontend": "npm --prefix frontend run dev",
     "seed": "ts-node database/seed.ts",

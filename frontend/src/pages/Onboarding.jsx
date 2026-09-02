@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLang } from "../context/LanguageContext.jsx";
+import { api } from "../services/api.js";
 
 const TRIMESTERS = [
   { id: "t1", label: "Trimester 1", twi: "Bɔbea 1", icon: "pregnant_woman" },
@@ -17,8 +18,53 @@ const CONDITIONS = [
   { id: "gd",     label: "Gestational Diabetes", twi: "Sukaa yadeɛ" },
 ];
 
-function speak(text) {
-  if (!window.speechSynthesis) return;
+let onboardingAudioPlayer = null;
+
+async function speak(text, lang) {
+  if (onboardingAudioPlayer) {
+    onboardingAudioPlayer.pause();
+    onboardingAudioPlayer = null;
+  }
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+
+  const isTwi = lang === "twi" || lang === "tw";
+  const voice = isTwi ? "abena_twi_high" : "akua_eng";
+
+  try {
+    const res = await api.synthesizeSpeech({
+      text,
+      language: isTwi ? "tw" : "en",
+      voice
+    });
+
+    if (res && res.success && res.blob && res.blob.size > 200) {
+      if (typeof window !== "undefined" && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      const audioUrl = URL.createObjectURL(res.blob);
+      const audio = new Audio(audioUrl);
+      onboardingAudioPlayer = audio;
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        if (onboardingAudioPlayer === audio) onboardingAudioPlayer = null;
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(audioUrl);
+        if (onboardingAudioPlayer === audio) onboardingAudioPlayer = null;
+      };
+      await audio.play();
+      return;
+    }
+  } catch (e) {}
+
+  if (isTwi) {
+    console.log('[Onboarding] Twi speech uses Abena AI Neural Engine exclusively.');
+    return;
+  }
+
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
   const utt = new SpeechSynthesisUtterance(text);
   utt.lang = "en-GH";
   window.speechSynthesis.cancel();

@@ -2,8 +2,8 @@ import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 
-const DB_PATH = path.join(__dirname, '../lily_offline.db');
-const SQLITE_SCHEMA_PATH = path.join(__dirname, 'sqlite_schema.sql');
+const DB_PATH = path.join(process.cwd(), 'lily_offline.db');
+const SQLITE_SCHEMA_PATH = path.join(process.cwd(), 'database/sqlite_schema.sql');
 
 export function seedDatabase() {
   console.log(`[Seed] Initializing SQLite database at: ${DB_PATH}`);
@@ -16,11 +16,21 @@ export function seedDatabase() {
   // Read and execute schema
   const schemaSql = fs.readFileSync(SQLITE_SCHEMA_PATH, 'utf8');
   db.exec(schemaSql);
+
+  // Column migration safety check for existing SQLite databases on disk
+  try { db.exec(`ALTER TABLE user_profile ADD COLUMN email TEXT;`); } catch (_) {}
+  try { db.exec(`ALTER TABLE user_profile ADD COLUMN password_hash TEXT;`); } catch (_) {}
+  try { db.exec(`ALTER TABLE user_profile ADD COLUMN primary_contact_name TEXT;`); } catch (_) {}
+  try { db.exec(`ALTER TABLE user_profile ADD COLUMN primary_contact_phone TEXT;`); } catch (_) {}
+  try { db.exec(`ALTER TABLE user_profile ADD COLUMN relationship TEXT;`); } catch (_) {}
+  try { db.exec(`ALTER TABLE user_profile ADD COLUMN secondary_contact_name TEXT;`); } catch (_) {}
+  try { db.exec(`ALTER TABLE user_profile ADD COLUMN secondary_contact_phone TEXT;`); } catch (_) {}
+
   console.log('[Seed] SQLite Schema created successfully.');
 
   // 1. Seed Herbal Matrix
   const herbalData = JSON.parse(
-    fs.readFileSync(path.join(__dirname, 'seed_data/herbal_matrix.json'), 'utf8')
+    fs.readFileSync(path.join(process.cwd(), 'database/seed_data/herbal_matrix.json'), 'utf8')
   );
   const insertHerbal = db.prepare(`
     INSERT OR REPLACE INTO herbal_drug_matrix 
@@ -45,7 +55,7 @@ export function seedDatabase() {
 
   // 2. Seed Triage Rules
   const triageData = JSON.parse(
-    fs.readFileSync(path.join(__dirname, 'seed_data/triage_rules.json'), 'utf8')
+    fs.readFileSync(path.join(process.cwd(), 'database/seed_data/triage_rules.json'), 'utf8')
   );
   const insertTriage = db.prepare(`
     INSERT OR REPLACE INTO triage_rules
@@ -70,7 +80,7 @@ export function seedDatabase() {
 
   // 3. Seed Q&A Knowledge Base
   const qaData = JSON.parse(
-    fs.readFileSync(path.join(__dirname, 'seed_data/maternal_qa_dataset.json'), 'utf8')
+    fs.readFileSync(path.join(process.cwd(), 'database/seed_data/maternal_qa_dataset.json'), 'utf8')
   );
   const insertQa = db.prepare(`
     INSERT OR REPLACE INTO offline_knowledge_qa

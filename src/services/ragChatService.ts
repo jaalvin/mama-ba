@@ -1,6 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { CONFIG, getOfflineDb } from '../config';
-import { KhayaService } from './khayaService';
 
 export interface ChatRequest {
   userId: string;
@@ -11,29 +10,63 @@ export interface ChatRequest {
 export interface ChatResponse {
   answerEnglish: string;
   answerTwi: string;
-  source: 'gemini_medical_ai_khaya_nmt' | 'offline_knowledge_base';
+  source: 'gemini_medical_ai' | 'groq_medical_ai' | 'offline_knowledge_base';
   disclaimer: string;
   matchedCategory?: string;
 }
 
 export class RAGChatService {
+  private static async queryGroqAi(prompt: string): Promise<{ english: string; twi: string } | null> {
+    const groqKey = CONFIG.GROQ_API_KEY || process.env.GROQ_API_KEY || '';
+    if (!groqKey) return null;
+
+    const models = ['groq/compound-mini', 'groq/compound', 'openai/gpt-oss-120b', 'qwen/qwen3.6-27b'];
+
+    for (const modelName of models) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [{ role: 'user', content: prompt }]
+          }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = (await response.json()) as any;
+          const rawText = data.choices && data.choices[0] ? data.choices[0].message.content : '';
+          const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.english && parsed.twi) {
+              console.log(`[Groq AI] Dual JSON response generated via model ${modelName}`);
+              return { english: parsed.english, twi: parsed.twi };
+            }
+          }
+        }
+      } catch (err: any) {
+        console.warn(`[Groq AI] Model ${modelName} notice:`, err.message || err);
+      }
+    }
+    return null;
+  }
+
   static async processQuery(req: ChatRequest): Promise<ChatResponse> {
     const db = getOfflineDb();
     const originalQuery = req.query.trim();
-    let englishQuery = originalQuery;
+    const englishQuery = originalQuery;
 
-    // 1. If user typed/spoke Twi, translate short query to English via Khaya NMT
-    const hasTwiChars = /[ɔɛ]/i.test(originalQuery);
-    const isTwiMode = req.language === 'twi' || hasTwiChars || !/^[a-zA-Z0-9\s,.?!'\-]+$/.test(originalQuery);
-
-    if (isTwiMode) {
-      const translated = await KhayaService.translateText(originalQuery, 'tw-en');
-      if (translated && translated.length > 2) {
-        englishQuery = translated;
-      }
-    }
-
-    // 2. Retrieve Gold-Standard Reference Q&A from SQLite (Ghana Maternal Dataset)
+    // 1. Retrieve Gold-Standard Reference Q&A from SQLite (Ghana Maternal Dataset)
     const qaStmt = db.prepare(`SELECT * FROM offline_knowledge_qa`);
     const allQa = (qaStmt.all() || []) as Array<{
       id: string;
@@ -45,7 +78,14 @@ export class RAGChatService {
       tags: string;
     }>;
 
-    const queryWords = englishQuery.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const STOP_WORDS = new Set([
+      'can', 'could', 'during', 'this', 'that', 'time', 'what', 'when', 'where', 'which',
+      'with', 'have', 'has', 'had', 'from', 'for', 'are', 'was', 'were', 'the', 'and',
+      'you', 'your', 'about', 'some', 'will', 'would', 'should', 'good', 'how', 'why',
+      'take', 'give', 'make', 'do', 'does', 'did', 'is', 'it', 'in', 'on', 'at', 'to'
+    ]);
+
+    const queryWords = englishQuery.toLowerCase().split(/\s+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
     let bestMatch: (typeof allQa)[0] | null = null;
     let maxScore = 0;
 
@@ -53,7 +93,7 @@ export class RAGChatService {
       const corpus = `${qa.question_english} ${qa.answer_english} ${qa.category} ${qa.tags}`.toLowerCase();
       let score = 0;
       for (const word of queryWords) {
-        if (corpus.includes(word)) score += 2;
+        if (corpus.includes(word)) score += 3;
       }
       if (score > maxScore) {
         maxScore = score;
@@ -61,21 +101,41 @@ export class RAGChatService {
       }
     }
 
-    // 3. Query Gemini for Dual-Language Response (English + Natural Twi) with Key Failover
+    let englishAnswer = '';
+    let twiAnswer = '';
+    let responseSource: 'gemini_medical_ai' | 'groq_medical_ai' | 'offline_knowledge_base' = 'offline_knowledge_base';
+
+    const prompt = `
+You are "Mama Ba" (The Guided Health Companion), an empathetic, localized maternal healthcare AI for Ghana Health Service (GHS).
+
+User Query: "${englishQuery}"
+
+Local Reference Data:
+- English Guideline: "${bestMatch ? bestMatch.answer_english : 'Eat iron-rich foods (Kontomire), stay hydrated, space herbal teas 2 hours from iron pills.'}"
+- Twi Guideline: "${bestMatch ? bestMatch.answer_twi : 'Di nnuane a dadeɛ wom te sɛ kontomire, nom nsuo pii, na gyae berɛ simma aduonu ansa na woanom tii.'}"
+
+Instructions:
+Respond strictly in valid JSON format containing exactly two keys:
+1. "english": A clear, empathetic answer in English (2-3 sentences max).
+2. "twi": The translation of the response into natural, fluent Ghanaian Twi (Akan) (2-3 sentences max).
+
+JSON format:
+{
+  "english": "Your answer in English here.",
+  "twi": "Your answer in Twi here."
+}
+`;
+
+    // 2. Primary LLM: Query Gemini for Dual-Language Response (English + Native Twi)
     const apiKeys = [
       CONFIG.GEMINI_API_KEY || process.env.GEMINI_API_KEY || '',
       CONFIG.GEMINI_FALLBACK_API_KEY || process.env.GEMINI_FALLBACK_API_KEY || ''
     ].filter(k => k && k.length > 5);
 
-    let englishAnswer = '';
-    let twiAnswer = '';
     const verifiedModels = [
       'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
       'gemini-1.5-pro',
-      'gemini-2.0-flash-lite-preview-02-05',
-      'gemini-2.0-flash-exp'
+      'gemini-2.5-pro'
     ];
 
     keyLoop:
@@ -83,51 +143,66 @@ export class RAGChatService {
       for (const modelName of verifiedModels) {
         try {
           const genAI = new GoogleGenerativeAI(key);
-          const model = genAI.getGenerativeModel({ model: modelName });
-
-          const prompt = `
-You are "The Guided Health Companion" (Mama Ba) - an empathetic, localized maternal healthcare AI for Ghana Health Service (GHS).
-
-Local Reference Data:
-- English Guideline: "${bestMatch ? bestMatch.answer_english : 'Eat iron-rich foods (Kontomire), stay hydrated, space herbal teas 2 hours from iron pills.'}"
-- Native Twi Translation Reference: "${bestMatch ? bestMatch.answer_twi : 'Di nnuane a dadeɛ wom te sɛ kontomire, nom nsuo pii, na gyae berɛ simma aduonu ansa na woanom tii.'}"
-
-User Query: "${englishQuery}"
-
-Instructions:
-1. Directly answer the user's question regarding pregnancy, maternal health, or infant care in clear, concise language (under 3 sentences).
-2. If danger signs exist (severe bleeding, severe headache, blurred vision, high fever), advise immediate clinic travel.
-3. Output MUST be valid JSON with two fields: "english" and "twi".
-
-JSON Output:
-`;
+          const model = genAI.getGenerativeModel({
+            model: modelName,
+            generationConfig: {
+              maxOutputTokens: 1024,
+              temperature: 0.2,
+              responseMimeType: 'application/json'
+            }
+          });
 
           const result = await model.generateContent(prompt);
           const rawText = result.response.text().trim();
 
-          // Extract JSON structure safely
-          const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0]);
-            if (parsed.english) englishAnswer = parsed.english;
-            if (parsed.twi) twiAnswer = parsed.twi;
-            console.log(`[Gemini AI] Dual JSON response via ${modelName} with key prefix ${key.slice(0, 8)}...`);
+          let parsed: any = null;
+          try {
+            parsed = JSON.parse(rawText);
+          } catch (e) {
+            const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              parsed = JSON.parse(jsonMatch[0]);
+            }
+          }
+
+          if (parsed && parsed.english && parsed.twi) {
+            englishAnswer = parsed.english;
+            twiAnswer = parsed.twi;
+            console.log(`[Gemini AI] Dual JSON response via ${modelName}`);
+            responseSource = 'gemini_medical_ai';
             break keyLoop;
-          } else if (rawText.length > 5) {
-            englishAnswer = rawText;
+          } else if (parsed && parsed.english) {
+            englishAnswer = parsed.english;
+            if (parsed.twi) twiAnswer = parsed.twi;
+            responseSource = 'gemini_medical_ai';
             break keyLoop;
           }
         } catch (err: any) {
           const errMsg = err.message || String(err);
-          console.warn(`[Gemini AI] Model ${modelName} notice (key prefix ${key.slice(0, 8)}...):`, errMsg);
+          console.warn(`[Gemini AI] Model ${modelName} notice:`, errMsg);
+          if (errMsg.includes('403') || errMsg.includes('429') || errMsg.includes('Forbidden') || errMsg.includes('Quota') || errMsg.includes('API_KEY_INVALID')) {
+            break;
+          }
         }
       }
     }
 
-    // 4. Fallback Handling if Gemini is Offline or API Key Quota Exceeded
+    // 3. Groq LLM Fallback (when Gemini fails or reaches quota)
     if (!englishAnswer) {
+      console.log('[RAG] Gemini AI unavailable, triggering Groq AI fallback...');
+      const groqRes = await this.queryGroqAi(prompt);
+      if (groqRes) {
+        englishAnswer = groqRes.english;
+        twiAnswer = groqRes.twi;
+        responseSource = 'groq_medical_ai';
+      }
+    }
+
+    // 4. Offline Knowledge Base Fallback
+    if (!englishAnswer) {
+      responseSource = 'offline_knowledge_base';
       const qLower = englishQuery.toLowerCase();
-      if (bestMatch && maxScore >= 2) {
+      if (bestMatch && maxScore >= 1) {
         englishAnswer = bestMatch.answer_english;
         twiAnswer = bestMatch.answer_twi;
       } else if (qLower.includes('head') || qLower.includes('headache') || qLower.includes('dizzy')) {
@@ -142,20 +217,18 @@ JSON Output:
       }
     }
 
-    // 5. If Twi translation is missing, use Sentence-Chunked Khaya NMT as fallback
     if (!twiAnswer || twiAnswer.length < 5) {
       if (bestMatch && bestMatch.answer_twi) {
         twiAnswer = bestMatch.answer_twi;
       } else {
-        const translated = await KhayaService.translateText(englishAnswer, 'en-tw');
-        twiAnswer = translated || `Kɔ asibiti a ɛbɛn wo ntɛm na wo ne dɔketa nkasa fa wo apɔmuden ho.`;
+        twiAnswer = `Kɔ asibiti a ɛbɛn wo ntɛm na wo ne dɔketa nkasa fa wo apɔmuden ho.`;
       }
     }
 
     const response: ChatResponse = {
       answerEnglish: englishAnswer,
       answerTwi: twiAnswer,
-      source: englishAnswer.includes('Kontomire') && apiKeys.length === 0 ? 'offline_knowledge_base' : 'gemini_medical_ai_khaya_nmt',
+      source: responseSource,
       disclaimer: 'Guidance provided for educational companion use only. Consult a qualified clinician for clinical diagnosis.',
       matchedCategory: bestMatch ? bestMatch.category : 'Maternal Health'
     };

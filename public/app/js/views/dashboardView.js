@@ -22,9 +22,8 @@ export const DashboardView = {
 
         <!-- Model Attribution Badges -->
         <div class="ai-tech-badges" style="justify-content: center; margin-top: 0.5rem; border-top: none; padding-top: 0;">
-          <span class="badge-chip hf">🤗 Hugging Face</span>
-          <span class="badge-chip medasr">🎙️ samwell/medasr-ghana</span>
-          <span class="badge-chip khaya">🌿 Khaya AI (Twi NMT)</span>
+          <span class="badge-chip hf">🤖 Gemini & Groq Medical AI</span>
+          <span class="badge-chip medasr">🎙️ Abena AI (Fluent Twi Speech & ASR)</span>
         </div>
 
         <div class="mic-btn-wrapper">
@@ -80,36 +79,119 @@ export const DashboardView = {
 
       <!-- Daily Reminders Checklist Widget -->
       <div class="card">
-        <div class="card-title">
-          <span>📅</span> Today's Medication & Care Checklist
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div class="card-title" style="margin-bottom: 0;">
+            <span>📅</span> Today's Medication & Care Checklist
+          </div>
+          <button id="btn-toggle-reminder-form" class="btn btn-secondary" style="font-size: 0.75rem; padding: 0.3rem 0.6rem;">
+            + Add Reminder
+          </button>
         </div>
-        <div class="checklist-item">
-          <input type="checkbox" id="check-iron" checked />
-          <label for="check-iron" style="font-size: 0.9rem;">
-            <strong>Prenatal Iron Supplement (Ferrous Sulfate)</strong> — Take 1 tablet (Space 2 hrs from Nibima tea)
-          </label>
+
+        <!-- Add Reminder Drawer -->
+        <div id="add-reminder-drawer" style="display: none; background: rgba(15, 23, 42, 0.5); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-card); margin-bottom: 1rem;">
+          <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem;">Create New Medication Reminder:</div>
+          <input type="text" id="new-rem-title" class="input-field" placeholder="Medication name (e.g. Iron & Folic Acid)..." style="font-size: 0.85rem;" />
+          <div class="grid-2" style="margin-top: 0.5rem;">
+            <input type="time" id="new-rem-time" class="input-field" value="08:00" style="font-size: 0.85rem;" />
+            <input type="text" id="new-rem-dosage" class="input-field" placeholder="Dosage (e.g. 1 Tablet)..." style="font-size: 0.85rem;" />
+          </div>
+          <button id="btn-save-new-reminder" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem; font-size: 0.85rem;">
+            Save Reminder to Database
+          </button>
         </div>
-        <div class="checklist-item">
-          <input type="checkbox" id="check-anc" />
-          <label for="check-anc" style="font-size: 0.9rem;">
-            <strong>Review Upcoming 3rd ANC Booking Date</strong> — Gestational Week 24 Checkup
-          </label>
-        </div>
-        <div class="checklist-item">
-          <input type="checkbox" id="check-water" />
-          <label for="check-water" style="font-size: 0.9rem;">
-            <strong>Hydration Goal</strong> — Drink 2.5 Liters of safe clean water daily
-          </label>
+
+        <div id="dashboard-reminders-list">
+          <div style="color: var(--text-muted); font-size: 0.85rem;">Loading daily reminders...</div>
         </div>
       </div>
     `;
   },
 
-  bindEvents(container, state, onNavigate) {
+  async bindEvents(container, state, onNavigate, api) {
     const micBtn = container.querySelector('#hero-mic-btn');
     const micStatus = container.querySelector('#hero-mic-status');
     const micRipple = container.querySelector('#hero-mic-ripple');
     const voiceWave = container.querySelector('#hero-voice-wave');
+    const remindersList = container.querySelector('#dashboard-reminders-list');
+    const drawer = container.querySelector('#add-reminder-drawer');
+    const toggleFormBtn = container.querySelector('#btn-toggle-reminder-form');
+    const saveRemBtn = container.querySelector('#btn-save-new-reminder');
+
+    // Load Reminders
+    async function loadReminders() {
+      if (!api || !api.getReminders) return;
+      const res = await api.getReminders(state.userId);
+      if (res.success && res.data) {
+        if (res.data.length === 0) {
+          remindersList.innerHTML = `<div style="color: var(--text-muted); font-size: 0.85rem;">No reminders set for today. Tap "+ Add Reminder" above.</div>`;
+          return;
+        }
+
+        remindersList.innerHTML = res.data.map(rem => `
+          <div class="checklist-item" style="display: flex; justify-content: space-between; align-items: center; border-left: 4px solid ${rem.isCompleted ? 'var(--primary)' : 'var(--accent-orange)'};">
+            <div style="display: flex; gap: 0.5rem; align-items: flex-start; flex: 1;">
+              <input type="checkbox" class="rem-toggle-cb" data-id="${rem.id}" ${rem.isCompleted ? 'checked' : ''} style="margin-top: 0.2rem; cursor: pointer;" />
+              <div>
+                <strong style="${rem.isCompleted ? 'text-decoration: line-through; opacity: 0.7;' : ''}">${rem.title}</strong><br>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">
+                  ⏰ ${rem.scheduledTime} ${rem.dosageInfo ? `• ${rem.dosageInfo}` : ''}
+                </span>
+              </div>
+            </div>
+            <button class="rem-delete-btn" data-id="${rem.id}" style="background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 1rem; padding: 0.2rem 0.5rem;">
+              🗑️
+            </button>
+          </div>
+        `).join('');
+
+        // Bind checkbox clicks
+        remindersList.querySelectorAll('.rem-toggle-cb').forEach(cb => {
+          cb.addEventListener('change', async (e) => {
+            const id = e.target.getAttribute('data-id');
+            const isNowDone = e.target.checked;
+            await api.toggleReminder(id, { isCompleted: isNowDone });
+            loadReminders();
+          });
+        });
+
+        // Bind delete clicks
+        remindersList.querySelectorAll('.rem-delete-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = btn.getAttribute('data-id');
+            await api.deleteReminder(id);
+            loadReminders();
+          });
+        });
+      }
+    }
+
+    loadReminders();
+
+    toggleFormBtn?.addEventListener('click', () => {
+      drawer.style.display = drawer.style.display === 'none' ? 'block' : 'none';
+    });
+
+    saveRemBtn?.addEventListener('click', async () => {
+      const title = container.querySelector('#new-rem-title').value.trim();
+      const scheduledTime = container.querySelector('#new-rem-time').value;
+      const dosageInfo = container.querySelector('#new-rem-dosage').value.trim();
+
+      if (!title) return;
+
+      await api.createReminder({
+        userId: state.userId,
+        title,
+        reminderType: 'MEDICATION',
+        scheduledTime,
+        recurrence: 'DAILY',
+        dosageInfo: dosageInfo || '1 Tablet'
+      });
+
+      container.querySelector('#new-rem-title').value = '';
+      drawer.style.display = 'none';
+      loadReminders();
+    });
 
     let isRecordingAudio = false;
 
@@ -123,7 +205,7 @@ export const DashboardView = {
         micBtn.classList.add('recording');
         if (micRipple) micRipple.style.display = 'block';
         if (voiceWave) voiceWave.style.display = 'flex';
-        micStatus.innerHTML = '<span style="color: var(--danger);">🔴 Khaya ASR & MedASR-Ghana Listening... Speak in Twi or English</span>';
+        micStatus.innerHTML = '<span style="color: var(--danger);">🔴 Abena AI Speech Recognition Listening... Speak in Twi or English</span>';
 
         const lang = state.language === 'twi' ? 'tw' : 'en';
         await SpeechService.startRecording(lang, (transcription) => {
@@ -154,27 +236,10 @@ export const DashboardView = {
       }
     });
 
-    function fallbackVoiceTrigger() {
-      micBtn.classList.add('recording');
-      if (micRipple) micRipple.style.display = 'block';
-      if (voiceWave) voiceWave.style.display = 'flex';
-      micStatus.innerHTML = '<span style="color: var(--danger);">🎙️ MedASR-Ghana Voice Engine Active... Speak now</span>';
-
-      setTimeout(() => {
-        micBtn.classList.remove('recording');
-        if (micRipple) micRipple.style.display = 'none';
-        if (voiceWave) voiceWave.style.display = 'none';
-        state.pendingQuery = state.language === 'twi'
-          ? 'Nibima aduru ye ma nyinsen mu anaa?'
-          : 'What local Ghanaian foods give iron during pregnancy?';
-        micStatus.textContent = `Voice recorded: "${state.pendingQuery}". AI generating response & speaking back...`;
-        setTimeout(() => onNavigate('chat'), 600);
-      }, 2000);
-    }
-
     container.querySelector('#card-maternal')?.addEventListener('click', () => onNavigate('maternal'));
     container.querySelector('#card-triage')?.addEventListener('click', () => onNavigate('triage'));
     container.querySelector('#card-herbal')?.addEventListener('click', () => onNavigate('herbal'));
     container.querySelector('#card-vitals')?.addEventListener('click', () => onNavigate('vitals'));
   }
 };
+

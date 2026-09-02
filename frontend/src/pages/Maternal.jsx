@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLang } from "../context/LanguageContext.jsx";
-import { useAuth } from "../context/AuthContext.jsx";
-import { api } from "../services/api.js";
 
 const ANC_VISITS = [
   { n: 1, title: "ANC Visit 1", desc: "Initial registration, dating scan & baseline labs.", status: "done" },
@@ -27,31 +25,11 @@ const VACCINES = [
 
 export default function Maternal() {
   const { lang } = useLang();
-  const { user } = useAuth();
-  const [vaccDone, setVaccDone] = useState(() => {
-    const raw = localStorage.getItem("mama_ba_vaccines");
-    return raw ? JSON.parse(raw) : ["bcg", "opv0"];
-  });
-  const [reminders, setReminders] = useState(() => {
-    const raw = localStorage.getItem("mama_ba_reminders");
-    return raw ? JSON.parse(raw) : { anc: true, vacc: false };
-  });
+  const [vaccDone, setVaccDone] = useState(["bcg", "opv0"]);
+  const [reminders, setReminders] = useState({ anc: true, vacc: false });
 
-  useEffect(() => {
-    localStorage.setItem("mama_ba_vaccines", JSON.stringify(vaccDone));
-  }, [vaccDone]);
-
-  useEffect(() => {
-    localStorage.setItem("mama_ba_reminders", JSON.stringify(reminders));
-  }, [reminders]);
-
-  const toggleVacc = async (id) => {
-    const updated = vaccDone.includes(id) ? vaccDone.filter((x) => x !== id) : [...vaccDone, id];
-    setVaccDone(updated);
-    try {
-      await api.getImmunizationSchedule({ userId: user?.email || "demo-patient-001", completed: updated });
-    } catch { /* graceful fallback */ }
-  };
+  const toggleVacc = (id) =>
+    setVaccDone((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
 
   return (
     <div className="px-4 py-6 md:px-6 max-w-lg mx-auto">
@@ -66,8 +44,8 @@ export default function Maternal() {
 
       {/* Reminder Toggles */}
       <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 mb-6 flex flex-col gap-3">
-        <h2 className="text-label-md text-on-surface font-semibold">
-          {lang === "twi" ? "Kae Me Kae (Persistent Alerts)" : "Reminders (Persistent)"}
+        <h2 className="text-label-md text-on-surface">
+          {lang === "twi" ? "Kae Me Kae" : "Reminders"}
         </h2>
         {[
           { key: "anc", label: { en: "ANC Visit Reminders", twi: "ANC Nhwɛ Kae" } },
@@ -80,13 +58,13 @@ export default function Maternal() {
             <button
               type="button"
               onClick={() => setReminders((r) => ({ ...r, [key]: !r[key] }))}
-              className={`w-12 h-6 rounded-full transition-colors relative ${
+              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
                 reminders[key] ? "bg-primary" : "bg-outline-variant"
               }`}
             >
               <span
-                className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform shadow ${
-                  reminders[key] ? "translate-x-6" : "translate-x-0.5"
+                className={`block w-5 h-5 bg-white rounded-full transition-transform shadow ${
+                  reminders[key] ? "translate-x-5" : "translate-x-0"
                 }`}
               />
             </button>
@@ -112,40 +90,24 @@ export default function Maternal() {
                     : "bg-surface-container-highest text-on-surface-variant"
                 }`}
               >
-                {v.status === "done" ? (
-                  <span className="material-symbols-outlined text-[16px]">check</span>
-                ) : (
-                  v.n
-                )}
+                {v.status === "done"
+                  ? <span className="material-symbols-outlined text-[16px]">check</span>
+                  : v.n}
               </div>
               {idx < ANC_VISITS.length - 1 && (
-                <div
-                  className={`w-0.5 flex-1 min-h-[32px] ${
-                    v.status === "done" ? "bg-forest-green" : "bg-outline-variant"
-                  }`}
-                />
+                <div className={`w-0.5 flex-1 min-h-[32px] ${v.status === "done" ? "bg-forest-green" : "bg-outline-variant"}`} />
               )}
             </div>
             {/* Content */}
-            <div
-              className={`mb-4 flex-1 rounded-2xl p-4 ${
-                v.status === "next"
-                  ? "bg-primary text-on-primary shadow-md"
-                  : "bg-surface-container-lowest border border-outline-variant"
-              }`}
-            >
-              <h3
-                className={`font-semibold text-sm ${
-                  v.status === "next" ? "text-on-primary" : "text-on-surface"
-                }`}
-              >
+            <div className={`mb-4 flex-1 rounded-2xl p-4 ${
+              v.status === "next"
+                ? "bg-primary text-on-primary"
+                : "bg-surface-container-lowest border border-outline-variant"
+            }`}>
+              <h3 className={`font-semibold text-sm ${v.status === "next" ? "text-on-primary" : "text-on-surface"}`}>
                 {v.title}
               </h3>
-              <p
-                className={`text-xs mt-1 ${
-                  v.status === "next" ? "text-on-primary/90" : "text-on-surface-variant"
-                }`}
-              >
+              <p className={`text-xs mt-1 ${v.status === "next" ? "text-on-primary/90" : "text-on-surface-variant"}`}>
                 {v.desc}
               </p>
               {v.status === "next" && (
@@ -167,7 +129,6 @@ export default function Maternal() {
         {VACCINES.map((v) => (
           <button
             key={v.id}
-            type="button"
             onClick={() => toggleVacc(v.id)}
             className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-surface-container-low transition-colors"
           >
@@ -183,11 +144,7 @@ export default function Maternal() {
               )}
             </span>
             <div className="flex-1">
-              <p
-                className={`text-sm font-semibold ${
-                  vaccDone.includes(v.id) ? "line-through text-on-surface-variant" : "text-on-surface"
-                }`}
-              >
+              <p className={`text-sm font-semibold ${vaccDone.includes(v.id) ? "line-through text-on-surface-variant" : "text-on-surface"}`}>
                 {lang === "twi" ? v.twi : v.label}
               </p>
               <p className="text-xs text-on-surface-variant">{v.when}</p>

@@ -44,9 +44,9 @@ export const ChatView = {
 
         <!-- Model Attribution Chips -->
         <div class="ai-tech-badges" style="margin-top: 0; margin-bottom: 1rem; border-top: none; padding-top: 0;">
-          <span class="badge-chip hf">🤗 Hugging Face</span>
-          <span class="badge-chip medasr">🎙️ samwell/medasr-ghana (Ghana Medical ASR)</span>
-          <span class="badge-chip khaya">🌿 Khaya AI (Twi NMT)</span>
+          <span class="badge-chip hf">🤖 Gemini & Groq Medical AI</span>
+          <span class="badge-chip medasr">🎙️ Abena AI (Twi Speech & ASR)</span>
+          <span class="badge-chip khaya">🤗 Meta MMS Akan Neural TTS</span>
         </div>
 
         <!-- Preset Guidance Cards Horizontal Chips -->
@@ -231,7 +231,7 @@ export const ChatView = {
         isRecordingAudio = true;
         micBtn.style.background = 'var(--danger)';
         micBtn.style.borderColor = 'var(--danger)';
-        chatInput.placeholder = '🎙️ Recording Ghanaian Voice (Khaya ASR & MedASR-Ghana)... Speak now';
+        chatInput.placeholder = '🎙️ Recording Ghanaian Voice (Abena AI Speech Recognition)... Speak now';
         if (voiceWave) voiceWave.style.display = 'flex';
 
         const lang = state.language === 'twi' ? 'tw' : 'en';
@@ -312,10 +312,17 @@ export const ChatView = {
       messagesArea.appendChild(userBubble);
       messagesArea.scrollTop = messagesArea.scrollHeight;
 
-      // Loading Indicator
+      // Loading Indicator with 3 rippling dots animation
       const loadingBubble = document.createElement('div');
-      loadingBubble.style.cssText = 'align-self: flex-start; color: var(--text-muted); font-size: 0.85rem; font-style: italic;';
-      loadingBubble.textContent = isSpokenTwi ? 'Redwen ho wɔ Twi mu (Khaya AI NMT)...' : 'Processing with Gemini & MedASR Medical AI...';
+      loadingBubble.className = 'dots-ripple-container';
+      loadingBubble.style.cssText = 'align-self: flex-start; margin-top: 0.5rem;';
+      loadingBubble.innerHTML = `
+        <div class="dots-ripple">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      `;
       messagesArea.appendChild(loadingBubble);
 
       const res = await api.askChatbot({ query: text, language: isSpokenTwi ? 'twi' : state.language });
@@ -341,9 +348,8 @@ export const ChatView = {
             ⚠️ ${res.data.disclaimer}
           </div>
           <div class="ai-tech-badges">
-            <span class="badge-chip hf">🤗 Hugging Face</span>
-            <span class="badge-chip medasr">🎙️ MedASR-Ghana</span>
-            <span class="badge-chip khaya">🌿 Khaya AI NMT</span>
+            <span class="badge-chip hf">🤖 Gemini & Groq Medical AI</span>
+            <span class="badge-chip medasr">🎙️ Abena AI (Twi Voice & ASR)</span>
           </div>
         `;
 

@@ -3,12 +3,19 @@
 CREATE TABLE IF NOT EXISTS user_profile (
     user_id TEXT PRIMARY KEY,
     full_name TEXT,
+    email TEXT,
+    password_hash TEXT,
     language_preference TEXT DEFAULT 'twi',
     is_pregnant INTEGER DEFAULT 0,
     gestational_weeks INTEGER DEFAULT 0,
     due_date TEXT,
     child_birth_date TEXT,
     emergency_contact_phone TEXT,
+    primary_contact_name TEXT,
+    primary_contact_phone TEXT,
+    relationship TEXT,
+    secondary_contact_name TEXT,
+    secondary_contact_phone TEXT,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -90,6 +97,20 @@ CREATE TABLE IF NOT EXISTS medication_reminders (
     sync_status TEXT DEFAULT 'pending'
 );
 
+CREATE TABLE IF NOT EXISTS reminders (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    reminder_type TEXT DEFAULT 'MEDICATION', -- 'MEDICATION', 'ANC_VISIT', 'IMMUNIZATION', 'VITALS_LOG'
+    scheduled_time TEXT NOT NULL,
+    recurrence TEXT DEFAULT 'DAILY', -- 'ONCE', 'DAILY', 'WEEKLY'
+    dosage_info TEXT,
+    is_active INTEGER DEFAULT 1,
+    is_completed INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    sync_status TEXT DEFAULT 'pending'
+);
+
 CREATE TABLE IF NOT EXISTS offline_knowledge_qa (
     id TEXT PRIMARY KEY,
     question_english TEXT NOT NULL,
@@ -131,6 +152,20 @@ CREATE TABLE IF NOT EXISTS accredited_pharmacies (
     is_open_now INTEGER DEFAULT 1
 );
 
+CREATE TABLE IF NOT EXISTS prescription_orders (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    pharmacy_id TEXT NOT NULL,
+    pharmacy_name TEXT,
+    prescription_details TEXT NOT NULL,
+    delivery_address TEXT NOT NULL,
+    contact_phone TEXT NOT NULL,
+    file_attached INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'PROCESSING',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    sync_status TEXT DEFAULT 'pending'
+);
+
 CREATE TABLE IF NOT EXISTS hospital_appointments (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -140,4 +175,5 @@ CREATE TABLE IF NOT EXISTS hospital_appointments (
     status TEXT DEFAULT 'CONFIRMED',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
 

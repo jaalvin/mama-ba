@@ -73,4 +73,62 @@ describe('Express REST API Endpoints - Guided Health Companion', () => {
     expect(res.body.data.herbalMatrix).toBeDefined();
     expect(res.body.data.triageRules).toBeDefined();
   });
+
+  it('POST /api/v1/reminders should create a scheduled reminder', async () => {
+    const testUserId = `rem-user-${Date.now()}`;
+    const res = await request(app)
+      .post('/api/v1/reminders')
+      .send({
+        userId: testUserId,
+        title: 'Take Iron Supplement',
+        reminderType: 'MEDICATION',
+        scheduledTime: '14:00',
+        dosageInfo: '1 Tablet daily'
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.title).toBe('Take Iron Supplement');
+
+    const getRes = await request(app).get(`/api/v1/reminders/${testUserId}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.count).toBe(1);
+  });
+
+  it('POST /api/v1/logistics/prescription/order should persist prescription order', async () => {
+    const testUserId = `rx-user-${Date.now()}`;
+    const res = await request(app)
+      .post('/api/v1/logistics/prescription/order')
+      .send({
+        userId: testUserId,
+        pharmacyId: '1',
+        prescriptionDetails: 'Folic acid 5mg daily',
+        deliveryAddress: 'Kotei Junction, Kumasi',
+        phone: '+233208179910'
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.orderId).toMatch(/^RX-/);
+
+    const getOrders = await request(app).get(`/api/v1/logistics/prescriptions/${testUserId}`);
+    expect(getOrders.status).toBe(200);
+    expect(getOrders.body.count).toBe(1);
+    expect(getOrders.body.data[0].delivery_address).toBe('Kotei Junction, Kumasi');
+  });
+
+  it('POST /api/v1/auth/change-password should update password hash', async () => {
+    const testUserId = `pwd-user-${Date.now()}`;
+    const res = await request(app)
+      .post('/api/v1/auth/change-password')
+      .send({
+        userId: testUserId,
+        newPassword: 'securePassword123'
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
 });
+
+

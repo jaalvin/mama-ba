@@ -1,5 +1,4 @@
-import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
@@ -16,7 +15,10 @@ import Vitals from "./pages/Vitals.jsx";
 import Maternal from "./pages/Maternal.jsx";
 import CareLogistics from "./pages/CareLogistics.jsx";
 import Profile from "./pages/Profile.jsx";
-import EmergencyContacts from "./pages/EmergencyContacts.jsx";
+import EmergencyContacts from "./pages/EmergencyContacts";
+import HealthDisclaimer from "./pages/HealthDisclaimer";
+import PrivacyData from "./pages/PrivacyData";
+import ChangePassword from "./pages/ChangePassword";
 
 export default function App() {
   return (
@@ -26,6 +28,7 @@ export default function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/signup" element={<SignUpPage />} />
+          
           <Route
             path="/onboarding"
             element={
@@ -34,6 +37,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+
           <Route
             path="/app"
             element={
@@ -49,10 +53,14 @@ export default function App() {
             <Route path="vitals" element={<Vitals />} />
             <Route path="maternal" element={<Maternal />} />
             <Route path="care" element={<CareLogistics />} />
-            <Route path="emergency" element={<EmergencyContacts />} />
+
+            {/* Profile Root & Sub-pages */}
             <Route path="profile" element={<Profile />} />
+            <Route path="profile/emergency-contacts" element={<EmergencyContacts />} />
+            <Route path="profile/health-disclaimer" element={<HealthDisclaimer />} />
+            <Route path="profile/privacy-data" element={<PrivacyData />} />
+            <Route path="profile/change-password" element={<ChangePassword />} />
           </Route>
-          <Route path="*" element={<Navigate to="/app" replace />} />
         </Routes>
       </AuthProvider>
     </LanguageProvider>

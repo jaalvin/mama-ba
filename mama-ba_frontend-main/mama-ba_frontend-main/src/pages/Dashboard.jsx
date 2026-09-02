@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLang } from "../context/LanguageContext.jsx";
+import { Baby, Leaf, AlertTriangle, HeartPulse, MapPin, ChevronRight } from "lucide-react";
 
 const MEDS = [
   { id: "iron", label: "Iron & Folic Acid", time: "2:00 PM", twi: "Ayaresa nhoma" },
@@ -22,18 +23,6 @@ export default function Dashboard() {
 
   return (
     <div className="px-4 py-6 md:px-6 flex flex-col gap-6 max-w-lg mx-auto">
-
-      {/* Offline Sync Pill */}
-      <div className={`self-start flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold border ${
-        isOnline
-          ? "bg-forest-green/10 text-forest-green border-forest-green/30"
-          : "bg-surface-container-highest text-on-surface-variant border-outline-variant"
-      }`}>
-        <span className={`w-2 h-2 rounded-full ${isOnline ? "bg-forest-green" : "bg-outline-variant"}`} />
-        {isOnline
-          ? (lang === "twi" ? "Wɔ Cloud mu" : "Synced with Cloud")
-          : (lang === "twi" ? "Gyinahye — Offline" : "Saved On-Device – Offline")}
-      </div>
 
       {/* Hero greeting */}
       <section className="flex flex-col items-center text-center gap-2">
@@ -100,31 +89,35 @@ export default function Dashboard() {
         </h2>
         <div className="grid grid-cols-2 gap-3">
           <Link to="/app/maternal" className="bg-primary-container/30 border border-primary/20 rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:bg-primary-container/50 transition-colors">
-            <span className="text-2xl">🤰</span>
+            <Baby className="w-7 h-7 text-primary" strokeWidth={1.5} />
             <span className="text-label-md text-on-surface text-sm leading-tight">
               {lang === "twi" ? "Maame & Ba" : "Maternal & Baby Tracker"}
             </span>
           </Link>
+          
           <Link to="/app/safety" className="bg-forest-green/10 border border-forest-green/20 rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:bg-forest-green/20 transition-colors">
-            <span className="text-2xl">🌿</span>
+            <Leaf className="w-7 h-7 text-forest-green" strokeWidth={1.5} />
             <span className="text-label-md text-on-surface text-sm leading-tight">
               {lang === "twi" ? "Afifide & Nnuro" : "Herbal & Medication Safety"}
             </span>
           </Link>
+          
           <Link to="/app/triage" className="bg-error-container/40 border border-error/20 rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:bg-error-container/60 transition-colors">
-            <span className="text-2xl">🚨</span>
+            <AlertTriangle className="w-7 h-7 text-error" strokeWidth={1.5} />
             <span className="text-label-md text-on-surface text-sm leading-tight">
               {lang === "twi" ? "Hwɛ Yadeɛ" : "Check Symptoms"}
             </span>
           </Link>
+          
           <Link to="/app/vitals" className="bg-tertiary-container/20 border border-tertiary/20 rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:bg-tertiary-container/40 transition-colors">
-            <span className="text-2xl">🩺</span>
+            <HeartPulse className="w-7 h-7 text-tertiary" strokeWidth={1.5} />
             <span className="text-label-md text-on-surface text-sm leading-tight">
               {lang === "twi" ? "Gye Apomuden Nkae" : "Log Daily Vitals"}
             </span>
           </Link>
+          
           <Link to="/app/care" className="col-span-2 bg-secondary-container/20 border border-secondary/20 rounded-2xl p-4 flex items-center gap-4 hover:bg-secondary-container/40 transition-colors">
-            <span className="text-2xl">📍</span>
+            <MapPin className="w-7 h-7 text-secondary shrink-0" strokeWidth={1.5} />
             <div className="text-left">
               <span className="text-label-md text-on-surface block">
                 {lang === "twi" ? "Hwɛ Adwumakuw a Ɛbɛn Wo" : "Find Nearby Pharmacy"}
@@ -133,7 +126,7 @@ export default function Dashboard() {
                 {lang === "twi" ? "Ayaresabea ne Adwumakuw" : "Book appointments & order meds"}
               </span>
             </div>
-            <span className="material-symbols-outlined ml-auto text-outline">chevron_right</span>
+            <ChevronRight className="ml-auto text-outline w-6 h-6" strokeWidth={1.5} />
           </Link>
         </div>
       </section>

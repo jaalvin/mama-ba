@@ -160,6 +160,40 @@ export const SpeechService = {
   async startRecording(language = 'tw', onResultCallback = null, onErrorCallback = null) {
     this.stop();
     if (this.isRecording) return;
+
+    const isEnglish = language === 'en' || language === 'english';
+
+    // 1. ENGLISH MODE: Native Browser Speech Recognition (100% Reliable, 0 API Calls)
+    if (isEnglish) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          const recognizer = new SpeechRecognition();
+          this.recognition = recognizer;
+          recognizer.continuous = false;
+          recognizer.interimResults = false;
+          recognizer.lang = 'en-GH';
+
+          recognizer.onstart = () => { this.isRecording = true; };
+          recognizer.onend = () => { this.isRecording = false; };
+          recognizer.onerror = () => {
+            this.isRecording = false;
+            if (onErrorCallback) onErrorCallback('Speech recognition failed. Try speaking louder.');
+          };
+          recognizer.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            if (onResultCallback && transcript) onResultCallback(transcript);
+          };
+
+          recognizer.start();
+          return true;
+        } catch (e) {
+          console.warn('[SpeechService] Native English speech failed, falling back to MediaRecorder:', e);
+        }
+      }
+    }
+
+    // 2. TWI MODE: MediaRecorder + Abena ASR API
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       this.mediaRecorder = new MediaRecorder(stream);
@@ -173,28 +207,24 @@ export const SpeechService = {
       this.mediaRecorder.onstop = async () => {
         this.isRecording = false;
         const rawBlob = new Blob(this.audioChunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
-        let finalBlob = rawBlob;
+        stream.getTracks().forEach(track => track.stop());
 
-        try {
-          // Convert WebM/Opus into authentic 16kHz mono WAV
-          finalBlob = await convertBlobTo16kHzWav(rawBlob);
-        } catch (e) {
-          console.warn('[SpeechService] WAV conversion notice, proceeding with raw blob:', e);
+        if (rawBlob.size < 500) {
+          if (onErrorCallback) onErrorCallback('Recording too short. Speak longer.');
+          return;
         }
 
         const reader = new FileReader();
         reader.onloadend = async () => {
           const base64Wav = reader.result;
-          const res = await API.transcribeVoice({ audio_base64: base64Wav, language });
-          if (res.success && res.transcription) {
+          const res = await API.transcribeVoice({ audio_base64: base64Wav, language: 'twi-only' });
+          if (res && res.success && res.transcription) {
             if (onResultCallback) onResultCallback(res.transcription);
           } else if (onErrorCallback) {
-            onErrorCallback(res.error || 'Speech transcription failed');
+            onErrorCallback(res.error || 'Could not transcribe Twi speech.');
           }
         };
-        reader.readAsDataURL(finalBlob);
-
-        stream.getTracks().forEach(track => track.stop());
+        reader.readAsDataURL(rawBlob);
       };
 
       this.mediaRecorder.start();
@@ -207,8 +237,12 @@ export const SpeechService = {
   },
 
   stopRecording() {
+    if (this.recognition && this.isRecording) {
+      try { this.recognition.stop(); } catch (e) {}
+      this.isRecording = false;
+    }
     if (this.mediaRecorder && this.isRecording) {
-      this.mediaRecorder.stop();
+      try { this.mediaRecorder.stop(); } catch (e) {}
       this.isRecording = false;
     }
   },
@@ -226,50 +260,69 @@ export const SpeechService = {
     if (buttonElem) {
       this.activeSpeakerBtn = buttonElem;
       buttonElem.classList.add('speaking-active');
-      buttonElem.innerHTML = `🔊 <em>${this.voiceGender === 'female' ? '👩' : '👨'} Speaking...</em>`;
+      buttonElem.innerHTML = `🔊 <em>${this.voiceGender === 'female' ? '👩 Abena' : '👨 Kwabena'} Speaking...</em>`;
     }
 
-    // STRICT ISOLATION: Call Khaya AI Neural Audio ONLY when explicitly in Twi mode
-    const isExplicitTwi = lang === 'twi' || lang === 'tw';
+    const isTwi = lang === 'twi' || lang === 'tw' || this.detectTwiLanguage(cleanText);
 
-    if (isExplicitTwi) {
-      try {
-        const response = await fetch('/api/v1/chat/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: cleanText,
-            language: 'tw',
-            speaker: this.voiceGender === 'female' ? 'female' : 'male_low'
-          })
-        });
+    // 1. PRIMARY FLUENT GHANAIAN SPEECH: Abena AI Engine (abena_twi_high / akua_eng / kwabena_eng)
+    try {
+      const preferredVoice = isTwi
+        ? 'abena_twi_high'
+        : (this.voiceGender === 'female' ? 'akua_eng' : 'kwabena_eng');
 
-        if (response.ok) {
-          const audioBlob = await response.blob();
-          if (audioBlob && audioBlob.size > 200) {
-            const audioUrl = URL.createObjectURL(audioBlob);
-            const audio = new Audio(audioUrl);
-            this.activeAudioElement = audio;
+      const response = await fetch('/api/v1/chat/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: cleanText,
+          language: isTwi ? 'tw' : 'en',
+          speaker: this.voiceGender === 'female' ? 'female' : 'male',
+          voice: preferredVoice
+        })
+      });
 
-            audio.onended = () => {
-              URL.revokeObjectURL(audioUrl);
-              this.clearSpeakingState(onEndCallback);
-            };
-            audio.onerror = () => {
-              URL.revokeObjectURL(audioUrl);
-              this.clearSpeakingState(onEndCallback);
-            };
-
-            await audio.play();
-            return true;
+      if (response.ok) {
+        const audioBlob = await response.blob();
+        if (audioBlob && audioBlob.size > 200) {
+          // Cancel any browser speech synthesis to ensure ZERO concurrent audio playback
+          if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
           }
+
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          this.activeAudioElement = audio;
+
+          audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            this.clearSpeakingState(onEndCallback);
+          };
+          audio.onerror = () => {
+            URL.revokeObjectURL(audioUrl);
+            this.clearSpeakingState(onEndCallback);
+          };
+
+          await audio.play();
+          return true; // Abena AI played successfully - DO NOT FALL THROUGH TO BROWSER SYNTHESIS
         }
-      } catch (e) {
-        console.warn('[SpeechService] Khaya TTS stream notice:', e);
       }
+    } catch (e) {
+      console.warn('[SpeechService] Abena AI speech stream notice:', e);
     }
 
-    // ENGLISH PLAYBACK: Use High-Quality Neural Human Natural Voice (Microsoft Natural / Google)
+    // 2. FOR TWI: STRICT ABENA AI ONLY (NO European Web Speech / NO Phonetic Fallback)
+    if (isTwi) {
+      console.log('[SpeechService] Twi speech uses Abena AI Neural Engine exclusively.');
+      this.clearSpeakingState(onEndCallback);
+      return false;
+    }
+
+    // 3. ENGLISH FALLBACK: Browser Synthesis (Only for English if Abena AI fails)
+    return this.fallbackBrowserSynthesis(cleanText, lang, onEndCallback);
+  },
+
+  fallbackBrowserSynthesis(cleanText, lang, onEndCallback) {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
 
@@ -281,7 +334,7 @@ export const SpeechService = {
         utterance.voice = defaultVoice;
         utterance.lang = defaultVoice.lang;
       } else {
-        utterance.lang = 'en-US';
+        utterance.lang = 'en-GH';
       }
 
       if (this.voiceGender === 'female') {
@@ -301,6 +354,61 @@ export const SpeechService = {
 
     this.clearSpeakingState(onEndCallback);
     return false;
+  },
+
+  phoneticTwiFallback(text, onEndCallback = null) {
+    if (!('speechSynthesis' in window)) {
+      this.clearSpeakingState(onEndCallback);
+      return false;
+    }
+
+    window.speechSynthesis.cancel();
+
+    // Map Akan/Twi unicode letters & digraphs to phonetic approximations
+    const phoneticText = text
+      .replace(/ɔ/g, 'o')
+      .replace(/Ɔ/g, 'O')
+      .replace(/ɛ/g, 'e')
+      .replace(/Ɛ/g, 'E')
+      .replace(/ky/gi, 'ch')
+      .replace(/gy/gi, 'j')
+      .replace(/dw/gi, 'jw');
+
+    const utterance = new SpeechSynthesisUtterance(phoneticText);
+    this.speakingUtterance = utterance;
+
+    // Use Ghanaian English (en-GH) or fallback en-US cadence to approximate Akan phonemes
+    utterance.lang = 'en-GH';
+    utterance.rate = 0.88;
+    utterance.pitch = this.voiceGender === 'female' ? 1.05 : 0.95;
+
+    utterance.onend = () => this.clearSpeakingState(onEndCallback);
+    utterance.onerror = () => this.clearSpeakingState(onEndCallback);
+
+    window.speechSynthesis.speak(utterance);
+    return true;
+  },
+
+  async playPreRecordedAudio(filename, onEndCallback = null) {
+    try {
+      const audioPath = `/app/assets/audio/twi/${filename}.mp3`;
+      const audio = new Audio(audioPath);
+      this.activeAudioElement = audio;
+
+      return new Promise((resolve) => {
+        audio.onended = () => {
+          this.clearSpeakingState(onEndCallback);
+          resolve(true);
+        };
+        audio.onerror = () => {
+          this.activeAudioElement = null;
+          resolve(false);
+        };
+        audio.play().catch(() => resolve(false));
+      });
+    } catch (e) {
+      return false;
+    }
   },
 
   clearSpeakingState(onEndCallback = null) {

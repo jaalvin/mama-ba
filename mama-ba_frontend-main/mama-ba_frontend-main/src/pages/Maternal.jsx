@@ -52,13 +52,20 @@ export default function Maternal() {
           { key: "vacc", label: { en: "Vaccine Due Alerts", twi: "Nnuro Bere Kae" } },
         ].map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between">
-            <span className="text-sm text-on-surface">{lang === "twi" ? label.twi : label.en}</span>
+            <span className="text-sm text-on-surface">
+              {lang === "twi" ? label.twi : label.en}
+            </span>
             <button
+              type="button"
               onClick={() => setReminders((r) => ({ ...r, [key]: !r[key] }))}
-              className={`w-12 h-6 rounded-full transition-colors relative ${reminders[key] ? "bg-primary" : "bg-outline-variant"}`}
+              className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
+                reminders[key] ? "bg-primary" : "bg-outline-variant"
+              }`}
             >
               <span
-                className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform shadow ${reminders[key] ? "translate-x-6" : "translate-x-0.5"}`}
+                className={`block w-5 h-5 bg-white rounded-full transition-transform shadow ${
+                  reminders[key] ? "translate-x-5" : "translate-x-0"
+                }`}
               />
             </button>
           </div>

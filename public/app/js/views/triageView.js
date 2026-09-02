@@ -13,7 +13,7 @@ export const TriageView = {
         </p>
 
         <!-- Interactive Symptom Checkboxes Grid -->
-        <div class="grid-2" style="margin-bottom: 1.5rem;">
+        <div class="grid-2" style="margin-bottom: 1rem;">
           <div class="checklist-item">
             <input type="checkbox" id="sym-bleeding" value="severe_vaginal_bleeding" />
             <label for="sym-bleeding" style="font-size: 0.9rem; cursor: pointer;">
@@ -39,18 +39,18 @@ export const TriageView = {
           </div>
 
           <div class="checklist-item">
-            <input type="checkbox" id="sym-movement" value="reduced_fetal_movement" />
-            <label for="sym-movement" style="font-size: 0.9rem; cursor: pointer;">
-              <strong>🟡 Reduced Fetal Movement</strong><br>
-              <span style="font-size: 0.8rem; color: var(--text-muted);">Abofra ammwosow dɔnhwerew mu</span>
+            <input type="checkbox" id="sym-water" value="water_broke_early" />
+            <label for="sym-water" style="font-size: 0.9rem; cursor: pointer;">
+              <strong style="color: var(--danger);">🔴 Water Broke / Fluid Leakage</strong><br>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Nsuo pue firi yaa mu</span>
             </label>
           </div>
 
           <div class="checklist-item">
-            <input type="checkbox" id="sym-morning" value="mild_morning_sickness" />
-            <label for="sym-morning" style="font-size: 0.9rem; cursor: pointer;">
-              <strong>🟢 Mild Nausea / Morning Sickness</strong><br>
-              <span style="font-size: 0.8rem; color: var(--text-muted);">Anopa ho a ɛyɛ tan</span>
+            <input type="checkbox" id="sym-movement" value="reduced_fetal_movement" />
+            <label for="sym-movement" style="font-size: 0.9rem; cursor: pointer;">
+              <strong>🟡 Reduced Fetal Movement</strong><br>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Abofra ammwosow dɔnhwerew mu</span>
             </label>
           </div>
 
@@ -63,7 +63,11 @@ export const TriageView = {
           </div>
         </div>
 
-        <button id="btn-run-triage" class="btn btn-primary" style="width: 100%;">
+        <!-- Free-form symptom text input -->
+        <label style="font-weight: 600; font-size: 0.85rem; display: block; margin-bottom: 0.3rem;">Describe Any Additional Symptoms:</label>
+        <textarea id="custom-triage-text" class="input-field" style="height: 70px; resize: vertical; font-size: 0.85rem;" placeholder="e.g., Severe back pain and chills..."></textarea>
+
+        <button id="btn-run-triage" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
           Evaluate Symptoms On-Device &rarr;
         </button>
 
@@ -81,9 +85,9 @@ export const TriageView = {
             <!-- Dynamic emergency content injected here -->
           </div>
           <div style="display: flex; gap: 0.75rem;">
-            <button id="btn-modal-call" class="btn btn-primary" style="background: var(--danger); flex: 1;">
-              📞 Call Emergency Hotline
-            </button>
+            <a href="tel:112" id="btn-modal-call" class="btn btn-primary" style="background: var(--danger); flex: 1; text-align: center; text-decoration: none;">
+              📞 Call 112 Hotline
+            </a>
             <button id="btn-modal-close" class="btn btn-secondary">
               Dismiss
             </button>
@@ -106,13 +110,24 @@ export const TriageView = {
         selected.push(cb.value);
       });
 
-      if (selected.length === 0) {
+      const customText = container.querySelector('#custom-triage-text')?.value.trim();
+
+      if (selected.length === 0 && !customText) {
         resultBox.style.display = 'block';
-        resultBox.innerHTML = `<div class="status-banner caution">Please select at least one symptom to evaluate.</div>`;
+        resultBox.innerHTML = `<div class="status-banner caution">Please select at least one symptom or describe your symptoms above.</div>`;
         return;
       }
 
-      const res = await api.evaluateTriage({ symptomKeys: selected });
+      if (customText) {
+        api.saveHealthJournal({
+          userId: state.userId,
+          symptoms: selected,
+          mood: 'triage_eval',
+          notesText: `Triage evaluation notes: ${customText}`
+        });
+      }
+
+      const res = await api.evaluateTriage({ symptomKeys: selected.length > 0 ? selected : ['mild_morning_sickness'] });
       if (res.success && res.data) {
         const data = res.data;
         resultBox.style.display = 'block';
@@ -154,3 +169,4 @@ export const TriageView = {
     });
   }
 };
+

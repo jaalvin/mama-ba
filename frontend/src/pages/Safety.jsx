@@ -1,7 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useLang } from "../context/LanguageContext.jsx";
-import { useAuth } from "../context/AuthContext.jsx";
-import { api } from "../services/api.js";
 
 const HERBS = [
   { id: "taabea", name: "Taabea", twi: "Taabea" },
@@ -23,6 +21,7 @@ const DRUGS = [
   { id: "metronidazole", name: "Metronidazole" },
 ];
 
+// Safety matrix: herb_drug → { verdict, en, twi }
 const MATRIX = {
   taabea_artemether: {
     verdict: "danger",
@@ -60,140 +59,151 @@ const MATRIX = {
       twi: "Akekaduro aduane mu mmerɛ nhyia Paracetamol no. Akekaduro dɔɔso tumi ma mogya pue — fa aduane mu nko ara.",
     },
   },
+  neem_artemether: {
+    verdict: "danger",
+    en: "DANGER: Neem may significantly reduce the effectiveness of antimalarial treatment.",
+    twi: "ƆHAW: Neem tumi sɛe antimalarial nnuro adwuma kɛseɛ.",
+    rationale: {
+      en: "Neem induces CYP450 liver enzymes which can rapidly metabolise antimalarial drugs, lowering their plasma concentration below the effective therapeutic range.",
+      twi: "Neem ma liver enzymes dɔɔso a ɛtumi sɛe nnuro ntɛm, ma wɔn yɛ mmerɛ ara.",
+    },
+  },
+  koko_iron: {
+    verdict: "caution",
+    en: "CAUTION: Koko (fermented cereal porridge) can inhibit iron absorption. Take iron supplement 1–2 hours before eating Koko.",
+    twi: "ÈKA: Koko tumi sɛe iron nkɔ mu. Gye iron nnuro dɔnhwerew 1-2 ansa na wubedi Koko.",
+    rationale: {
+      en: "Phytic acid in fermented cereals forms complexes with iron, reducing its bioavailability. Separating intake by 1–2 hours allows proper iron absorption before the phytate effect occurs.",
+      twi: "Phytic acid wɔ koko mu de iron kura, ma ɛntumi nkɔ mu yie. Fa dɔnhwerew 1-2 ntam na iron bɛtumi akɔ mu ansa phytate bɛyɛ adwuma.",
+    },
+  },
+};
+
+const VERDICT_CONFIG = {
+  safe: {
+    label: "🟢 SAFE",
+    bg: "bg-forest-green/10 border-forest-green/40",
+    text: "text-forest-green",
+  },
+  caution: {
+    label: "🟡 CAUTION",
+    bg: "bg-earthen-ochre/10 border-earthen-ochre/40",
+    text: "text-earthen-ochre",
+  },
+  danger: {
+    label: "🔴 DANGER",
+    bg: "bg-error-container border-error/50",
+    text: "text-error",
+  },
 };
 
 export default function Safety() {
   const { lang } = useLang();
-  const { user } = useAuth();
-  const [selectedHerb, setSelectedHerb] = useState("");
-  const [selectedDrug, setSelectedDrug] = useState("");
-  const [result, setResult] = useState(null);
+  const [herb, setHerb] = useState("");
+  const [drug, setDrug] = useState("");
 
-  const handleCheck = async () => {
-    if (!selectedHerb) return;
-    const key = `${selectedHerb}_${selectedDrug}`;
-    const found = MATRIX[key] || {
-      verdict: "caution",
-      en: "NO DIRECT INTERACTION DATA: Use herbal preparations with caution during pregnancy. Consult your GHS midwife.",
-      twi: "NSƐM NNI HƆ NYINAA: Fa apomuden aduane pɛpɛɛpɛ na kɔ fa kyerɛ wo ɔwɔfoɔ.",
-      rationale: {
-        en: "Limited pharmacological data exists for this specific combination. Always inform your healthcare provider about all herbal preparations.",
-        twi: "Nnuro asɛm pii nni hɔ fa eyi ho. Kyerɛ wo ayaresabea adwumayɛfoɔ bere biara.",
-      },
-    };
-
-    setResult(found);
-
-    // Persist check log to SQLite backend database
-    try {
-      await api.checkHerbalSafety({
-        userId: user?.email || "demo-patient-001",
-        herb: selectedHerb,
-        drug: selectedDrug,
-        result: found.verdict
-      });
-    } catch { /* graceful fallback */ }
-  };
+  const key = herb && drug ? `${herb}_${drug}` : null;
+  const result = key ? MATRIX[key] || null : null;
+  const verdict = result ? VERDICT_CONFIG[result.verdict] : null;
 
   return (
     <div className="px-4 py-6 md:px-6 max-w-lg mx-auto">
       <h1 className="font-headline text-headline-md text-on-background mb-1">
-        {lang === "twi" ? "Apomuden Nnuro Ban" : "Herbal Safety Checker"}
+        {lang === "twi" ? "Apomuden Afifide & Nnuro" : "Herbal & Food Safety Checker"}
       </h1>
       <p className="text-on-surface-variant mb-6 text-sm">
         {lang === "twi"
-          ? "Hwɛ sɛ aduane anaa nnuro ne wo ayaresa hyia"
-          : "Check interactions between traditional remedies and prescribed medications"}
+          ? "Yi afifide ne nnuro na yɛahwɛ sɛ ɛho ho"
+          : "Select a local herb/food and a medication to check compatibility"}
       </p>
 
-      {/* Selector Card */}
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 mb-6 flex flex-col gap-4">
-        <div>
-          <label className="block text-label-md text-on-surface mb-2">
-            {lang === "twi" ? "1. Yi Aduane / Taabea" : "1. Select Herbal Preparation"}
-          </label>
-          <select
-            value={selectedHerb}
-            onChange={(e) => { setSelectedHerb(e.target.value); setResult(null); }}
-            className="w-full h-12 px-3 rounded-xl bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-on-surface text-sm"
-          >
-            <option value="">{lang === "twi" ? "-- Yi --" : "-- Select Herb --"}</option>
-            {HERBS.map((h) => (
-              <option key={h.id} value={h.id}>
-                {lang === "twi" ? h.twi : h.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-label-md text-on-surface mb-2">
-            {lang === "twi" ? "2. Yi Nnuro (Optional)" : "2. Select Prescribed Drug (Optional)"}
-          </label>
-          <select
-            value={selectedDrug}
-            onChange={(e) => { setSelectedDrug(e.target.value); setResult(null); }}
-            className="w-full h-12 px-3 rounded-xl bg-surface-container border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-on-surface text-sm"
-          >
-            <option value="">{lang === "twi" ? "-- Biara nni hɔ --" : "-- None / General Safety --"}</option>
-            {DRUGS.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <button
-          onClick={handleCheck}
-          disabled={!selectedHerb}
-          className="w-full bg-primary text-on-primary font-headline text-button py-3.5 rounded-full active:scale-95 transition-transform disabled:opacity-50 flex items-center justify-center gap-2 mt-1 shadow-md"
+      {/* Herb Picker */}
+      <div className="mb-4">
+        <label className="block text-label-md text-on-surface mb-2">
+          <span className="material-symbols-outlined text-[16px] align-middle mr-1 text-forest-green">spa</span>
+          {lang === "twi" ? "Afifide / Aduane" : "Local Herb or Food"}
+        </label>
+        <select
+          value={herb}
+          onChange={(e) => setHerb(e.target.value)}
+          className="w-full h-14 px-4 rounded-2xl bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-on-surface"
         >
-          <span className="material-symbols-outlined">pageview</span>
-          {lang === "twi" ? "Hwɛ Nsɛm" : "Check Interaction"}
-        </button>
+          <option value="">{lang === "twi" ? "Yi afifide..." : "Select herb or food..."}</option>
+          {HERBS.map((h) => (
+            <option key={h.id} value={h.id}>
+              {lang === "twi" ? h.twi : h.name}
+            </option>
+          ))}
+        </select>
       </div>
 
-      {/* Result Display */}
-      {result && (
-        <div
-          className={`rounded-2xl border p-5 mb-6 ${
-            result.verdict === "danger"
-              ? "bg-error-container/30 border-error/30 text-on-error-container"
-              : result.verdict === "caution"
-              ? "bg-earthen-ochre/10 border-earthen-ochre/30 text-on-surface"
-              : "bg-forest-green/10 border-forest-green/30 text-on-surface"
-          }`}
+      {/* Drug Picker */}
+      <div className="mb-6">
+        <label className="block text-label-md text-on-surface mb-2">
+          <span className="material-symbols-outlined text-[16px] align-middle mr-1 text-tertiary">medication</span>
+          {lang === "twi" ? "Nnuro" : "Prescription Drug"}
+        </label>
+        <select
+          value={drug}
+          onChange={(e) => setDrug(e.target.value)}
+          className="w-full h-14 px-4 rounded-2xl bg-surface-container-lowest border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary text-on-surface"
         >
-          <div className="flex items-center gap-2.5 mb-2">
-            <span className="material-symbols-outlined text-[24px]">
-              {result.verdict === "danger" ? "dangerous" : result.verdict === "caution" ? "warning" : "task_alt"}
-            </span>
-            <h2 className="font-headline text-headline-sm font-semibold">
-              {lang === "twi" ? result.twi : result.en}
-            </h2>
-          </div>
+          <option value="">{lang === "twi" ? "Yi nnuro..." : "Select medication..."}</option>
+          {DRUGS.map((d) => (
+            <option key={d.id} value={d.id}>{d.name}</option>
+          ))}
+        </select>
+      </div>
 
-          <div className="mt-3 pt-3 border-t border-outline-variant/30">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1">
-              {lang === "twi" ? "Adwumayɛfoɔ Rationale" : "Pharmacological Rationale"}
-            </h3>
-            <p className="text-xs text-on-surface-variant leading-relaxed">
-              {lang === "twi" ? result.rationale.twi : result.rationale.en}
+      {/* Result */}
+      {herb && drug && (
+        result ? (
+          <div className={`rounded-2xl border p-5 ${verdict.bg}`}>
+            <p className={`font-headline text-headline-md mb-3 ${verdict.text}`}>
+              {verdict.label}
             </p>
+            <p className={`font-semibold mb-3 ${verdict.text}`}>
+              {lang === "twi" ? result.twi : result.en}
+            </p>
+            <div className="border-t border-current/20 pt-3 mt-2">
+              <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wide mb-1">
+                {lang === "twi" ? "Ɛdeɛn enti?" : "Why this happens"}
+              </p>
+              <p className="text-sm text-on-surface-variant leading-relaxed">
+                {lang === "twi" ? result.rationale.twi : result.rationale.en}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 text-center">
+            <span className="material-symbols-outlined text-[32px] text-outline mb-2">info</span>
+            <p className="text-on-surface-variant text-sm">
+              {lang === "twi"
+                ? "Yɛnni ho nsɛm fa saa apem no ho. Bisa wo onipa adwumayɛfoɔ."
+                : "No specific interaction data available for this combination. Please consult your healthcare provider."}
+            </p>
+          </div>
+        )
+      )}
+
+      {!herb && !drug && (
+        <div className="mt-6">
+          <p className="text-label-md text-on-surface-variant mb-3">
+            {lang === "twi" ? "Afifide dwumayɛ:" : "Common local herbs:"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {HERBS.slice(0, 5).map((h) => (
+              <button
+                key={h.id}
+                onClick={() => setHerb(h.id)}
+                className="px-3 py-1.5 rounded-full bg-forest-green/10 text-forest-green border border-forest-green/20 text-sm font-medium hover:bg-forest-green/20 transition-colors"
+              >
+                {lang === "twi" ? h.twi : h.name}
+              </button>
+            ))}
           </div>
         </div>
       )}
-
-      {/* Informational Disclaimer */}
-      <div className="bg-surface-container-low border border-outline-variant rounded-2xl p-4 flex items-start gap-3">
-        <span className="material-symbols-outlined text-outline text-[20px] shrink-0 mt-0.5">info</span>
-        <p className="text-xs text-outline leading-relaxed">
-          {lang === "twi"
-            ? "Apomuden Nnuro Ban database yɛ GHS/WHO fapem. All queries are persisted into SQLite for clinical audit logs."
-            : "Herbal Safety Guidance is based on traditional safety databases and GHS/WHO clinical guidelines. All checks are saved persistently to SQLite."}
-        </p>
-      </div>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { TriageView } from './views/triageView.js';
 import { HerbalView } from './views/herbalView.js';
 import { VitalsView } from './views/vitalsView.js';
 import { MaternalView } from './views/maternalView.js';
+import { CareView } from './views/careView.js';
 
 // Application State
 const savedState = localStorage.getItem('lily_app_state');
@@ -53,7 +54,8 @@ const views = {
   triage: TriageView,
   herbal: HerbalView,
   vitals: VitalsView,
-  maternal: MaternalView
+  maternal: MaternalView,
+  care: CareView
 };
 
 function initApp() {

@@ -1,4 +1,3 @@
-import React from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useLang } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -12,7 +11,7 @@ const navItems = [
 ];
 
 export default function AppShell() {
-  const { lang } = useLang();
+  const { lang, setLang } = useLang();
   const { isDemoMode } = useAuth();
 
   return (
@@ -28,12 +27,39 @@ export default function AppShell() {
 
         <header className={`fixed inset-x-0 mx-auto w-full md:max-w-md z-40 flex items-center justify-between h-14 px-4 bg-background/95 backdrop-blur-sm border-b border-outline-variant ${isDemoMode ? "top-6" : "top-0"}`}>
           <span className="font-headline text-headline-md text-primary font-bold">Mama Ba</span>
+          
+          {/* Segmented Language Toggle */}
+          <div className="bg-surface-container p-1 rounded-full border border-outline-variant flex items-center gap-1 scale-90">
+            <button
+              type="button"
+              onClick={() => setLang("en")}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                lang !== "twi"
+                  ? "bg-primary text-on-primary shadow-sm"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              🇬🇭 English
+            </button>
+            <button
+              type="button"
+              onClick={() => setLang("twi")}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                lang === "twi"
+                  ? "bg-primary text-on-primary shadow-sm"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              Twi (Akan)
+            </button>
+          </div>
+
           <NavLink
             to="/app/care"
             className="flex items-center gap-1 text-xs text-on-surface-variant hover:text-primary transition-colors"
           >
             <span className="material-symbols-outlined text-[18px]">local_pharmacy</span>
-            {lang === "twi" ? "Nnuro Dwa" : "Pharmacy"}
+            {lang === "twi" ? "Dwa" : "Pharmacy"}
           </NavLink>
         </header>
 

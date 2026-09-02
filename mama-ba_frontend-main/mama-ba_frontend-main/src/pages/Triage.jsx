@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useLang } from "../context/LanguageContext.jsx";
+import { Activity, Droplets, Thermometer, Footprints, Flame, Compass } from "lucide-react";
 
 const SYMPTOMS = [
-  { id: "headache", emoji: "🤕", en: "Headache", twi: "Tiawa", risk: "moderate" },
-  { id: "bleeding", emoji: "🩸", en: "Bleeding", twi: "Mogya tu", risk: "high" },
-  { id: "fever", emoji: "🌡️", en: "High Fever", twi: "Hye boro", risk: "high" },
-  { id: "swollen", emoji: "🦶", en: "Swollen Ankles", twi: "Nan abɔ ntonton", risk: "moderate" },
-  { id: "abdominal", emoji: "😣", en: "Abdominal Pain", twi: "Yafunu yaw", risk: "high" },
-  { id: "dizziness", emoji: "😵", en: "Dizziness", twi: "Tibɔ", risk: "moderate" },
+  { id: "headache", icon: Activity, en: "Headache", twi: "Tiawa", risk: "moderate" },
+  { id: "bleeding", icon: Droplets, en: "Bleeding", twi: "Mogya tu", risk: "high" },
+  { id: "fever", icon: Thermometer, en: "High Fever", twi: "Hye boro", risk: "high" },
+  { id: "swollen", icon: Footprints, en: "Swollen Ankles", twi: "Nan abɔ ntonton", risk: "moderate" },
+  { id: "abdominal", icon: Flame, en: "Abdominal Pain", twi: "Yafunu yaw", risk: "high" },
+  { id: "dizziness", icon: Compass, en: "Dizziness", twi: "Tibɔ", risk: "moderate" },
 ];
 
 const TRIAGE_LEVELS = {
@@ -76,22 +77,30 @@ export default function Triage() {
 
       {/* Visual Symptom Tiles */}
       <div className="grid grid-cols-3 gap-3 mb-6">
-        {SYMPTOMS.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => toggle(s.id)}
-            className={`rounded-2xl border p-4 flex flex-col items-center gap-2 transition-all active:scale-95 ${
-              selected.includes(s.id)
-                ? "bg-primary text-on-primary border-primary shadow-md"
-                : "bg-surface-container-lowest border-outline-variant text-on-surface"
-            }`}
-          >
-            <span className="text-2xl">{s.emoji}</span>
-            <span className="text-xs font-semibold text-center leading-tight">
-              {lang === "twi" ? s.twi : s.en}
-            </span>
-          </button>
-        ))}
+  {SYMPTOMS.map((s) => {
+    const Icon = s.icon; // Assign component to a capitalized variable
+    const isSelected = selected.includes(s.id);
+
+    return (
+      <button
+        key={s.id}
+        onClick={() => toggle(s.id)}
+        className={`rounded-2xl border p-4 flex flex-col items-center gap-2 transition-all active:scale-95 ${
+          isSelected
+            ? "bg-primary text-on-primary border-primary shadow-md"
+            : "bg-surface-container-lowest border-outline-variant text-on-surface hover:bg-surface-container-low"
+        }`}
+      >
+              <Icon 
+                className={`w-7 h-7 ${isSelected ? "text-on-primary" : "text-primary"}`} 
+                strokeWidth={1.75} 
+              />
+              <span className="text-xs font-semibold text-center leading-tight">
+                {lang === "twi" ? s.twi : s.en}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Triage Result */}
