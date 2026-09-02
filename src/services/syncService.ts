@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getOfflineDb } from '../config';
+import { supabaseAdmin } from '../lib/supabaseAdmin';
 
 export interface SyncPayload {
   userId: string;
@@ -32,7 +33,7 @@ export class SyncService {
   }
 
   /**
-   * Process offline queue payloads uploaded from mobile client when network returns.
+   * Process offline queue payloads uploaded from client when network returns.
    */
   static processSyncPayload(payload: SyncPayload) {
     const db = getOfflineDb();
@@ -62,6 +63,7 @@ export class SyncService {
         );
         processedCount++;
       }
+      this.syncToSupabase('vitals_logs', payload.vitals);
     }
 
     // Process journal entries
@@ -84,6 +86,32 @@ export class SyncService {
         );
         processedCount++;
       }
+      this.syncToSupabase('health_journal', payload.journalEntries);
+    }
+
+    // Process reminders / medications
+    if (payload.reminders && Array.isArray(payload.reminders)) {
+      const stmt = db.prepare(`
+        INSERT OR REPLACE INTO reminders
+        (id, user_id, title, reminder_type, scheduled_time, recurrence, dosage_info, is_active, is_completed, sync_status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')
+      `);
+
+      for (const r of payload.reminders) {
+        stmt.run(
+          r.id || `rem-${Date.now()}`,
+          payload.userId,
+          r.title || r.label || 'Medication',
+          r.reminderType || r.reminder_type || 'MEDICATION',
+          r.scheduledTime || r.scheduled_time || r.time || '08:00',
+          r.recurrence || 'DAILY',
+          r.dosageInfo || r.dosage_info || null,
+          r.isActive !== undefined ? (r.isActive ? 1 : 0) : 1,
+          r.isCompleted !== undefined ? (r.isCompleted ? 1 : 0) : 0
+        );
+        processedCount++;
+      }
+      this.syncToSupabase('reminders', payload.reminders);
     }
 
     return {
@@ -92,6 +120,17 @@ export class SyncService {
       itemsProcessed: processedCount,
       syncedAt: new Date().toISOString()
     };
+  }
+
+  /**
+   * Helper to push records to Supabase asynchronously without blocking local DB operations.
+   */
+  private static async syncToSupabase(table: string, records: any[]) {
+    try {
+      if (supabaseAdmin && records && records.length > 0) {
+        await supabaseAdmin.from(table).upsert(records);
+      }
+    } catch { /* non-blocking background sync */ }
   }
 
   /**
@@ -110,11 +149,15 @@ export class SyncService {
 
     const vitals = db.prepare(`SELECT * FROM vitals_logs WHERE user_id = ? ORDER BY logged_at DESC`).all(userId);
     const journalEntries = db.prepare(`SELECT * FROM health_journal WHERE user_id = ? ORDER BY entry_date DESC`).all(userId);
+    let reminders: any[] = [];
+    try {
+      reminders = db.prepare(`SELECT * FROM reminders WHERE user_id = ? ORDER BY scheduled_time ASC`).all(userId);
+    } catch { /* fallback */ }
     let schedules: any[] = [];
     try {
       schedules = db.prepare(`SELECT * FROM user_maternal_schedules WHERE user_id = ?`).all(userId);
     } catch { /* if table doesn't exist yet */ }
-    
+
     const profile = db.prepare(`SELECT user_id, full_name, email, language_preference, is_pregnant, gestational_weeks, due_date FROM user_profile WHERE user_id = ?`).get(userId);
 
     return {
@@ -125,6 +168,7 @@ export class SyncService {
         profile,
         vitals,
         journalEntries,
+        reminders,
         schedules
       }
     };
