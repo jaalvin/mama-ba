@@ -169,6 +169,14 @@ export default function SignInPage() {
             {errors.password && (
               <p className="mt-1 text-sm text-error">{errors.password.message}</p>
             )}
+            <div className="text-right mt-1">
+              <Link
+                to="/forgot-password"
+                className="text-xs text-primary font-semibold hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           <button

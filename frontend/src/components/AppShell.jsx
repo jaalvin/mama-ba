@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { useLang } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
 import NotificationPanel from "./NotificationPanel.jsx";
 import PWAInstallPromptModal from "./PWAInstallPromptModal.jsx";
+import { startTipScheduler } from "../services/tipScheduler.js";
 
 const navItems = [
   { to: "/app", label: { en: "Home", twi: "Fie" }, icon: "home", end: true },
@@ -16,9 +17,16 @@ const navItems = [
 
 export default function AppShell() {
   const { lang } = useLang();
-  const { isDemoMode } = useAuth();
-  const { unreadCount } = useNotifications();
+  const { isDemoMode, isAuthenticated } = useAuth();
+  const { unreadCount, addNotification } = useNotifications();
   const [panelOpen, setPanelOpen] = useState(false);
+
+  // Start pregnancy tip scheduler when user is logged in
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const stop = startTipScheduler(lang, addNotification);
+    return stop;
+  }, [isAuthenticated, lang, addNotification]);
 
   return (
     <div className="min-h-screen bg-background">

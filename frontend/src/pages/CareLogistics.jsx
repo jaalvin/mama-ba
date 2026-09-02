@@ -7,7 +7,7 @@ import { scheduleAlarm } from "../services/notifications.js";
 import {
   MapPin, Building2, Search, Phone, Navigation, Truck, Calendar,
   Video, UserCheck, Upload, X, CheckCircle2, Clock, CalendarCheck,
-  Pill, Plus, Trash2, Loader2, LocateFixed,
+  Pill, Plus, Trash2, Loader2, LocateFixed, ExternalLink,
 } from "lucide-react";
 
 // ── Fallback local pharmacies (Kumasi) ───────────────────────────────────────
@@ -102,6 +102,12 @@ export default function CareLogistics() {
   const [appts, setAppts]             = useState([]);
   const [apptLoading, setApptLoading] = useState(true);
   const [savingAppt, setSavingAppt]   = useState(false);
+  // Track current time to detect when a virtual appointment is due
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(tick);
+  }, []);
 
   const [primaryHospital, setPrimaryHospital] = useState("");
   const [backupHospital, setBackupHospital]   = useState("");
@@ -113,7 +119,7 @@ export default function CareLogistics() {
   const alarmCancellers = useRef({});
 
   useEffect(() => {
-    if (!accessToken) return;
+    // Load appointments from local cache first; remote sync if token available
     apptAPI.list(accessToken)
       .then(list => {
         setAppts(list);
@@ -335,28 +341,46 @@ export default function CareLogistics() {
         <div className="flex flex-col gap-4">
 
           {/* Upcoming Appointments */}
-          {apptLoading ? (
-            <div className="flex justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-          ) : appts.length > 0 && (
+          {appts.length > 0 && (
             <div className="flex flex-col gap-2 mb-2">
               <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
                 {lang === "twi" ? "Nhyiam a Ɛreba" : "Upcoming Appointments"}
               </p>
-              {appts.map(appt => (
-                <div key={appt.id} className="bg-surface-container-lowest border border-primary/20 rounded-2xl p-4 flex items-start justify-between gap-2">
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-on-surface">{appt.reason}</p>
-                    <p className="text-xs text-on-surface-variant mt-0.5">{appt.primaryHospital}</p>
-                    {appt.backupHospital && (
-                      <p className="text-xs text-on-surface-variant">Backup: {appt.backupHospital}</p>
+              {appts.map(appt => {
+                const now = Date.now();
+                const apptMs = new Date(`${appt.date}T${appt.time}`).getTime();
+                const isVirtual = appt.visitType === "virtual";
+                // Show Zoom join window: -15 min before to +60 min after
+                const canJoin = isVirtual && !isNaN(apptMs) && now >= apptMs - 15 * 60 * 1000 && now <= apptMs + 60 * 60 * 1000;
+                return (
+                  <div key={appt.id} className="bg-surface-container-lowest border border-primary/20 rounded-2xl p-4 flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-on-surface">{appt.reason}</p>
+                        <p className="text-xs text-on-surface-variant mt-0.5">{appt.primaryHospital}</p>
+                        {appt.backupHospital && (
+                          <p className="text-xs text-on-surface-variant">Backup: {appt.backupHospital}</p>
+                        )}
+                        <p className="text-xs text-primary font-semibold mt-1">{formatApptDateTime(appt.date, appt.time)}</p>
+                        <p className="text-xs text-on-surface-variant capitalize">{appt.visitType === "virtual" ? "Virtual" : "In-Person"}</p>
+                      </div>
+                      <button onClick={() => handleDeleteAppt(appt.id)}
+                        className="p-1.5 text-outline hover:text-error hover:bg-error/10 rounded-full transition-colors shrink-0">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    {canJoin && (
+                      <a
+                        href="https://zoom.us/join"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-primary text-on-primary font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm hover:bg-primary/90 active:scale-95 transition-all animate-pulse"
+                      >
+                        <Video className="w-4 h-4" />
+                        <span>{lang === "twi" ? "Bra Wɔ Virtual Nhyiam No Mu" : "Join Virtual Appointment Now"}</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
                     )}
-                    <p className="text-xs text-primary font-semibold mt-1">{formatApptDateTime(appt.date, appt.time)}</p>
-                    <p className="text-xs text-on-surface-variant capitalize">{appt.visitType === "virtual" ? "Virtual" : "In-Person"}</p>
-                  </div>
-                  <button onClick={() => handleDeleteAppt(appt.id)}
-                    className="p-1.5 text-outline hover:text-error hover:bg-error/10 rounded-full transition-colors shrink-0">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
                 </div>
               ))}
             </div>

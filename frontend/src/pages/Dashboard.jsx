@@ -11,6 +11,18 @@ import {
   Calendar, CalendarCheck, X,
 } from "lucide-react";
 
+// ── Daily checked-med persistence helpers ──────────────────────────────────
+function todayKey(uid) {
+  const d = new Date().toISOString().split("T")[0];
+  return `mama_ba_usr_${uid || "guest"}_meds_taken_${d}`;
+}
+function loadCheckedToday(uid) {
+  try { return JSON.parse(localStorage.getItem(todayKey(uid))) ?? []; } catch { return []; }
+}
+function saveCheckedToday(uid, ids) {
+  try { localStorage.setItem(todayKey(uid), JSON.stringify(ids)); } catch { /* ignore */ }
+}
+
 // Baby size lookup by gestational week
 const BABY_SIZE = {
   4: { en: "a poppy seed", twi: "abɔ ketewa" },
@@ -64,9 +76,10 @@ export default function Dashboard() {
   const [modalDueDate, setModalDueDate] = useState(user?.dueDate || "");
 
   // Medications
+  const activeUid = user?.id || localStorage.getItem("mama_ba_active_user_id") || "guest";
   const [meds, setMeds]           = useState([]);
   const [medsLoading, setMedsLoading] = useState(true);
-  const [checked, setChecked]     = useState([]);
+  const [checked, setChecked]     = useState(() => loadCheckedToday(activeUid));
   const [addOpen, setAddOpen]     = useState(false);
   const [medName, setMedName]     = useState("");
   const [medTime, setMedTime]     = useState("");
@@ -75,9 +88,8 @@ export default function Dashboard() {
   // Alarm cleanup refs: map of medId → cancel function
   const alarmCancellers = useRef({});
 
-  // ── Load medications ───────────────────────────────────────────────────────
+  // ── Load medications (always load from local cache; token used for remote sync) ──
   const loadMeds = useCallback(() => {
-    if (!accessToken) return;
     setMedsLoading(true);
     medsAPI.list(accessToken)
       .then(setMeds)
@@ -86,6 +98,11 @@ export default function Dashboard() {
   }, [accessToken]);
 
   useEffect(() => { loadMeds(); }, [loadMeds]);
+
+  // Persist checked state to localStorage daily
+  useEffect(() => {
+    saveCheckedToday(activeUid, checked);
+  }, [checked, activeUid]);
 
   // ── Schedule / reschedule alarms whenever med list changes ─────────────────
   useEffect(() => {
@@ -135,7 +152,11 @@ export default function Dashboard() {
   }, [meds, lang, addNotification]);
 
   const toggleMed = (id) =>
-    setChecked((prev) => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setChecked((prev) => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      saveCheckedToday(activeUid, next);
+      return next;
+    });
 
   const handleAddMed = async (e) => {
     e.preventDefault();

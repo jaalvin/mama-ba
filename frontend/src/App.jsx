@@ -23,6 +23,8 @@ import ChangePassword from "./pages/ChangePassword.jsx";
 import PrivacyPolicy from "./pages/PrivacyPolicy.jsx";
 import TermsOfService from "./pages/TermsOfService.jsx";
 import ContactSupport from "./pages/ContactSupport.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ResetPassword from "./pages/ResetPassword.jsx";
 import ClickFeedback from "./components/ClickFeedback.jsx";
 
 export default function App() {
@@ -41,6 +43,8 @@ export default function App() {
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/health-disclaimer" element={<HealthDisclaimer />} />
             <Route path="/contact" element={<ContactSupport />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             <Route
               path="/onboarding"

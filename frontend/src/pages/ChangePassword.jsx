@@ -1,34 +1,43 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Lock, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle2, Eye, EyeOff, Loader2 } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 export default function ChangePassword() {
   const navigate = useNavigate();
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess(false);
 
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters long.");
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("New passwords do not match.");
+      setError("Passwords do not match.");
       return;
     }
 
-    // Replace with your API call or Firebase/Django auth logic
-    setSuccess(true);
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    setLoading(true);
+    try {
+      const { error: sbErr } = await supabase.auth.updateUser({ password: newPassword });
+      if (sbErr) throw sbErr;
+      setSuccess(true);
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setError(err.message || "Could not update password. You may need to sign in again first.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -59,33 +68,37 @@ export default function ChangePassword() {
 
       <form onSubmit={handleSubmit} className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 flex flex-col gap-4">
         <div>
-          <label className="text-xs font-semibold text-on-surface-variant block mb-1">Current Password</label>
-          <input
-            type="password"
-            value={currentPassword}
-            onChange={(e) => setCurrentPassword(e.target.value)}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-primary"
-            required
-          />
+          <label className="text-xs font-semibold text-on-surface-variant block mb-1">
+            New Password
+          </label>
+          <div className="relative">
+            <input
+              type={showPw ? "text" : "password"}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 pr-10 text-sm text-on-surface focus:outline-none focus:border-primary"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary"
+            >
+              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
 
         <div>
-          <label className="text-xs font-semibold text-on-surface-variant block mb-1">New Password</label>
+          <label className="text-xs font-semibold text-on-surface-variant block mb-1">
+            Confirm New Password
+          </label>
           <input
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-primary"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="text-xs font-semibold text-on-surface-variant block mb-1">Confirm New Password</label>
-          <input
-            type="password"
+            type={showPw ? "text" : "password"}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Re-enter new password"
             className="w-full bg-surface-container-low border border-outline-variant rounded-xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:border-primary"
             required
           />
@@ -93,10 +106,14 @@ export default function ChangePassword() {
 
         <button
           type="submit"
-          className="w-full bg-primary text-on-primary font-semibold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors mt-2"
+          disabled={loading}
+          className="w-full bg-primary text-on-primary font-semibold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors mt-2 disabled:opacity-60"
         >
-          <Lock className="w-5 h-5" />
-          <span>Update Password</span>
+          {loading ? (
+            <><Loader2 className="w-4 h-4 animate-spin" /> Updating…</>
+          ) : (
+            <><Lock className="w-5 h-5" /> Update Password</>
+          )}
         </button>
       </form>
     </div>

@@ -54,6 +54,16 @@ export default function Ask() {
   const [currentlySpeaking, setCurrentlySpeaking] = useState(null);
   const [loading, setLoading] = useState(false);
   const activeRecorderRef = useRef(null);
+  const bottomRef = useRef(null);
+
+  // Auto-scroll to bottom whenever messages change
+  useEffect(() => {
+    // Slight delay so React has painted the new message before scrolling
+    const id = setTimeout(() => {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }, 60);
+    return () => clearTimeout(id);
+  }, [messages]);
 
   // Reload chat history if active user changes
   useEffect(() => {
@@ -306,6 +316,8 @@ export default function Ask() {
             </div>
           </div>
         ))}
+        {/* Auto-scroll anchor */}
+        <div ref={bottomRef} className="shrink-0 h-0" />
       </div>
 
       {/* Bottom panel */}
