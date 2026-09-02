@@ -9,45 +9,84 @@ const AuthContext = createContext(null);
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 const API_BASE  = import.meta.env.VITE_API_BASE_URL || "/api";
 const STORAGE_KEY = "mama-ba-demo-user";
+const PERSIST_USER_KEY = "mama-ba-persisted-user";
+
+function getSavedUser() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(PERSIST_USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistUser(user) {
+  if (user) {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    localStorage.setItem(PERSIST_USER_KEY, JSON.stringify(user));
+  } else {
+    sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PERSIST_USER_KEY);
+  }
+}
 
 // ─── MOCK HELPERS (only used when DEMO_MODE is true) ─────────
 async function mockDelay() { await new Promise((r) => setTimeout(r, 450)); }
 
 function mockLogin({ email }) {
-  const user = { name: email.split("@")[0], email };
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  const existing = getSavedUser();
+  const user = { name: email.split("@")[0], email, ...existing };
+  persistUser(user);
   return { accessToken: "demo-token", user };
 }
 
 function mockSignup({ name, email }) {
   const user = { name, email };
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  persistUser(user);
   return { accessToken: "demo-token", user };
 }
 
 function mockLogout() {
-  sessionStorage.removeItem(STORAGE_KEY);
+  persistUser(null);
 }
 
 function mockRefresh() {
-  const raw = sessionStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  try { return { accessToken: "demo-token", user: JSON.parse(raw) }; }
-  catch { return null; }
+  const user = getSavedUser();
+  if (!user) return null;
+  return { accessToken: "demo-token", user };
 }
 // ─────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }) {
-  const [user, setUser]               = useState(null);
+  const [user, setUserState]          = useState(getSavedUser);
   const [accessToken, setAccessToken] = useState(null);
   const [isLoading, setIsLoading]     = useState(true);
+
+  const setUser = useCallback((valOrFn) => {
+    setUserState((prev) => {
+      const next = typeof valOrFn === "function" ? valOrFn(prev) : valOrFn;
+      persistUser(next);
+      return next;
+    });
+  }, []);
+
+  const updateUser = useCallback((updates) => {
+    setUserState((prev) => {
+      const next = { ...(prev || {}), ...updates };
+      persistUser(next);
+      return next;
+    });
+  }, []);
 
   // Restore session on mount
   const refresh = useCallback(async () => {
     try {
       if (DEMO_MODE) {
         const data = mockRefresh();
-        if (data) { setAccessToken(data.accessToken); setUser(data.user); }
+        if (data) {
+          setAccessToken(data.accessToken);
+          setUserState(data.user);
+        }
       } else {
         const res = await fetch(`${API_BASE}/auth/refresh`, {
           method: "POST",
@@ -56,11 +95,12 @@ export function AuthProvider({ children }) {
         if (!res.ok) throw new Error("No active session");
         const data = await res.json();
         setAccessToken(data.accessToken);
-        setUser(data.user);
+        setUserState(data.user);
+        persistUser(data.user);
       }
     } catch {
       setAccessToken(null);
-      setUser(null);
+      setUserState(null);
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +113,7 @@ export function AuthProvider({ children }) {
       await mockDelay();
       const data = mockLogin(credentials);
       setAccessToken(data.accessToken);
-      setUser(data.user);
+      setUserState(data.user);
       return data.user;
     }
     const res = await fetch(`${API_BASE}/auth/login`, {
@@ -88,7 +128,8 @@ export function AuthProvider({ children }) {
     }
     const data = await res.json();
     setAccessToken(data.accessToken);
-    setUser(data.user);
+    setUserState(data.user);
+    persistUser(data.user);
     return data.user;
   }, []);
 
@@ -97,7 +138,7 @@ export function AuthProvider({ children }) {
       await mockDelay();
       const data = mockSignup(credentials);
       setAccessToken(data.accessToken);
-      setUser(data.user);
+      setUserState(data.user);
       return data.user;
     }
     const res = await fetch(`${API_BASE}/auth/register`, {
@@ -112,7 +153,8 @@ export function AuthProvider({ children }) {
     }
     const data = await res.json();
     setAccessToken(data.accessToken);
-    setUser(data.user);
+    setUserState(data.user);
+    persistUser(data.user);
     return data.user;
   }, []);
 
@@ -125,7 +167,8 @@ export function AuthProvider({ children }) {
       } catch { /* ignore */ }
     }
     setAccessToken(null);
-    setUser(null);
+    setUserState(null);
+    persistUser(null);
   }, []);
 
   const value = useMemo(
@@ -138,9 +181,10 @@ export function AuthProvider({ children }) {
       signup,
       logout,
       setUser,
+      updateUser,
       isDemoMode: DEMO_MODE,
     }),
-    [user, accessToken, isLoading, login, signup, logout]
+    [user, accessToken, isLoading, login, signup, logout, setUser, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

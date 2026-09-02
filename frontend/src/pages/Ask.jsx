@@ -1,383 +1,304 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useLang } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { api } from "../services/api.js";
+import { playNeuralSpeech, stopNeuralSpeech } from "../services/speech.js";
+import { startVoiceRecording, stopVoiceRecording } from "../services/voiceRecorder.js";
+import { Mic, Volume2, Square, Settings, Send } from "lucide-react";
 
 const PRESET_QUESTIONS = [
   {
-    en: "What local Ghanaian foods give iron during pregnancy?",
-    twi: "Aduane bɛn na ɛma dadeɛ/mogya berɛ a wɔnyem?",
+    en: "Foods that increase blood during pregnancy",
+    twi: "Aduane a ɛma mogya so wɔ abɔdeɛ mu",
   },
   {
-    en: "What are the danger signs of pre-eclampsia?",
-    twi: "Pre-eclampsia ho nsɛnkyerɛnneɛ a ɛyɛ hu bɛn na wɔwɔ?",
+    en: "Signs of pre-eclampsia to watch out for",
+    twi: "Pre-eclampsia nsɛnkyerɛnneɛ",
   },
   {
     en: "Can I drink Taabea while taking antibiotics?",
     twi: "Metumi anom Taabea na metwam antibiotics?",
   },
   {
-    en: "What vaccines does my newborn baby need?",
-    twi: "Abofra foforo hiaduro foforo bɛn na ɛhia?",
+    en: "How to manage swollen feet in pregnancy",
+    twi: "Sɛn na mɛsiesie nan a abɔ ntonton?",
   },
 ];
 
-function encodeWavBlob(samples, sampleRate = 16000) {
-  const buffer = new ArrayBuffer(44 + samples.length * 2);
-  const view = new DataView(buffer);
-
-  function writeString(view, offset, string) {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  }
-
-  writeString(view, 0, 'RIFF');
-  view.setUint32(4, 36 + samples.length * 2, true);
-  writeString(view, 8, 'WAVE');
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeString(view, 36, 'data');
-  view.setUint32(40, samples.length * 2, true);
-
-  let offset = 44;
-  for (let i = 0; i < samples.length; i++, offset += 2) {
-    const s = Math.max(-1, Math.min(1, samples[i]));
-    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-  }
-
-  return new Blob([view], { type: 'audio/wav' });
-}
-
-let activeAudioPlayer = null;
+const DEFAULT_GREETING = {
+  id: 1,
+  role: "assistant",
+  en: "Hi, I'm here to help. Ask me anything about your pregnancy or your baby in your preferred language.",
+  twi: "Akwaaba! Mewɔ ha sɛ meboa wo. Bisa me biribiara fa wo abɔdeɛ anaa wo ba ho asɛm.",
+};
 
 export default function Ask() {
-  const { lang } = useLang();
+  const { lang, voiceLang } = useLang();
   const { user } = useAuth();
-  const [audioState, setAudioState] = useState({ key: null, status: null });
+  
+  const activeUid = user?.id || (typeof window !== "undefined" && localStorage.getItem("mama_ba_active_user_id")) || "guest";
+  const chatStoreKey = `mama_ba_usr_${activeUid}_chat_history`;
 
-  const playSpeech = async (msgId, text, langType) => {
-    const audioKey = `${msgId}-${langType}`;
-
-    if (audioState.key === audioKey) {
-      if (activeAudioPlayer) {
-        activeAudioPlayer.pause();
-        activeAudioPlayer = null;
-      }
-      if (typeof window !== "undefined" && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-      setAudioState({ key: null, status: null });
-      return;
-    }
-
-    if (activeAudioPlayer) {
-      activeAudioPlayer.pause();
-      activeAudioPlayer = null;
-    }
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-
-    const targetText = text || (langType === "twi" ? "Akwaaba! Mema wo apɔmuden pa." : "Welcome to Guided Companion.");
-    const cleanText = String(targetText)
-      .replace(/<[^>]*>/g, "")
-      .replace(/[*_#`~]/g, "")
-      .trim();
-
-    if (!cleanText) {
-      setAudioState({ key: null, status: null });
-      return;
-    }
-
-    setAudioState({ key: audioKey, status: "loading" });
-
-    const isTwi = langType === "twi" || langType === "tw" || langType === "ak";
-    const preferredVoice = isTwi ? "abena_twi_high" : "akua_eng";
-
+  const [messages, setMessages] = useState(() => {
     try {
-      const res = await api.synthesizeSpeech({
-        text: cleanText,
-        language: isTwi ? "tw" : "en",
-        speaker_id: "female",
-        speaker: "female"
-      });
-
-      if (res && res.success && res.blob && res.blob.size > 200) {
-        if (typeof window !== "undefined" && window.speechSynthesis) {
-          window.speechSynthesis.cancel();
-        }
-        const audioUrl = URL.createObjectURL(res.blob);
-        const audio = new Audio(audioUrl);
-        activeAudioPlayer = audio;
-
-        setAudioState({ key: audioKey, status: "playing" });
-
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          if (activeAudioPlayer === audio) activeAudioPlayer = null;
-          setAudioState({ key: null, status: null });
-        };
-        audio.onerror = () => {
-          URL.revokeObjectURL(audioUrl);
-          if (activeAudioPlayer === audio) activeAudioPlayer = null;
-          setAudioState({ key: null, status: null });
-        };
-        await audio.play().catch((err) => {
-          console.warn('[Ask] Audio element play error:', err);
-          setAudioState({ key: null, status: null });
-        });
-        return;
-      }
-    } catch (e) {
-      console.warn('[Ask] Speech synthesis API notice:', e);
+      const stored = localStorage.getItem(chatStoreKey);
+      return stored ? JSON.parse(stored) : [DEFAULT_GREETING];
+    } catch {
+      return [DEFAULT_GREETING];
     }
+  });
 
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      const utt = new SpeechSynthesisUtterance(cleanText);
-      utt.lang = isTwi ? "en-GH" : "en-US";
-      utt.rate = 0.95;
-      utt.onend = () => setAudioState({ key: null, status: null });
-      utt.onerror = () => setAudioState({ key: null, status: null });
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(utt);
-      setAudioState({ key: audioKey, status: "playing" });
-    } else {
-      setAudioState({ key: null, status: null });
-    }
-  };
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      role: "assistant",
-      en: "Akwaaba! I am Mama Ba, your guided health companion. Ask me any maternal or child health question in English or Twi.",
-      twi: "Akwaaba! Me din de Mama Ba. Bisa me biribiara fa wo apɔmuden anaa wo ba ho wɔ Twi anaa Borɔfo mu.",
-    },
-  ]);
   const [inputText, setInputText] = useState("");
-  const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
-  const recognitionRef = useRef(null);
+  const [currentlySpeaking, setCurrentlySpeaking] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const activeRecorderRef = useRef(null);
 
-  const handleSendQuery = async (queryText) => {
-    const text = queryText || inputText;
-    if (!text.trim() || loading) return;
+  // Reload chat history if active user changes
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(chatStoreKey);
+      setMessages(stored ? JSON.parse(stored) : [DEFAULT_GREETING]);
+    } catch {
+      setMessages([DEFAULT_GREETING]);
+    }
+  }, [activeUid, chatStoreKey]);
 
+  // Persist messages to active user's storage
+  useEffect(() => {
+    try {
+      if (messages && messages.length > 0) {
+        localStorage.setItem(chatStoreKey, JSON.stringify(messages));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [messages, chatStoreKey]);
+
+  // Stop speech on unmount
+  useEffect(() => {
+    return () => {
+      stopNeuralSpeech();
+      stopVoiceRecording(activeRecorderRef.current);
+    };
+  }, []);
+
+  const speakText = (text, languageKey, audioId) => {
+    if (currentlySpeaking === audioId) {
+      stopNeuralSpeech();
+      setCurrentlySpeaking(null);
+      return;
+    }
+
+    stopNeuralSpeech();
+    playNeuralSpeech(
+      text,
+      languageKey,
+      () => setCurrentlySpeaking(audioId),
+      () => setCurrentlySpeaking(null),
+      () => setCurrentlySpeaking(null)
+    );
+  };
+
+  const processUserQuery = async (queryText) => {
+    if (!queryText || !queryText.trim()) return;
+
+    const userText = queryText.trim();
     const userMsgId = Date.now();
+    const newAssisId = userMsgId + 1;
+
     setMessages((prev) => [
       ...prev,
-      { id: userMsgId, role: "user", en: text, twi: text },
+      { id: userMsgId, role: "user", en: userText, twi: userText },
     ]);
-    setInputText("");
+
     setLoading(true);
 
-    const res = await api.askChatbot({
-      query: text,
-      userId: user?.email || "demo-patient-001",
-      language: lang === "twi" ? "twi" : "english",
-    });
+    try {
+      const res = await api.askChatbot({ query: userText, language: voiceLang, userId: activeUid });
+      
+      let assistTextEn = "Thanks for your question. Here is supportive guidance tailored for your journey.";
+      let assistTextTwi = "Meda wo ase wɔ wo asɛm ho. Yɛwɔ afotu pa a ɛbɛboa wo abɔdeɛ mu.";
 
-    setLoading(false);
-
-    if (res && res.success && res.data) {
-      const ansEn = res.data.answerEnglish || res.data.response || res.data.answer || "Please consult a healthcare worker.";
-      const ansTw = res.data.answerTwi || res.data.twiResponse || "Di nnuane pa na kɔ asopiti ntɛm.";
+      if (res && res.success && res.data) {
+        assistTextEn = res.data.answerEnglish || res.data.response || assistTextEn;
+        assistTextTwi = res.data.answerTwi || assistTextTwi;
+      }
 
       setMessages((prev) => [
         ...prev,
         {
-          id: Date.now(),
+          id: newAssisId,
           role: "assistant",
-          en: ansEn,
-          twi: ansTw,
-          triageLevel: res.data.triageLevel,
+          en: assistTextEn,
+          twi: assistTextTwi,
         },
       ]);
-    } else {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          role: "assistant",
-          en: "I'm having trouble connecting to the medical AI service right now. Please ensure your backend is active or try again shortly.",
-          twi: "Mitumi nni nkitahodi ne apɔmuden AI som faako seesei. Yɛsrɛ wo san yɛ bio.",
-        },
-      ]);
+
+      speakText(
+        voiceLang === "twi" ? assistTextTwi : assistTextEn,
+        voiceLang,
+        `${newAssisId}-${voiceLang}`
+      );
+    } catch (err) {
+      console.warn('[Ask] AI Query notice:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-      const audioContextRef = useRef(null);
-      const audioStreamRef = useRef(null);
-      const audioSamplesRef = useRef([]);
-      const scriptProcessorRef = useRef(null);
+  const addQuestion = (q) => {
+    const userText = voiceLang === "twi" ? q.twi : q.en;
+    processUserQuery(userText);
+  };
+
+  const handleSendText = (e) => {
+    e.preventDefault();
+    if (inputText.trim()) {
+      const q = inputText;
+      setInputText("");
+      processUserQuery(q);
+    }
+  };
 
   const toggleListening = async () => {
+    stopNeuralSpeech();
+    setCurrentlySpeaking(null);
+
     if (listening) {
-      if (scriptProcessorRef.current) {
-        scriptProcessorRef.current.disconnect();
-        scriptProcessorRef.current = null;
-      }
-      if (audioStreamRef.current) {
-        audioStreamRef.current.getTracks().forEach((track) => track.stop());
-        audioStreamRef.current = null;
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-
+      stopVoiceRecording(activeRecorderRef.current);
       setListening(false);
-
-      const rawSamples = audioSamplesRef.current;
-      if (!rawSamples || rawSamples.length === 0) return;
-
-      let totalLen = 0;
-      for (const chunk of rawSamples) totalLen += chunk.length;
-      const mergedSamples = new Float32Array(totalLen);
-      let offset = 0;
-      for (const chunk of rawSamples) {
-        mergedSamples.set(chunk, offset);
-        offset += chunk.length;
-      }
-
-      if (mergedSamples.length < 8000) {
-        console.warn('[Ask] Audio recording too short.');
-        return;
-      }
-
-      const wavBlob = encodeWavBlob(mergedSamples, 16000);
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Audio = reader.result;
-        setLoading(true);
-        try {
-          const res = await api.transcribeVoice({
-            audio_base64: base64Audio,
-            language: lang === 'twi' ? 'twi-only' : 'twi-en'
-          });
-          setLoading(false);
-          if (res && res.success && res.transcription) {
-            handleSendQuery(res.transcription);
-          } else if (res && res.error) {
-            alert(res.error);
-          }
-        } catch (err) {
-          setLoading(false);
-          console.warn('[Ask] Abena ASR error:', err);
-        }
-      };
-      reader.readAsDataURL(wavBlob);
       return;
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioStreamRef.current = stream;
-      audioSamplesRef.current = [];
+    const recorder = await startVoiceRecording({
+      voiceLang,
+      onStart: () => setListening(true),
+      onEnd: () => setListening(false),
+      onError: (errMsg) => {
+        setListening(false);
+        alert(errMsg);
+      },
+      onResult: (transcript) => {
+        setListening(false);
+        processUserQuery(transcript);
+      },
+    });
 
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      const audioCtx = new AudioCtx({ sampleRate: 16000 });
-      audioContextRef.current = audioCtx;
-
-      const source = audioCtx.createMediaStreamSource(stream);
-      const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-      scriptProcessorRef.current = processor;
-
-      processor.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0);
-        audioSamplesRef.current.push(new Float32Array(inputData));
-      };
-
-      source.connect(processor);
-      processor.connect(audioCtx.destination);
-
-      setListening(true);
-    } catch (err) {
-      console.warn('[Ask] Microphone access error:', err);
-      alert('Microphone permission is required to record Ghanaian voice.');
-    }
+    activeRecorderRef.current = recorder;
   };
 
   return (
     <div className="flex flex-col h-[calc(100vh-9rem)] px-4 md:px-6 max-w-lg mx-auto">
+      {/* Voice Assistant Language Badge & Switcher shortcut */}
+      <div className="flex items-center justify-between py-2 border-b border-outline-variant text-xs">
+        <div className="flex items-center gap-1.5 text-on-surface-variant">
+          <span className="text-sm">{voiceLang === "twi" ? "🇬🇭" : "🇬🇧"}</span>
+          <span className="font-semibold text-on-surface">
+            {voiceLang === "twi" ? "Twi Voice Active" : "English Voice Active"}
+          </span>
+          {currentlySpeaking && (
+            <span className="ml-1.5 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-bold animate-pulse">
+              Speaking...
+            </span>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {currentlySpeaking && (
+            <button
+              onClick={() => {
+                stopNeuralSpeech();
+                setCurrentlySpeaking(null);
+              }}
+              className="text-error font-bold flex items-center gap-1 hover:underline cursor-pointer"
+            >
+              <Square className="w-3 h-3 fill-current" />
+              <span>Stop</span>
+            </button>
+          )}
+
+          <Link
+            to="/app/profile"
+            className="flex items-center gap-1 text-primary hover:underline font-semibold"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Settings</span>
+          </Link>
+        </div>
+      </div>
+
       {/* Transcript */}
       <div className="flex-1 overflow-y-auto flex flex-col gap-4 py-4">
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
-              className={`max-w-[85%] rounded-2xl p-4 ${
+              className={`max-w-[85%] rounded-2xl p-4 shadow-sm ${
                 m.role === "user"
                   ? "bg-primary text-on-primary rounded-tr-sm"
                   : "bg-surface-container-lowest border border-outline-variant text-on-surface rounded-tl-sm"
               }`}
             >
               {/* Primary language text */}
-              <p className="text-sm leading-relaxed whitespace-pre-line">{lang === "twi" ? m.twi : m.en}</p>
+              <p className="text-sm leading-relaxed font-medium">
+                {voiceLang === "twi" ? m.twi : m.en}
+              </p>
 
               {/* Bilingual secondary for assistant messages */}
               {m.role === "assistant" && (
                 <>
                   <div className="mt-2 pt-2 border-t border-outline-variant/30">
-                    <p className="text-xs text-on-surface-variant leading-relaxed italic">
-                      {lang === "twi" ? m.en : m.twi}
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      {voiceLang === "twi" ? m.en : m.twi}
                     </p>
                   </div>
-                  {/* Playback buttons */}
-                  <div className="flex gap-1.5 mt-2.5 flex-wrap">
+                  {/* Playback buttons with stop toggle */}
+                  <div className="flex gap-2 mt-3">
                     <button
-                      type="button"
-                      onClick={() => playSpeech(m.id, m.en, "en")}
-                      className={`flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border transition-all duration-200 ${
-                        audioState.key === `${m.id}-en` && audioState.status === "playing"
-                          ? "bg-primary text-on-primary border-primary shadow-xs font-semibold scale-95"
-                          : audioState.key === `${m.id}-en` && audioState.status === "loading"
-                          ? "bg-primary-container text-primary border-primary animate-pulse font-semibold"
-                          : "bg-primary-container/20 text-primary border-primary/20 hover:bg-primary-container/40"
+                      onClick={() => speakText(m.twi, "twi", `${m.id}-twi`)}
+                      className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-all ${
+                        currentlySpeaking === `${m.id}-twi`
+                          ? "bg-error text-on-error border-error animate-pulse font-bold shadow-xs"
+                          : voiceLang === "twi"
+                          ? "bg-primary text-on-primary border-primary font-semibold shadow-xs"
+                          : "bg-surface-container text-on-surface-variant border-outline-variant hover:border-primary"
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[13px]">
-                        {audioState.key === `${m.id}-en` && audioState.status === "loading"
-                          ? "progress_activity"
-                          : audioState.key === `${m.id}-en` && audioState.status === "playing"
-                          ? "equalizer"
-                          : "volume_up"}
-                      </span>
-                      {audioState.key === `${m.id}-en` && audioState.status === "loading"
-                        ? "Loading EN..."
-                        : audioState.key === `${m.id}-en` && audioState.status === "playing"
-                        ? "Playing EN..."
-                        : "EN-GH Audio"}
+                      {currentlySpeaking === `${m.id}-twi` ? (
+                        <>
+                          <Square className="w-3 h-3 fill-current" />
+                          <span>Stop Twi</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-3.5 h-3.5" />
+                          <span>🇬🇭 Twi Audio</span>
+                        </>
+                      )}
                     </button>
 
                     <button
-                      type="button"
-                      onClick={() => playSpeech(m.id, m.twi, "twi")}
-                      className={`flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border transition-all duration-200 ${
-                        audioState.key === `${m.id}-twi` && audioState.status === "playing"
-                          ? "bg-tertiary text-on-tertiary border-tertiary shadow-xs font-semibold scale-95"
-                          : audioState.key === `${m.id}-twi` && audioState.status === "loading"
-                          ? "bg-tertiary-container text-tertiary border-tertiary animate-pulse font-semibold"
-                          : "bg-tertiary-container/20 text-tertiary border-tertiary/20 hover:bg-tertiary-container/40"
+                      onClick={() => speakText(m.en, "en", `${m.id}-en`)}
+                      className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-all ${
+                        currentlySpeaking === `${m.id}-en`
+                          ? "bg-error text-on-error border-error animate-pulse font-bold shadow-xs"
+                          : voiceLang === "en"
+                          ? "bg-primary text-on-primary border-primary font-semibold shadow-xs"
+                          : "bg-surface-container text-on-surface-variant border-outline-variant hover:border-primary"
                       }`}
                     >
-                      <span className="material-symbols-outlined text-[13px]">
-                        {audioState.key === `${m.id}-twi` && audioState.status === "loading"
-                          ? "progress_activity"
-                          : audioState.key === `${m.id}-twi` && audioState.status === "playing"
-                          ? "equalizer"
-                          : "volume_up"}
-                      </span>
-                      {audioState.key === `${m.id}-twi` && audioState.status === "loading"
-                        ? "Loading Twi..."
-                        : audioState.key === `${m.id}-twi` && audioState.status === "playing"
-                        ? "Playing Twi..."
-                        : "Twi Audio"}
+                      {currentlySpeaking === `${m.id}-en` ? (
+                        <>
+                          <Square className="w-3 h-3 fill-current" />
+                          <span>Stop English</span>
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 className="w-3.5 h-3.5" />
+                          <span>🇬🇧 English</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </>
@@ -385,19 +306,6 @@ export default function Ask() {
             </div>
           </div>
         ))}
-
-        {/* 3 Rippling Dots Thinking Indicator Note */}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl px-4 py-3 text-on-surface flex items-center gap-2.5 text-xs font-semibold shadow-xs">
-              <div className="flex items-center gap-1.5 py-0.5">
-                <span className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" />
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Bottom panel */}
@@ -407,57 +315,67 @@ export default function Ask() {
           {PRESET_QUESTIONS.map((q, i) => (
             <button
               key={i}
-              onClick={() => handleSendQuery(lang === "twi" ? q.twi : q.en)}
-              className="shrink-0 bg-primary-container/20 text-on-surface border border-primary/20 rounded-full px-3 py-1.5 text-xs font-medium hover:bg-primary-container/40 transition-colors max-w-[200px] text-left leading-snug"
+              onClick={() => addQuestion(q)}
+              className="shrink-0 bg-primary-container/20 text-on-surface border border-primary/20 rounded-full px-3.5 py-1.5 text-xs font-medium hover:bg-primary-container/40 transition-colors max-w-[200px] text-left leading-snug"
             >
-              {lang === "twi" ? q.twi : q.en}
+              {voiceLang === "twi" ? q.twi : q.en}
             </button>
           ))}
         </div>
 
-        {/* Text Input & Mic Form */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSendQuery();
-          }}
-          className="flex items-center gap-2"
-        >
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder={lang === "twi" ? "Bisa asɛm bi..." : "Type health question..."}
-            className="flex-1 h-12 px-4 rounded-2xl bg-surface-container-lowest border border-outline-variant text-on-surface text-sm focus:outline-none focus:border-primary"
-          />
-          <button
-            type="button"
-            onClick={toggleListening}
-            aria-label="Voice input"
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform ${
-              listening ? "bg-error text-on-error animate-pulse" : "bg-surface-container-high text-on-surface-variant"
-            }`}
-          >
-            <span className="material-symbols-outlined text-[22px]">mic</span>
-          </button>
-          <button
-            type="submit"
-            disabled={!inputText.trim() || loading}
-            className="w-12 h-12 rounded-2xl bg-primary text-on-primary flex items-center justify-center shrink-0 disabled:opacity-50 shadow-sm active:scale-95 transition-transform"
-          >
-            <span className="material-symbols-outlined text-[22px]">send</span>
-          </button>
-        </form>
+        {/* Audio Recording & Text Input Bar */}
+        <form onSubmit={handleSendText} className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant rounded-full px-3 py-2 shadow-sm">
+          {listening ? (
+            <div className="flex items-center gap-0.5 h-6 px-2 flex-1">
+              {[2, 4, 6, 4, 3, 5, 3, 2].map((h, i) => (
+                <span
+                  key={i}
+                  className="w-1 rounded-full bg-error"
+                  style={{
+                    height: `${h * 3}px`,
+                    animation: `pulse 0.6s ease-in-out ${i * 0.07}s infinite alternate`,
+                  }}
+                />
+              ))}
+              <span className="text-xs text-error font-medium ml-2">
+                {voiceLang === "twi" ? "Mete wo Twi kasa..." : "Listening to English..."}
+              </span>
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              placeholder={
+                voiceLang === "twi"
+                  ? "Twerɛ anaa kyerɛ wo asɛm (e.g. Kontomire, Mogya)..."
+                  : "Type or speak your question in English or Twi..."
+              }
+              className="flex-1 bg-transparent px-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none"
+            />
+          )}
 
-        {/* Disclaimer */}
-        <div className="bg-surface-container-low border border-outline-variant rounded-xl p-3 flex items-start gap-2">
-          <span className="material-symbols-outlined text-outline text-[16px] shrink-0 mt-0.5">info</span>
-          <p className="text-xs text-outline">
-            {lang === "twi"
-              ? "Mama Ba ma nsɛm a ɛfata. Kɔ onyansafo wɔ asiane mu."
-              : "Mama Ba provides general guidance. Always consult a doctor for serious concerns."}
-          </p>
-        </div>
+          {inputText.trim() ? (
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm active:scale-95 transition-transform shrink-0"
+            >
+              <Send className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={toggleListening}
+              aria-label={voiceLang === "twi" ? "Bisa asɛm wɔ Twi mu" : "Ask a question in English"}
+              className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md active:scale-95 transition-transform shrink-0 ${
+                listening ? "bg-error animate-pulse text-white" : "bg-primary text-on-primary"
+              }`}
+            >
+              <Mic className="w-5 h-5" />
+            </button>
+          )}
+        </form>
       </div>
     </div>
   );

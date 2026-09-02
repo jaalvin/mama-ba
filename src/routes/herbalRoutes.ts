@@ -3,6 +3,34 @@ import { HerbalService } from '../services/herbalService';
 
 const router = Router();
 
+// POST /api/v1/herbal-safety/evaluate
+router.post('/evaluate', async (req: Request, res: Response) => {
+  try {
+    const query = req.body.query || req.body.herbName || req.body.foodItem || '';
+    if (!query || !query.trim()) {
+      return res.status(400).json({ success: false, error: 'Query parameter is required.' });
+    }
+    const card = await HerbalService.evaluateSafety(query);
+    res.json({ success: true, data: card });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/v1/herbal-safety/check-combination
+router.post('/check-combination', async (req: Request, res: Response) => {
+  try {
+    const { item1, item2 } = req.body;
+    if (!item1 || !item2 || !item1.trim() || !item2.trim()) {
+      return res.status(400).json({ success: false, error: 'Both item1 and item2 parameters are required.' });
+    }
+    const card = await HerbalService.evaluateCombinationSafety(item1, item2);
+    res.json({ success: true, data: card });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // POST /api/v1/herbal-safety/check
 router.post('/check', (req: Request, res: Response) => {
   try {

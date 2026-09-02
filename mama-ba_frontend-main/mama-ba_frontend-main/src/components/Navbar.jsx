@@ -5,7 +5,7 @@ const links = [
   { label: "Features", href: "#features" },
   { label: "Twi Voice", href: "#twi-voice" },
   { label: "Safety", href: "#safety" },
-  { label: "Testimonials", href: "#testimonials" },
+  { label: "How it works", href: "#how-it-works" },
 ];
 
 export default function Navbar() {

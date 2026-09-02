@@ -109,3 +109,51 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Tactile Button Feedback & Interaction Magic */
+button,
+a,
+[role="button"],
+.clickable,
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+summary,
+label[for] {
+  cursor: pointer !important;
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.12s ease, background-color 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:hover,
+a:hover,
+[role="button"]:hover,
+.clickable:hover {
+  filter: brightness(1.03);
+}
+
+button:active,
+a:active,
+[role="button"]:active,
+.clickable:active {
+  transform: scale(0.95) translateY(1px) !important;
+}
+
+/* Animated Ripple Element */
+.btn-ripple-span {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: btn-ripple-anim 0.55s cubic-bezier(0.1, 0.8, 0.3, 1);
+  background-color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+  z-index: 50;
+}
+
+@keyframes btn-ripple-anim {
+  to {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}

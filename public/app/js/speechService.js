@@ -217,7 +217,7 @@ export const SpeechService = {
         const reader = new FileReader();
         reader.onloadend = async () => {
           const base64Wav = reader.result;
-          const res = await API.transcribeVoice({ audio_base64: base64Wav, language: 'twi-only' });
+          const res = await API.transcribeVoice({ audio_base64: base64Wav, language: 'twi' });
           if (res && res.success && res.transcription) {
             if (onResultCallback) onResultCallback(res.transcription);
           } else if (onErrorCallback) {

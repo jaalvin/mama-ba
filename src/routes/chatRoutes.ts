@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { RAGChatService } from '../services/ragChatService';
 import { MmsTtsService } from '../services/mmsTtsService';
 import { KhayaAiService } from '../services/khayaAiService';
+import { AbenaAiService } from '../services/abenaAiService';
 
 const router = Router();
 
@@ -37,34 +38,49 @@ router.post('/translate', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/v1/chat/asr (Khaya AI Automatic Speech Recognition API v3)
+// POST /api/v1/chat/asr (Abena AI 4-Key Pool -> Anonymous Abena -> Khaya AI ASR v3 Fallback)
 router.post('/asr', async (req: Request, res: Response) => {
   try {
     const { audio_base64, language } = req.body;
     let audioBuffer: Buffer | null = null;
 
     if (audio_base64) {
-      const cleanBase64 = audio_base64.replace(/^data:audio\/\w+;base64,/, '');
+      const cleanBase64 = audio_base64.replace(/^data:[^;]+(;codecs=[^;]+)?;base64,/, '').replace(/^data:.*?;base64,/, '');
       audioBuffer = Buffer.from(cleanBase64, 'base64');
     } else if (Buffer.isBuffer(req.body)) {
       audioBuffer = req.body;
     }
 
-    if (!audioBuffer || audioBuffer.length < 500) {
+    if (!audioBuffer || audioBuffer.length < 20) {
       return res.json({
         success: false,
-        error: 'Audio recording too short or empty. Please speak for 2-3 seconds.'
+        error: 'Audio recording too short or empty. Please try speaking again.'
       });
     }
 
-    // Khaya AI ASR v3 (Transcribes Ghanaian and African languages)
-    const targetLang = (language === 'twi' || language === 'tw' || language === 'twi-only' || language === 'ak') ? 'twi' : 'eng';
-    const khayaTranscription = await KhayaAiService.transcribeAudio(audioBuffer, targetLang);
+    const reqLang = (language || 'twi').toLowerCase();
+    const isEng = reqLang === 'en' || reqLang === 'eng' || reqLang === 'english';
+    const abenaLang = isEng ? 'twi-en' : 'twi-only';
+    const khayaLang = isEng ? 'eng' : 'twi';
 
+    // 1. Primary Ghanaian Neural ASR: Abena AI Engine (Cascades 4 Keys -> Anonymous)
+    const abenaTranscription = await AbenaAiService.transcribeAudio(audioBuffer, abenaLang);
+    if (abenaTranscription && abenaTranscription.trim()) {
+      return res.json({
+        success: true,
+        transcription: abenaTranscription.trim(),
+        provider: 'abena_ai'
+      });
+    }
+
+    // 2. Secondary ASR Fallback: Khaya AI ASR API v3
+    console.log('[ASR Route] Abena AI exhausted/unavailable. Triggering Khaya AI ASR fallback...');
+    const khayaTranscription = await KhayaAiService.transcribeAudio(audioBuffer, khayaLang);
     if (khayaTranscription && khayaTranscription.trim()) {
       return res.json({
         success: true,
-        transcription: khayaTranscription.trim()
+        transcription: khayaTranscription.trim(),
+        provider: 'khaya_ai'
       });
     }
 
@@ -77,20 +93,35 @@ router.post('/asr', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/v1/chat/tts (Khaya AI Text-To-Speech API v2 - Female Voice)
+// POST /api/v1/chat/tts (Abena AI 4-Key Pool -> Anonymous Abena -> Khaya AI v2 -> Meta MMS Fallback)
 router.post('/tts', async (req: Request, res: Response) => {
   try {
-    const { text, language, speaker_id, speaker } = req.body;
+    const { text, language, speaker_id, speaker, voice } = req.body;
     if (!text || !text.trim()) {
       return res.status(400).json({ success: false, error: 'text is required and must not be empty' });
     }
 
     const targetLang = (language || 'tw').toLowerCase();
     const isTwi = targetLang === 'tw' || targetLang === 'twi' || targetLang === 'ak';
+    const preferredVoice = voice || (isTwi ? 'abena_twi_high' : 'akua_eng');
     const khayaLang = isTwi ? 'twi' : 'eng';
     const speakerId = speaker_id || speaker || 'female';
 
-    // 1. Primary Ghanaian Neural TTS: Khaya AI TTS API v2 (Female Voice)
+    // 1. Primary Ghanaian Neural TTS: Abena AI Engine (Cascades Key 1 -> Key 2 -> Key 3 -> Key 4 -> Anonymous)
+    const abenaBuffer = await AbenaAiService.synthesizeSpeech({
+      text,
+      voice: preferredVoice
+    });
+
+    if (abenaBuffer && abenaBuffer.length > 100) {
+      res.setHeader('Content-Type', 'audio/wav');
+      res.setHeader('Content-Length', abenaBuffer.length);
+      res.setHeader('X-Speech-Provider', 'Abena AI');
+      return res.send(abenaBuffer);
+    }
+
+    // 2. Secondary Neural TTS Fallback: Khaya AI TTS API v2
+    console.log('[TTS Route] Abena AI exhausted/unavailable. Triggering Khaya AI TTS fallback...');
     const khayaBuffer = await KhayaAiService.synthesizeSpeech({
       text,
       language: khayaLang,
@@ -100,21 +131,25 @@ router.post('/tts', async (req: Request, res: Response) => {
     if (khayaBuffer && khayaBuffer.length > 100) {
       res.setHeader('Content-Type', 'audio/wav');
       res.setHeader('Content-Length', khayaBuffer.length);
+      res.setHeader('X-Speech-Provider', 'Khaya AI');
       return res.send(khayaBuffer);
     }
 
-    // 2. Secondary Neural TTS Fallback: Meta MMS Akan or Cloud Speech Pipeline
+    // 3. Tertiary Neural TTS Fallback: Meta MMS Akan or Cloud Speech Pipeline
+    console.log('[TTS Route] Khaya AI unavailable. Triggering Meta MMS Twi TTS fallback...');
     const mmsBuffer = await MmsTtsService.synthesizeTwiAudio(text);
     if (mmsBuffer && mmsBuffer.length > 100) {
       res.setHeader('Content-Type', 'audio/mpeg');
       res.setHeader('Content-Length', mmsBuffer.length);
+      res.setHeader('X-Speech-Provider', 'Meta MMS');
       return res.send(mmsBuffer);
     }
 
-    const fallbackBuffer = await MmsTtsService.synthesizeFallbackAudio(text);
+    const fallbackBuffer = await MmsTtsService.synthesizeFallbackAudio(text, khayaLang);
     if (fallbackBuffer && fallbackBuffer.length > 100) {
       res.setHeader('Content-Type', 'audio/mpeg');
       res.setHeader('Content-Length', fallbackBuffer.length);
+      res.setHeader('X-Speech-Provider', 'Cloud TTS');
       return res.send(fallbackBuffer);
     }
 

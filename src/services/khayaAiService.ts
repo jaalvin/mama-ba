@@ -172,7 +172,10 @@ export class KhayaAiService {
   static async transcribeAudio(audioBuffer: Buffer, language: string = 'twi'): Promise<string | null> {
     if (!audioBuffer || audioBuffer.length < 300) return null;
 
-    const targetLang = (language === 'tw' || language === 'twi' || language === 'ak') ? 'twi' : 'eng';
+    const normalized = (language || 'twi').toLowerCase();
+    const isEnglish = normalized === 'en' || normalized === 'eng' || normalized === 'english';
+    const targetLang = isEnglish ? 'eng' : 'twi';
+
     const keys = this.getApiKeys();
 
     for (const key of keys) {

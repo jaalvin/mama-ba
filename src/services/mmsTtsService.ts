@@ -60,10 +60,12 @@ export class MmsTtsService {
   /**
    * High reliability fallback TTS audio generator
    */
-  static async synthesizeFallbackAudio(text: string): Promise<Buffer | null> {
+  static async synthesizeFallbackAudio(text: string, lang: string = 'en'): Promise<Buffer | null> {
     try {
       const q = encodeURIComponent(text.slice(0, 200));
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${q}&tl=en&client=tw-ob`;
+      const isTwi = lang === 'twi' || lang === 'tw' || lang === 'ak';
+      const targetLang = isTwi ? 'ak' : 'en';
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${q}&tl=${targetLang}&client=tw-ob`;
 
       const response = await fetch(url, {
         headers: {
@@ -75,7 +77,7 @@ export class MmsTtsService {
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         if (buffer.length > 100) {
-          console.log(`[Fallback TTS] Generated ${buffer.length} bytes MP3 audio`);
+          console.log(`[Fallback TTS] Generated ${buffer.length} bytes MP3 audio (${targetLang})`);
           return buffer;
         }
       }

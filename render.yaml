@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: mama-ba-maternal-health
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: KHAYA_API_KEY
+        sync: false
+      - key: ABENA_KEY_1
+        sync: false

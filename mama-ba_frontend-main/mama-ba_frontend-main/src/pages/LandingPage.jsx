@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 
 const features = [
@@ -19,24 +19,30 @@ const features = [
   },
 ];
 
-const testimonials = [
+const HOW_IT_WORKS = [
   {
-    quote: "The pregnancy tracker explained exactly what my body was going through. No confusing medical words, just clear advice.",
-    name: "Yaa",
-    place: "Accra",
-    avatar: "https://encrypted-tbn1.gstatic.com/licensed-image?q=tbn:ANd9GcQkqDv8grw3twlfK178U0PZ4t_ppOiP-0r7HjNsjDucTTyOoMxc-xIFRqCTKO2YQWhhUBEgK18OPRZhGr8",
+    step: "01",
+    icon: "app_registration",
+    title: "Create Your Profile",
+    body: "Sign up in seconds and enter your due date, health details, and language preference. Mama Ba personalises everything around you.",
   },
   {
-    quote: "I use the Twi voice feature every day. It's so much easier than trying to read long articles when I'm tired.",
-    name: "Fatima",
-    place: "Tamale",
-    avatar: "https://encrypted-tbn2.gstatic.com/licensed-image?q=tbn:ANd9GcT8uQ5Oppn5fJAbJl237FHLvZhizHnwd3fnsBciiRfp530uFRfsHO6DqhncDeHowmRMVQSLyZfsxgtDiEE",
+    step: "02",
+    icon: "pregnant_woman",
+    title: "Track Your Journey",
+    body: "Log daily vitals, schedule ANC appointments, and track your baby's development week by week — all in one place.",
   },
   {
-    quote: "My local clinic recommended this app to remind me of my appointments. It really helps me stay on track.",
-    name: "Esi",
-    place: "Cape Coast",
-    avatar: "https://encrypted-tbn1.gstatic.com/licensed-image?q=tbn:ANd9GcQqmafKYUO3PMJVE_UvJxW4CRI4EArwV0eTGbvqSY-WJrh8iJkYqXXHNtKs_fQEsiCVxi0WyrQZc_xhRBY",
+    step: "03",
+    icon: "notifications_active",
+    title: "Get Timely Reminders",
+    body: "Receive device notifications for medication times, upcoming clinic visits, and vaccine due dates — so you never miss a critical step.",
+  },
+  {
+    step: "04",
+    icon: "local_pharmacy",
+    title: "Access Care Nearby",
+    body: "Find the nearest pharmacy using your GPS location, order prescription delivery, and book clinic appointments with backup options.",
   },
 ];
 
@@ -48,7 +54,7 @@ export default function LandingPage() {
       <Navbar />
 
       <main className="pt-20 pb-section-gap">
-        {/* Hero Section */}
+        {/* ── Hero ── */}
         <section className="px-margin-mobile py-12 md:py-16 max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="flex flex-col items-start text-left">
             <div className="inline-flex items-center space-x-2 bg-surface-container-high px-4 py-2 rounded-full mb-6 text-primary border border-outline-variant">
@@ -77,7 +83,7 @@ export default function LandingPage() {
               <button
                 onClick={() => navigate("/signin")}
                 aria-label="Ask with your voice"
-                className="border-2 border-clay-red text-clay-red font-headline text-button px-8 py-4 rounded-full w-full sm:w-auto hover:bg-surface-container-high transition-colors active:scale-95 flex items-center justify-center space-x-2"
+                className="border-2 border-primary text-primary font-headline text-button px-8 py-4 rounded-full w-full sm:w-auto hover:bg-surface-container-high transition-colors active:scale-95 flex items-center justify-center space-x-2"
               >
                 <span className="material-symbols-outlined">mic</span>
                 <span>Talk to Mama Ba</span>
@@ -95,13 +101,10 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Features Section */}
+        {/* ── Features ── */}
         <section id="features" className="px-margin-mobile grid grid-cols-1 md:grid-cols-3 gap-gutter-md max-w-[1200px] mx-auto py-section-gap">
           {features.map((f) => (
-            <div
-              key={f.title}
-              className="bg-surface-container-low border border-outline-variant rounded-xl p-8 flex flex-col gap-4 hover:bg-surface-container transition-colors duration-300 shadow-sm"
-            >
+            <div key={f.title} className="bg-surface-container-low border border-outline-variant rounded-xl p-8 flex flex-col gap-4 hover:bg-surface-container transition-colors duration-300 shadow-sm">
               <div className="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
                 <span className="material-symbols-outlined">{f.icon}</span>
               </div>
@@ -111,7 +114,34 @@ export default function LandingPage() {
           ))}
         </section>
 
-        {/* Voice Section */}
+        {/* ── How It Works ── */}
+        <section id="how-it-works" className="px-margin-mobile py-section-gap bg-surface-container-low border-y border-outline-variant">
+          <div className="max-w-[1200px] mx-auto">
+            <div className="text-center max-w-2xl mx-auto mb-12">
+              <h2 className="font-headline text-headline-lg-mobile md:text-headline-xl text-primary mb-4">
+                How Mama Ba Works
+              </h2>
+              <p className="text-on-surface-variant">
+                From sign-up to your first reminder, you're guided every step of the way — in Twi or English.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {HOW_IT_WORKS.map((s) => (
+                <div key={s.step} className="relative flex flex-col items-center text-center gap-4 p-6 bg-background rounded-2xl border border-outline-variant shadow-sm">
+                  <span className="absolute top-4 right-4 text-xs font-bold text-primary/30 font-headline">{s.step}</span>
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[28px] text-primary">{s.icon}</span>
+                  </div>
+                  <h3 className="font-headline text-headline-md text-on-surface">{s.title}</h3>
+                  <p className="text-sm text-on-surface-variant leading-relaxed">{s.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Twi Voice Section ── */}
         <section id="twi-voice" className="px-margin-mobile py-section-gap bg-forest-green text-on-primary relative overflow-hidden">
           <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div className="flex flex-col items-start gap-6">
@@ -141,7 +171,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Safety & Medical Section */}
+        {/* ── Safety & Medical Section ── */}
         <section id="safety" className="px-margin-mobile py-section-gap max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
           <div className="rounded-2xl overflow-hidden border border-outline-variant shadow-md aspect-[16/10]">
             <img
@@ -161,51 +191,23 @@ export default function LandingPage() {
             </p>
           </div>
         </section>
-
-        {/* Testimonials */}
-        <section id="testimonials" className="px-margin-mobile py-section-gap max-w-[1200px] mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <h2 className="font-headline text-headline-lg-mobile md:text-headline-xl text-charcoal-green mb-4">
-              Stories from Our Community
-            </h2>
-            <p className="text-on-surface-variant">
-              Hear from mothers across Ghana who have found comfort and guidance with their digital Big Sister.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-gutter-md">
-            {testimonials.map((t) => (
-              <div key={t.name} className="bg-surface-container-low border border-outline-variant rounded-xl p-6 flex flex-col justify-between">
-                <p className="text-on-surface mb-6 italic">"{t.quote}"</p>
-                <div className="flex items-center space-x-3">
-                  <img src={t.avatar} alt={t.name} className="w-12 h-12 rounded-full object-cover border border-outline-variant" />
-                  <div>
-                    <p className="font-headline text-label-md text-charcoal-green font-semibold">{t.name}</p>
-                    <p className="text-sm text-on-surface-variant">{t.place}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
       </main>
 
-      {/* Footer */}
+      {/* ── Footer ── */}
       <footer className="w-full py-section-gap bg-surface-container-high border-t border-outline-variant">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter-md px-margin-mobile md:px-gutter-md max-w-[1440px] mx-auto">
-          <div className="flex flex-col space-y-6">
+          <div className="flex flex-col space-y-4">
             <div className="font-headline text-headline-md font-bold text-primary">Mama Ba</div>
-            <p className="font-body text-label-md text-on-surface-variant">
-              © 2026 Mama Ba. Empowering Ghanaian Motherhood. Medical Disclaimer: This app
-              provides general health information and is not a substitute for professional
-              medical advice, diagnosis, or treatment.
+            <p className="font-body text-label-md text-on-surface-variant max-w-sm">
+              Empowering Ghanaian mothers with culturally respectful health guidance, from pregnancy through early motherhood.
             </p>
+            <p className="text-xs text-on-surface-variant">© 2026 Mama Ba. All rights reserved.</p>
           </div>
-          <div className="flex flex-col space-y-4 md:items-end">
-            <a href="#" className="font-body text-label-md text-on-surface-variant hover:text-primary transition-colors">Privacy Policy</a>
-            <a href="#" className="font-body text-label-md text-on-surface-variant hover:text-primary transition-colors">Terms of Service</a>
-            <a href="#" className="font-body text-label-md text-on-surface-variant hover:text-primary transition-colors">Health Disclaimer</a>
-            <a href="#" className="font-body text-label-md text-on-surface-variant hover:text-primary transition-colors">Contact Support</a>
+          <div className="flex flex-col space-y-3 md:items-end">
+            <Link to="/privacy-policy" className="font-body text-label-md text-on-surface-variant hover:text-primary transition-colors">Privacy Policy</Link>
+            <Link to="/terms-of-service" className="font-body text-label-md text-on-surface-variant hover:text-primary transition-colors">Terms of Service</Link>
+            <Link to="/health-disclaimer" className="font-body text-label-md text-on-surface-variant hover:text-primary transition-colors">Health Disclaimer</Link>
+            <Link to="/contact" className="font-body text-label-md text-on-surface-variant hover:text-primary transition-colors">Contact Support</Link>
           </div>
         </div>
       </footer>

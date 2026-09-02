@@ -1,87 +1,66 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLang } from "../context/LanguageContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
+import { vitals as vitalsAPI } from "../services/api.js";
+import { Loader2 } from "lucide-react";
 
 const VITALS_CONFIG = [
   {
     id: "bp_sys",
     label: { en: "Blood Pressure (Systolic)", twi: "Mogya Tumi (Systolic)" },
-    unit: "mmHg",
-    type: "number",
-    min: 70,
-    max: 200,
-    placeholder: "120",
+    unit: "mmHg", type: "number", min: 70, max: 200, placeholder: "120",
     thresholds: [
-      { max: 119, label: { en: "Normal", twi: "Pɛ" }, color: "text-forest-green bg-forest-green/10 border-forest-green/30" },
-      { max: 139, label: { en: "Elevated", twi: "Boro" }, color: "text-earthen-ochre bg-earthen-ochre/10 border-earthen-ochre/30" },
+      { max: 119, label: { en: "Normal", twi: "Pɛ" },              color: "text-forest-green bg-forest-green/10 border-forest-green/30" },
+      { max: 139, label: { en: "Elevated", twi: "Boro" },           color: "text-earthen-ochre bg-earthen-ochre/10 border-earthen-ochre/30" },
       { max: 999, label: { en: "High — See Doctor", twi: "Tumi — Kɔ Onyansafo" }, color: "text-error bg-error-container border-error/30" },
     ],
   },
   {
     id: "bp_dia",
     label: { en: "Blood Pressure (Diastolic)", twi: "Mogya Tumi (Diastolic)" },
-    unit: "mmHg",
-    type: "number",
-    min: 40,
-    max: 130,
-    placeholder: "80",
+    unit: "mmHg", type: "number", min: 40, max: 130, placeholder: "80",
     thresholds: [
-      { max: 79, label: { en: "Normal", twi: "Pɛ" }, color: "text-forest-green bg-forest-green/10 border-forest-green/30" },
-      { max: 89, label: { en: "Elevated", twi: "Boro" }, color: "text-earthen-ochre bg-earthen-ochre/10 border-earthen-ochre/30" },
+      { max: 79,  label: { en: "Normal", twi: "Pɛ" },              color: "text-forest-green bg-forest-green/10 border-forest-green/30" },
+      { max: 89,  label: { en: "Elevated", twi: "Boro" },           color: "text-earthen-ochre bg-earthen-ochre/10 border-earthen-ochre/30" },
       { max: 999, label: { en: "High — See Doctor", twi: "Tumi — Kɔ Onyansafo" }, color: "text-error bg-error-container border-error/30" },
     ],
   },
   {
     id: "temp",
     label: { en: "Body Temperature", twi: "Onipa Hye" },
-    unit: "°C",
-    type: "number",
-    min: 35,
-    max: 42,
-    placeholder: "36.6",
-    step: "0.1",
+    unit: "°C", type: "number", min: 35, max: 42, placeholder: "36.6", step: "0.1",
     thresholds: [
-      { max: 37.2, label: { en: "Normal", twi: "Pɛ" }, color: "text-forest-green bg-forest-green/10 border-forest-green/30" },
-      { max: 38.0, label: { en: "Low Fever", twi: "Hye Kakra" }, color: "text-earthen-ochre bg-earthen-ochre/10 border-earthen-ochre/30" },
-      { max: 99, label: { en: "High Fever — Act Now", twi: "Hye Dɔɔso — Yɛ Ntɛm" }, color: "text-error bg-error-container border-error/30" },
+      { max: 37.2, label: { en: "Normal", twi: "Pɛ" },             color: "text-forest-green bg-forest-green/10 border-forest-green/30" },
+      { max: 38.0, label: { en: "Low Fever", twi: "Hye Kakra" },   color: "text-earthen-ochre bg-earthen-ochre/10 border-earthen-ochre/30" },
+      { max: 99,   label: { en: "High Fever — Act Now", twi: "Hye Dɔɔso — Yɛ Ntɛm" }, color: "text-error bg-error-container border-error/30" },
     ],
   },
   {
     id: "sugar",
     label: { en: "Blood Sugar", twi: "Mogya Sukaa" },
-    unit: "mmol/L",
-    type: "number",
-    min: 2,
-    max: 20,
-    placeholder: "5.5",
-    step: "0.1",
+    unit: "mmol/L", type: "number", min: 2, max: 20, placeholder: "5.5", step: "0.1",
     thresholds: [
-      { max: 7.8, label: { en: "Normal", twi: "Pɛ" }, color: "text-forest-green bg-forest-green/10 border-forest-green/30" },
-      { max: 10, label: { en: "Elevated", twi: "Boro" }, color: "text-earthen-ochre bg-earthen-ochre/10 border-earthen-ochre/30" },
-      { max: 99, label: { en: "High — Seek Care", twi: "Dɔɔso — Kɔ Ayaresabea" }, color: "text-error bg-error-container border-error/30" },
+      { max: 7.8, label: { en: "Normal", twi: "Pɛ" },              color: "text-forest-green bg-forest-green/10 border-forest-green/30" },
+      { max: 10,  label: { en: "Elevated", twi: "Boro" },           color: "text-earthen-ochre bg-earthen-ochre/10 border-earthen-ochre/30" },
+      { max: 99,  label: { en: "High — Seek Care", twi: "Dɔɔso — Kɔ Ayaresabea" }, color: "text-error bg-error-container border-error/30" },
     ],
   },
   {
     id: "weight",
     label: { en: "Weight", twi: "Boɔdeɛ" },
-    unit: "kg",
-    type: "number",
-    min: 30,
-    max: 200,
-    placeholder: "65",
+    unit: "kg", type: "number", min: 30, max: 200, placeholder: "65",
     thresholds: [
       { max: 999, label: { en: "Logged", twi: "Agye" }, color: "text-primary bg-primary-container/20 border-primary/30" },
     ],
   },
 ];
 
-// Tiny sparkline SVG from an array of numbers
 function Sparkline({ values, color = "#84250f" }) {
   if (values.length < 2) return null;
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = max - min || 1;
-  const W = 100;
-  const H = 30;
+  const W = 100, H = 30;
   const pts = values.map((v, i) => {
     const x = (i / (values.length - 1)) * W;
     const y = H - ((v - min) / range) * H;
@@ -102,25 +81,49 @@ function getStatus(config, val) {
 
 export default function Vitals() {
   const { lang } = useLang();
-  const [values, setValues] = useState({});
-  const [history, setHistory] = useState({ bp_sys: [118, 122, 120, 125], bp_dia: [78, 80, 79, 82], temp: [36.5, 36.7, 36.6], sugar: [5.4, 5.6, 5.5], weight: [63, 63.5, 64] });
-  const [diary, setDiary] = useState("");
-  const [diaryRecording, setDiaryRecording] = useState(false);
+  const { accessToken } = useAuth();
+
+  const [values, setValues]   = useState({});
+  const [history, setHistory] = useState({});
+  const [histLoading, setHistLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [saved, setSaved]     = useState(false);
+
+  const [diary, setDiary]             = useState("");
+  const [diaryRecording, setDiaryRec] = useState(false);
   const recognitionRef = useRef(null);
+
+  // Load history on mount
+  useEffect(() => {
+    if (!accessToken) return;
+    vitalsAPI.history(accessToken)
+      .then(setHistory)
+      .catch(() => setHistory({}))
+      .finally(() => setHistLoading(false));
+  }, [accessToken]);
 
   const handleChange = (id, val) => setValues((prev) => ({ ...prev, [id]: val }));
 
-  const handleSave = () => {
-    const updated = { ...history };
-    VITALS_CONFIG.forEach(({ id }) => {
-      const v = parseFloat(values[id]);
-      if (!isNaN(v)) {
-        updated[id] = [...(updated[id] || []), v].slice(-7);
-      }
-    });
-    setHistory(updated);
-    setValues({});
-    alert(lang === "twi" ? "Agye yie!" : "Vitals saved!");
+  const handleSave = async () => {
+    const hasValues = VITALS_CONFIG.some(({ id }) => values[id] !== undefined && values[id] !== "");
+    if (!hasValues) return;
+    setSaving(true);
+    try {
+      const readings = {};
+      VITALS_CONFIG.forEach(({ id }) => {
+        const v = parseFloat(values[id]);
+        if (!isNaN(v)) readings[id] = v;
+      });
+      const updated = await vitalsAPI.save(accessToken, readings);
+      setHistory(updated);
+      setValues({});
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const startDiaryVoice = () => {
@@ -128,8 +131,8 @@ export default function Vitals() {
     if (!SR) return;
     const r = new SR();
     r.lang = "en-US";
-    r.onstart = () => setDiaryRecording(true);
-    r.onend = () => setDiaryRecording(false);
+    r.onstart = () => setDiaryRec(true);
+    r.onend   = () => setDiaryRec(false);
     r.onresult = (e) => setDiary((prev) => prev + " " + e.results[0][0].transcript);
     recognitionRef.current = r;
     r.start();
@@ -147,6 +150,7 @@ export default function Vitals() {
       <div className="flex flex-col gap-4 mb-6">
         {VITALS_CONFIG.map((cfg) => {
           const status = getStatus(cfg, values[cfg.id]);
+          const hist   = history[cfg.id] || [];
           return (
             <div key={cfg.id} className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
@@ -162,9 +166,7 @@ export default function Vitals() {
               <div className="flex items-center gap-3">
                 <input
                   type={cfg.type}
-                  min={cfg.min}
-                  max={cfg.max}
-                  step={cfg.step || "1"}
+                  min={cfg.min} max={cfg.max} step={cfg.step || "1"}
                   placeholder={cfg.placeholder}
                   value={values[cfg.id] || ""}
                   onChange={(e) => handleChange(cfg.id, e.target.value)}
@@ -172,13 +174,17 @@ export default function Vitals() {
                 />
                 <span className="text-on-surface-variant text-sm font-medium">{cfg.unit}</span>
               </div>
-              {/* Sparkline history */}
-              {history[cfg.id]?.length >= 2 && (
+              {histLoading ? (
+                <div className="mt-3 flex items-center gap-2 text-xs text-on-surface-variant">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  {lang === "twi" ? "Ɛreloading..." : "Loading history..."}
+                </div>
+              ) : hist.length >= 2 && (
                 <div className="mt-3">
                   <p className="text-xs text-on-surface-variant mb-1">
                     {lang === "twi" ? "Nkae nnansa" : "Recent trend"}
                   </p>
-                  <Sparkline values={history[cfg.id]} />
+                  <Sparkline values={hist} />
                 </div>
               )}
             </div>
@@ -189,10 +195,15 @@ export default function Vitals() {
       {/* Save button */}
       <button
         onClick={handleSave}
-        className="w-full bg-primary text-on-primary font-headline text-button py-4 rounded-full active:scale-95 transition-transform mb-6 flex items-center justify-center gap-2"
+        disabled={saving}
+        className="w-full bg-primary text-on-primary font-headline text-button py-4 rounded-full active:scale-95 transition-transform mb-6 flex items-center justify-center gap-2 disabled:opacity-70"
       >
-        <span className="material-symbols-outlined">save</span>
-        {lang === "twi" ? "Gye Nkae" : "Save Vitals"}
+        {saving
+          ? <Loader2 className="w-5 h-5 animate-spin" />
+          : <span className="material-symbols-outlined">save</span>}
+        {saved
+          ? (lang === "twi" ? "Agye yie! ✓" : "Saved! ✓")
+          : (lang === "twi" ? "Gye Nkae" : "Save Vitals")}
       </button>
 
       {/* Health Diary */}

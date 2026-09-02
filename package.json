@@ -4,7 +4,8 @@
   "description": "Offline-first & cloud-boosted backend for The Guided Health Companion (Patient App)",
   "main": "dist/src/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "node scripts/build.js",
+    "build:backend": "tsc",
     "build:frontend": "npm --prefix frontend run build",
     "start": "node dist/src/server.js",
     "dev": "ts-node src/server.ts",
