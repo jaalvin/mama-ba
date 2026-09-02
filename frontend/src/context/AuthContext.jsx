@@ -218,22 +218,33 @@ export function AuthProvider({ children }) {
     };
 
     // 2. Register with Supabase Auth as well
+    let supaRes = null;
     try {
       if (supabase && supabase.auth) {
-        await supabase.auth.signUp({
+        supaRes = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: name } }
-        }).catch(() => {});
+          options: {
+            emailRedirectTo: `${window.location.origin}/app/`,
+            data: { full_name: name }
+          }
+        }).catch(() => null);
       }
     } catch (e) {
       console.warn("Supabase Auth signup notice:", e);
     }
 
+    // Check if email confirmation is required by Supabase (user object created, session null)
+    const verificationPending = Boolean(supaRes?.data?.user && !supaRes?.data?.session);
+
+    if (verificationPending) {
+      return { user: newUser, verificationPending: true };
+    }
+
     setAccessToken(data.accessToken);
     setUserState(newUser);
     persistUser(newUser, data.accessToken);
-    return newUser;
+    return { user: newUser, verificationPending: false };
   }, []);
 
   const logout = useCallback(async () => {

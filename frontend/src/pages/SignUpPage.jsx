@@ -98,6 +98,8 @@ export default function SignUpPage() {
     }
   };
 
+  const [emailSent, setEmailSent]         = useState(false);
+
   // ── Step 2: verify OTP → create account ─────────────────────
   const verifyOtp = async () => {
     const code = otpValues.join("");
@@ -123,8 +125,12 @@ export default function SignUpPage() {
         }
       }
       // Code correct — create the account
-      await signup(submittedData);
-      navigate("/onboarding");
+      const result = await signup(submittedData);
+      if (result && result.verificationPending) {
+        setEmailSent(true);
+      } else {
+        navigate("/onboarding");
+      }
     } catch (err) {
       setOtpError(err.message);
     } finally {
@@ -157,6 +163,38 @@ export default function SignUpPage() {
     setOtpError("");
     startResendCooldown();
   };
+
+  // ────────────────────────────────────────────────────────────
+  // RENDER — Email verification pending step
+  // ────────────────────────────────────────────────────────────
+  if (emailSent) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4 py-12 md:px-8">
+        <Link to="/" className="font-headline text-headline-md font-bold text-primary mb-8">
+          Mama Ba
+        </Link>
+        <div className="w-full max-w-md bg-surface-container-lowest border border-outline-variant rounded-2xl shadow-sm p-8 text-center space-y-4">
+          <div className="flex justify-center mb-2">
+            <div className="w-16 h-16 rounded-full bg-primary-container/30 flex items-center justify-center">
+              <span className="material-symbols-outlined text-primary text-[32px]">mark_email_read</span>
+            </div>
+          </div>
+          <h2 className="text-xl font-bold font-headline text-on-surface">Check Your Email / Hwɛ Wo Email</h2>
+          <p className="text-sm text-on-surface-variant leading-relaxed">
+            We sent a verification link to <span className="font-semibold text-primary">{submittedData?.email}</span>. Click the link to activate your account and start using Mama Ba.
+          </p>
+          <div className="pt-4">
+            <Link
+              to="/signin"
+              className="inline-block w-full py-3.5 bg-primary text-on-primary font-semibold text-sm rounded-full shadow-xs hover:bg-primary-container transition-colors"
+            >
+              Go to Sign In / Kɔ So Sign In
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ────────────────────────────────────────────────────────────
   // RENDER — OTP step
