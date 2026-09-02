@@ -1,12 +1,27 @@
-import { Router, Request, Response } from 'express';
+import { Router, Response } from 'express';
 import { VitalsService } from '../services/vitalsService';
+import { optionalUser, AuthenticatedRequest } from '../middleware/authMiddleware';
 
 const router = Router();
 
-const handleLogVitals = (req: Request, res: Response) => {
+const getUserIdFromReq = (req: AuthenticatedRequest): string | null => {
+  return (
+    req.user?.userId ||
+    (req.headers['x-user-id'] as string) ||
+    (req.query.userId as string) ||
+    req.body?.userId ||
+    null
+  );
+};
+
+const handleLogVitals = (req: AuthenticatedRequest, res: Response) => {
   try {
+    const userId = getUserIdFromReq(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid userId is required to log vitals.' });
+    }
+
     const {
-      userId,
       systolicBp, bp_sys,
       diastolicBp, bp_dia,
       bodyTemperature, temp,
@@ -24,7 +39,7 @@ const handleLogVitals = (req: Request, res: Response) => {
     const p = pulseRate ?? pulse;
 
     const result = VitalsService.logVitals({
-      userId: userId || 'demo-patient-001',
+      userId,
       systolicBp: sys !== undefined && sys !== '' ? Number(sys) : undefined,
       diastolicBp: dia !== undefined && dia !== '' ? Number(dia) : undefined,
       bodyTemperature: t !== undefined && t !== '' ? Number(t) : undefined,
@@ -40,14 +55,19 @@ const handleLogVitals = (req: Request, res: Response) => {
   }
 };
 
+router.use(optionalUser);
+
 // Accept both POST /api/v1/vitals AND POST /api/v1/vitals/log
 router.post('/', handleLogVitals);
 router.post('/log', handleLogVitals);
 
 // GET /api/v1/vitals/history/:userId or GET /api/v1/vitals/history
-router.get('/history/:userId?', (req: Request, res: Response) => {
+router.get('/history/:userId?', (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.params.userId || (req.query.userId as string) || 'demo-patient-001';
+    const userId = req.params.userId || getUserIdFromReq(req);
+    if (!userId) {
+      return res.json({ success: true, count: 0, data: [] });
+    }
     const history = VitalsService.getVitalsHistory(userId);
     res.json({ success: true, count: history.length, data: history });
   } catch (error: any) {
@@ -56,11 +76,14 @@ router.get('/history/:userId?', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/vitals/journal
-router.post('/journal', (req: Request, res: Response) => {
+router.post('/journal', (req: AuthenticatedRequest, res: Response) => {
   try {
-    const { userId, symptoms, mood, notesText, audioNoteUrl } = req.body;
-    const uid = userId || (req.query.userId as string) || 'demo-patient-001';
-    const result = VitalsService.saveHealthJournal(uid, symptoms || [], mood || 'good', notesText, audioNoteUrl);
+    const userId = getUserIdFromReq(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, error: 'Unauthorized: Valid userId is required.' });
+    }
+    const { symptoms, mood, notesText, audioNoteUrl } = req.body;
+    const result = VitalsService.saveHealthJournal(userId, symptoms || [], mood || 'good', notesText, audioNoteUrl);
     res.json({ success: true, data: result });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -68,9 +91,12 @@ router.post('/journal', (req: Request, res: Response) => {
 });
 
 // GET /api/v1/vitals/journal/:userId
-router.get('/journal/:userId?', (req: Request, res: Response) => {
+router.get('/journal/:userId?', (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.params.userId || (req.query.userId as string) || 'demo-patient-001';
+    const userId = req.params.userId || getUserIdFromReq(req);
+    if (!userId) {
+      return res.json({ success: true, count: 0, data: [] });
+    }
     const journal = VitalsService.getJournalHistory(userId);
     res.json({ success: true, count: journal.length, data: journal });
   } catch (error: any) {

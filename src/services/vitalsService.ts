@@ -51,7 +51,7 @@ export class VitalsService {
     let isHigh = false;
     let isElevated = false;
 
-    const userId = entry.userId || 'demo-patient-001';
+    const userId = entry.userId || 'anonymous-user';
 
     // ── 1. Blood Pressure Evaluation ──────────────────────────────────────────
     if (entry.systolicBp || entry.diastolicBp) {
@@ -384,7 +384,7 @@ export class VitalsService {
     const db = getOfflineDb();
     try {
       const stmt = db.prepare(`SELECT * FROM vitals_logs WHERE user_id = ? ORDER BY logged_at DESC LIMIT ?`);
-      return stmt.all(userId || 'demo-patient-001', limit);
+      return stmt.all(userId, limit);
     } catch (e) {
       return [];
     }
@@ -405,7 +405,7 @@ export class VitalsService {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
-      stmt.run(id, userId || 'demo-patient-001', today, JSON.stringify(symptoms), mood, notesText || null, audioNoteUrl || null, 'pending');
+      stmt.run(id, userId, today, JSON.stringify(symptoms), mood, notesText || null, audioNoteUrl || null, 'pending');
     } catch (e) {
       console.warn('[VitalsService] Journal insert error:', e);
     }
@@ -420,7 +420,7 @@ export class VitalsService {
     const db = getOfflineDb();
     try {
       const stmt = db.prepare(`SELECT * FROM health_journal WHERE user_id = ? ORDER BY entry_date DESC`);
-      return stmt.all(userId || 'demo-patient-001');
+      return stmt.all(userId);
     } catch (e) {
       return [];
     }

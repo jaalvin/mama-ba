@@ -11,14 +11,18 @@ const API_BASE  = import.meta.env.VITE_API_BASE_URL || "/api/v1";
 
 // ─── Generic authenticated fetch ────────────────────────────────────────────
 export async function apiFetch(path, token, options = {}) {
+  const activeUserId = getActiveUserId();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(activeUserId ? { "x-user-id": activeUserId } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  };
+
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...(options.headers || {}),
-    },
+    headers,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

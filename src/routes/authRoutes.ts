@@ -1,8 +1,16 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { getOfflineDb } from '../config';
+import { generateToken, verifyToken } from '../middleware/authMiddleware';
 
 const router = Router();
 const verificationCodes = new Map<string, string>();
+
+/** Helper to generate salted SHA-256 password hash */
+function hashPassword(password: string): string {
+  const salt = 'mama-ba-ghana-maternal-health-2026';
+  return crypto.createHmac('sha256', salt).update(password).digest('hex');
+}
 
 // POST /api/v1/auth/send-verification
 router.post('/send-verification', (req: Request, res: Response) => {
@@ -11,13 +19,14 @@ router.post('/send-verification', (req: Request, res: Response) => {
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email address is required' });
     }
+    const cleanEmail = email.toLowerCase().trim();
     const code = String(Math.floor(100000 + Math.random() * 900000));
-    verificationCodes.set(email.toLowerCase().trim(), code);
-    console.log(`[Auth] Sent verification code ${code} to ${email}`);
+    verificationCodes.set(cleanEmail, code);
+    console.log(`[Auth] Verification code ${code} generated for ${cleanEmail}`);
     res.json({
       success: true,
       message: `Verification code sent to ${email}`,
-      code // Returned for dev/local convenience
+      code // Returned for dev/testing convenience
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -48,25 +57,50 @@ router.post('/verify-email', (req: Request, res: Response) => {
 // POST /api/v1/auth/register
 router.post('/register', (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
+    const { name, email, password, languagePreference } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
     const db = getOfflineDb();
-    const userId = `user-${Date.now()}`;
-    const fullName = name || email.split('@')[0];
 
-    const stmt = db.prepare(`
-      INSERT OR REPLACE INTO user_profile
-      (user_id, full_name, email, password_hash, updated_at)
-      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    // Check for existing user
+    const checkStmt = db.prepare(`SELECT user_id FROM user_profile WHERE email = ?`);
+    const existing = checkStmt.get(cleanEmail);
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'An account with this email address already exists. Please sign in.' });
+    }
+
+    const userId = `usr_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const fullName = name || cleanEmail.split('@')[0];
+    const passwordHash = hashPassword(password);
+    const langPref = languagePreference || 'twi';
+
+    const insertStmt = db.prepare(`
+      INSERT INTO user_profile
+      (user_id, full_name, email, password_hash, language_preference, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     `);
-    stmt.run(userId, fullName, email, password || 'hashed_pwd');
+    insertStmt.run(userId, fullName, cleanEmail, passwordHash, langPref);
 
-    const userObj = { name: fullName, email, userId };
+    const userObj = {
+      id: userId,
+      userId,
+      name: fullName,
+      fullName,
+      email: cleanEmail,
+      languagePreference: langPref
+    };
+
+    const token = generateToken({ userId, email: cleanEmail, name: fullName });
+
     res.json({
       success: true,
-      accessToken: `token-${Date.now()}`,
+      accessToken: token,
       user: userObj
     });
   } catch (error: any) {
@@ -78,19 +112,46 @@ router.post('/register', (req: Request, res: Response) => {
 router.post('/login', (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    if (!email) {
-      return res.status(400).json({ success: false, message: 'Email is required' });
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
-    const db = getOfflineDb();
-    const stmt = db.prepare(`SELECT * FROM user_profile WHERE email = ? OR user_id = ?`);
-    const profile: any = stmt.get(email, email);
 
-    const fullName = profile ? (profile.full_name || email.split('@')[0]) : email.split('@')[0];
-    const userObj = { name: fullName, email, userId: profile ? profile.user_id : `user-${Date.now()}` };
+    const cleanEmail = email.toLowerCase().trim();
+    const db = getOfflineDb();
+
+    const stmt = db.prepare(`SELECT * FROM user_profile WHERE email = ? OR user_id = ?`);
+    const profile: any = stmt.get(cleanEmail, cleanEmail);
+
+    if (!profile) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password. Please check your credentials or create an account.' });
+    }
+
+    const inputHash = hashPassword(password);
+    // Support legacy or direct password check during transition if needed
+    if (profile.password_hash && profile.password_hash !== inputHash && profile.password_hash !== password) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    const fullName = profile.full_name || cleanEmail.split('@')[0];
+    const userId = profile.user_id;
+
+    const userObj = {
+      id: userId,
+      userId,
+      name: fullName,
+      fullName,
+      email: profile.email || cleanEmail,
+      languagePreference: profile.language_preference || 'twi',
+      isPregnant: Boolean(profile.is_pregnant),
+      gestationalWeeks: profile.gestational_weeks || 0,
+      dueDate: profile.due_date || null
+    };
+
+    const token = generateToken({ userId, email: profile.email || cleanEmail, name: fullName });
 
     res.json({
       success: true,
-      accessToken: `token-${Date.now()}`,
+      accessToken: token,
       user: userObj
     });
   } catch (error: any) {
@@ -99,12 +160,55 @@ router.post('/login', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/auth/refresh
-router.post('/refresh', (_req: Request, res: Response) => {
-  res.json({
-    success: true,
-    accessToken: `token-${Date.now()}`,
-    user: { name: 'Mama Ba User', email: 'demo@mamaba.gh' }
-  });
+router.post('/refresh', (req: Request, res: Response) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const userIdHeader = req.headers['x-user-id'] as string;
+
+    let targetUserId: string | null = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const decoded = verifyToken(authHeader.substring(7));
+      if (decoded) targetUserId = decoded.userId;
+    } else if (userIdHeader) {
+      targetUserId = userIdHeader.trim();
+    }
+
+    if (!targetUserId) {
+      return res.status(401).json({ success: false, message: 'No active session token' });
+    }
+
+    const db = getOfflineDb();
+    const stmt = db.prepare(`SELECT * FROM user_profile WHERE user_id = ?`);
+    const profile: any = stmt.get(targetUserId);
+
+    if (!profile) {
+      return res.status(401).json({ success: false, message: 'User session expired' });
+    }
+
+    const fullName = profile.full_name || profile.email?.split('@')[0] || 'Patient';
+    const userObj = {
+      id: profile.user_id,
+      userId: profile.user_id,
+      name: fullName,
+      fullName,
+      email: profile.email,
+      languagePreference: profile.language_preference || 'twi',
+      isPregnant: Boolean(profile.is_pregnant),
+      gestationalWeeks: profile.gestational_weeks || 0,
+      dueDate: profile.due_date || null
+    };
+
+    const token = generateToken({ userId: profile.user_id, email: profile.email, name: fullName });
+
+    res.json({
+      success: true,
+      accessToken: token,
+      user: userObj
+    });
+  } catch (error: any) {
+    res.status(401).json({ success: false, message: error.message });
+  }
 });
 
 // POST /api/v1/auth/logout
@@ -192,15 +296,17 @@ router.post('/change-password', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'userId and newPassword are required' });
     }
     const db = getOfflineDb();
-    const checkStmt = db.prepare(`SELECT user_id FROM user_profile WHERE user_id = ?`);
-    const existing = checkStmt.get(userId);
+    const checkStmt = db.prepare(`SELECT user_id, password_hash FROM user_profile WHERE user_id = ?`);
+    const existing: any = checkStmt.get(userId);
+
+    const newHash = hashPassword(newPassword);
 
     if (existing) {
       const updateStmt = db.prepare(`UPDATE user_profile SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`);
-      updateStmt.run(newPassword, userId);
+      updateStmt.run(newHash, userId);
     } else {
       const insertStmt = db.prepare(`INSERT INTO user_profile (user_id, password_hash, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)`);
-      insertStmt.run(userId, newPassword);
+      insertStmt.run(userId, newHash);
     }
 
     res.json({ success: true, message: 'Password changed successfully' });
@@ -210,6 +316,3 @@ router.post('/change-password', (req: Request, res: Response) => {
 });
 
 export default router;
-
-
-

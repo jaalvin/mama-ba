@@ -10,15 +10,31 @@ const router = Router();
 router.post('/query', async (req: Request, res: Response) => {
   try {
     const { userId, query, language } = req.body;
+    const activeUserId = (req.headers['x-user-id'] as string) || userId || 'anonymous-user';
+
     if (!query) {
       return res.status(400).json({ success: false, error: 'query string is required' });
     }
     const result = await RAGChatService.processQuery({
-      userId: userId || 'demo-patient-001',
+      userId: activeUserId,
       query,
       language: language || 'twi'
     });
     res.json({ success: true, data: result });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/v1/chat/history/:userId?
+router.get('/history/:userId?', (req: Request, res: Response) => {
+  try {
+    const targetUserId = req.params.userId || (req.headers['x-user-id'] as string) || (req.query.userId as string);
+    if (!targetUserId) {
+      return res.json({ success: true, count: 0, data: [] });
+    }
+    const history = RAGChatService.getChatHistory(targetUserId);
+    res.json({ success: true, count: history.length, data: history });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

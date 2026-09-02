@@ -1,15 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext(null);
 
-// ─────────────────────────────────────────────────────────────
-//  Set VITE_DEMO_MODE=true in .env.local to bypass the backend.
-//  Remove or set it to false before attaching your real backend.
-// ─────────────────────────────────────────────────────────────
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 const API_BASE  = import.meta.env.VITE_API_BASE_URL || "/api/v1";
-const STORAGE_KEY = "mama-ba-demo-user";
+const STORAGE_KEY = "mama-ba-active-user";
 const PERSIST_USER_KEY = "mama-ba-persisted-user";
+const TOKEN_KEY = "mama-ba-access-token";
 
 function getSavedUser() {
   try {
@@ -20,102 +18,95 @@ function getSavedUser() {
   }
 }
 
-function persistUser(user) {
+function getSavedToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+function persistUser(user, token) {
   if (user && user.id) {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(user));
-    localStorage.setItem(PERSIST_USER_KEY, JSON.stringify(user));
-    localStorage.setItem("mama_ba_active_user_id", user.id);
+    const userId = user.id || user.userId;
+    const cleanUser = { ...user, id: userId, userId };
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(cleanUser));
+    localStorage.setItem(PERSIST_USER_KEY, JSON.stringify(cleanUser));
+    localStorage.setItem("mama_ba_active_user_id", userId);
+    if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
+      sessionStorage.setItem(TOKEN_KEY, token);
+    }
   } else {
     sessionStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(PERSIST_USER_KEY);
+    localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem("mama_ba_active_user_id");
   }
 }
 
-// Helper to generate deterministic user ID from email or string
-function generateUserId(email) {
-  let hash = 0;
-  const str = (email || "user").toLowerCase().trim();
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return `usr_${Math.abs(hash)}`;
-}
-
-// ─── MOCK HELPERS (only used when DEMO_MODE is true) ─────────
-async function mockDelay() { await new Promise((r) => setTimeout(r, 200)); }
-
-function mockLogin({ email }) {
-  const existing = getSavedUser();
-  const uid = existing?.id || generateUserId(email);
-  const user = { id: uid, name: email.split("@")[0], email, ...existing };
-  persistUser(user);
-  return { accessToken: "demo-token", user };
-}
-
-function mockSignup({ name, email }) {
-  const uid = generateUserId(email);
-  const user = { id: uid, name, email };
-  persistUser(user);
-  return { accessToken: "demo-token", user };
-}
-
-function mockLogout() {
-  persistUser(null);
-}
-
-function mockRefresh() {
-  const user = getSavedUser();
-  if (!user) return null;
-  return { accessToken: "demo-token", user };
-}
-// ─────────────────────────────────────────────────────────────
-
 export function AuthProvider({ children }) {
   const [user, setUserState]          = useState(getSavedUser);
-  const [accessToken, setAccessToken] = useState(null);
+  const [accessToken, setAccessToken] = useState(getSavedToken);
   const [isLoading, setIsLoading]     = useState(true);
 
   const setUser = useCallback((valOrFn) => {
     setUserState((prev) => {
       const next = typeof valOrFn === "function" ? valOrFn(prev) : valOrFn;
-      persistUser(next);
+      persistUser(next, accessToken);
       return next;
     });
-  }, []);
+  }, [accessToken]);
 
   const updateUser = useCallback((updates) => {
     setUserState((prev) => {
       const next = { ...(prev || {}), ...updates };
-      persistUser(next);
+      persistUser(next, accessToken);
       return next;
     });
-  }, []);
+  }, [accessToken]);
 
   // Restore session on mount
   const refresh = useCallback(async () => {
+    const savedUser = getSavedUser();
+    const savedToken = getSavedToken();
+
+    if (!savedUser && !savedToken) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      if (DEMO_MODE) {
-        const data = mockRefresh();
-        if (data) {
-          setAccessToken(data.accessToken);
-          setUserState(data.user);
-        }
-      } else {
-        const res = await fetch(`${API_BASE}/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
-        });
-        if (!res.ok) throw new Error("No active session");
+      const userId = savedUser?.id || savedUser?.userId;
+      const headers = {};
+      if (savedToken) headers["Authorization"] = `Bearer ${savedToken}`;
+      if (userId) headers["x-user-id"] = userId;
+
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        headers,
+        credentials: "include",
+      });
+
+      if (res.ok) {
         const data = await res.json();
-        setAccessToken(data.accessToken);
-        setUserState(data.user);
-        persistUser(data.user);
+        if (data.user) {
+          const freshUser = { ...data.user, id: data.user.id || data.user.userId };
+          setAccessToken(data.accessToken || savedToken);
+          setUserState(freshUser);
+          persistUser(freshUser, data.accessToken || savedToken);
+        }
+      } else if (savedUser) {
+        // Fallback to saved local user session if offline
+        setUserState(savedUser);
+        setAccessToken(savedToken || "offline-token");
       }
     } catch {
-      setAccessToken(null);
-      setUserState(null);
+      if (savedUser) {
+        setUserState(savedUser);
+        setAccessToken(savedToken || "offline-token");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -124,53 +115,83 @@ export function AuthProvider({ children }) {
   useEffect(() => { refresh(); }, [refresh]);
 
   const login = useCallback(async (credentials) => {
-    if (DEMO_MODE) {
-      await mockDelay();
-      const data = mockLogin(credentials);
-      setAccessToken(data.accessToken);
-      setUserState(data.user);
-      return data.user;
-    }
+    const { email, password } = credentials || {};
+    if (!email || !password) throw new Error("Email and password are required");
+
+    // 1. Authenticate with live Express backend
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(credentials),
+      body: JSON.stringify({ email, password }),
     });
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || "Invalid email or password");
     }
+
     const data = await res.json();
+    const authenticatedUser = {
+      ...data.user,
+      id: data.user.id || data.user.userId || `usr_${Date.now()}`
+    };
+
+    // 2. Also authenticate / sync with Supabase Auth if available
+    try {
+      if (supabase && supabase.auth) {
+        await supabase.auth.signInWithPassword({ email, password }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Supabase Auth sync notice:", e);
+    }
+
     setAccessToken(data.accessToken);
-    setUserState(data.user);
-    persistUser(data.user);
-    return data.user;
+    setUserState(authenticatedUser);
+    persistUser(authenticatedUser, data.accessToken);
+    return authenticatedUser;
   }, []);
 
   const signup = useCallback(async (credentials) => {
-    if (DEMO_MODE) {
-      await mockDelay();
-      const data = mockSignup(credentials);
-      setAccessToken(data.accessToken);
-      setUserState(data.user);
-      return data.user;
-    }
+    const { name, email, password, languagePreference } = credentials || {};
+    if (!email || !password) throw new Error("Email and password are required");
+
+    // 1. Create account on live Express backend
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(credentials),
+      body: JSON.stringify({ name, email, password, languagePreference }),
     });
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || "Couldn't create your account. Try again.");
+      throw new Error(err.message || "Couldn't create your account. Please try again.");
     }
+
     const data = await res.json();
+    const newUser = {
+      ...data.user,
+      id: data.user.id || data.user.userId || `usr_${Date.now()}`
+    };
+
+    // 2. Register with Supabase Auth as well
+    try {
+      if (supabase && supabase.auth) {
+        await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: name } }
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Supabase Auth signup notice:", e);
+    }
+
     setAccessToken(data.accessToken);
-    setUserState(data.user);
-    persistUser(data.user);
-    return data.user;
+    setUserState(newUser);
+    persistUser(newUser, data.accessToken);
+    return newUser;
   }, []);
 
   const logout = useCallback(async () => {
@@ -180,18 +201,28 @@ export function AuthProvider({ children }) {
       }
     } catch (e) { /* ignore */ }
 
-    if (DEMO_MODE) {
-      mockLogout();
-    } else {
-      try {
-        await fetch(`${API_BASE}/auth/logout`, { method: "POST", credentials: "include" });
-      } catch { /* ignore */ }
-    }
+    try {
+      const token = getSavedToken();
+      const userObj = getSavedUser();
+      const headers = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      if (userObj?.id) headers["x-user-id"] = userObj.id;
+
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: "POST",
+        headers,
+        credentials: "include"
+      }).catch(() => {});
+
+      if (supabase && supabase.auth) {
+        await supabase.auth.signOut().catch(() => {});
+      }
+    } catch { /* ignore */ }
+
     setAccessToken(null);
     setUserState(null);
-    persistUser(null);
+    persistUser(null, null);
 
-    // Hard reset user active ID and session storage
     if (typeof window !== "undefined") {
       localStorage.removeItem("mama_ba_active_user_id");
       sessionStorage.clear();
@@ -202,7 +233,7 @@ export function AuthProvider({ children }) {
     () => ({
       user,
       accessToken,
-      isAuthenticated: Boolean(accessToken),
+      isAuthenticated: Boolean(user),
       isLoading,
       login,
       signup,
