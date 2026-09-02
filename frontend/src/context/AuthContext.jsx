@@ -68,19 +68,29 @@ export function AuthProvider({ children }) {
     });
   }, [accessToken]);
 
-  // Restore session on mount
+  // Restore session on mount — behave like a native app:
+  // Always restore from localStorage immediately so the user is never asked
+  // to sign in again after closing and re-opening the app.
   const refresh = useCallback(async () => {
     const savedUser = getSavedUser();
     const savedToken = getSavedToken();
 
-    if (!savedUser && !savedToken) {
+    if (!savedUser) {
       setIsLoading(false);
       return;
     }
 
+    // ── Step 1: Restore from local storage immediately (no network required) ──
+    // This ensures the UI loads instantly like a native mobile app.
+    setUserState(savedUser);
+    setAccessToken(savedToken || "offline-token");
+    setIsLoading(false);
+
+    // ── Step 2: Silently try to get a fresh token in the background ──
+    // A failure here NEVER logs the user out — we just keep using the saved session.
     try {
       const userId = savedUser?.id || savedUser?.userId;
-      const headers = {};
+      const headers = { "Content-Type": "application/json" };
       if (savedToken) headers["Authorization"] = `Bearer ${savedToken}`;
       if (userId) headers["x-user-id"] = userId;
 
@@ -92,24 +102,16 @@ export function AuthProvider({ children }) {
 
       if (res.ok) {
         const data = await res.json();
-        if (data.user) {
+        if (data.user && data.accessToken) {
           const freshUser = { ...data.user, id: data.user.id || data.user.userId };
-          setAccessToken(data.accessToken || savedToken);
+          setAccessToken(data.accessToken);
           setUserState(freshUser);
-          persistUser(freshUser, data.accessToken || savedToken);
+          persistUser(freshUser, data.accessToken);
         }
-      } else if (savedUser) {
-        // Fallback to saved local user session if offline
-        setUserState(savedUser);
-        setAccessToken(savedToken || "offline-token");
       }
+      // If not ok, we silently stay with the saved session — no logout.
     } catch {
-      if (savedUser) {
-        setUserState(savedUser);
-        setAccessToken(savedToken || "offline-token");
-      }
-    } finally {
-      setIsLoading(false);
+      // Network offline or backend down — stay logged in with saved session.
     }
   }, []);
 

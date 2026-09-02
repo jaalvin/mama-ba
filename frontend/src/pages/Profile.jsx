@@ -68,6 +68,8 @@ export default function Profile() {
     voiceLang,
     setVoiceLang,
     stopSpeech,
+    isSpeaking,
+    speakingLanguage,
   } = useLang();
   const navigate = useNavigate();
 
