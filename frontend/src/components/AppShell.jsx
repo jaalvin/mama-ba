@@ -4,6 +4,7 @@ import { useLang } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
 import NotificationPanel from "./NotificationPanel.jsx";
+import PWAInstallPromptModal from "./PWAInstallPromptModal.jsx";
 
 const navItems = [
   { to: "/app", label: { en: "Home", twi: "Fie" }, icon: "home", end: true },
@@ -89,6 +90,9 @@ export default function AppShell() {
 
       {/* Notification slide-in panel */}
       <NotificationPanel open={panelOpen} onClose={() => setPanelOpen(false)} />
+
+      {/* PWA Home Screen Install Pop-Up Modal */}
+      <PWAInstallPromptModal />
     </div>
   );
 }
