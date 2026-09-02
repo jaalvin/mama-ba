@@ -44,6 +44,47 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// Root endpoint serving the Web App UI or API Status
+app.get('/', (_req: Request, res: Response) => {
+  const frontendIndex = path.resolve(frontendDistPath, 'index.html');
+  const appIndex = path.resolve(appPath, 'index.html');
+
+  if (fs.existsSync(frontendIndex)) {
+    return res.sendFile(frontendIndex);
+  }
+  if (fs.existsSync(appIndex)) {
+    return res.sendFile(appIndex);
+  }
+
+  res.json({
+    status: 'online',
+    system: 'Mama Ba Maternal Health Guided Companion API',
+    version: '1.0.0',
+    healthCheck: '/api/v1/health',
+    docs: '/docs'
+  });
+});
+
+// Base API v1 endpoint
+app.get('/api/v1', (_req: Request, res: Response) => {
+  res.json({
+    status: 'online',
+    system: 'The Guided Health Companion (Patient App API v1)',
+    healthCheck: '/api/v1/health',
+    endpoints: [
+      '/api/v1/herbal-safety',
+      '/api/v1/triage',
+      '/api/v1/maternal',
+      '/api/v1/vitals',
+      '/api/v1/chat',
+      '/api/v1/sync',
+      '/api/v1/auth',
+      '/api/v1/logistics',
+      '/api/v1/reminders'
+    ]
+  });
+});
+
 // Health check endpoint
 app.get('/api/v1/health', (_req: Request, res: Response) => {
   res.json({
