@@ -5,10 +5,16 @@ dotenv.config();
 export interface KhayaTtsOptions {
   text: string;
   language?: string;
+  speaker_id?: string;
+  speaker?: string;
+  format?: string;
+  output_format?: string;
+  stream?: boolean;
 }
 
 export class KhayaAiService {
   private static baseUrl = process.env.KHAYA_API_BASE_URL || CONFIG.KHAYA_API_BASE_URL || 'https://translation-api.ghananlp.org';
+  private static ttsCache = new Map<string, Buffer>();
 
   private static getApiKeys(): string[] {
     const keys = [
@@ -25,16 +31,22 @@ export class KhayaAiService {
    * Translates text between English & Ghanaian languages using Khaya Translation API v2
    */
   static async translateText(text: string, langPair: string = 'en-tw'): Promise<string | null> {
-    const cleanText = text
+    const cleanText = (text || '')
       .replace(/<[^>]*>/g, '')
       .replace(/[*_#`~]/g, '')
       .trim();
 
-    if (!cleanText) return null;
+    if (!cleanText) {
+      console.warn('[Khaya AI] Skipping translation: empty input text.');
+      return null;
+    }
 
     const keys = this.getApiKeys();
     for (const key of keys) {
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
         const response = await fetch(`${this.baseUrl}/v2/translate`, {
           method: 'POST',
           headers: {
@@ -44,8 +56,11 @@ export class KhayaAiService {
           body: JSON.stringify({
             in: cleanText,
             lang: langPair
-          })
+          }),
+          signal: controller.signal
         });
+
+        clearTimeout(timeoutId);
 
         if (response.ok) {
           const result = await response.text();
@@ -73,28 +88,43 @@ export class KhayaAiService {
   }
 
   /**
-   * Synthesizes text into audio (WAV binary stream) using Khaya TTS API v2
+   * Synthesizes text into audio (Female voice throughout) using Khaya TTS API v2
    */
   static async synthesizeSpeech(options: KhayaTtsOptions): Promise<Buffer | null> {
-    let cleanText = options.text
+    let cleanText = (options.text || '')
       .replace(/<[^>]*>/g, '')
       .replace(/[*_#`~]/g, '')
       .trim();
 
-    if (!cleanText) return null;
+    // 1. Guard against EMPTY_TEXT (Khaya API returning 400 Bad Request on empty strings)
+    if (!cleanText || !cleanText.length) {
+      console.warn('[Khaya AI] Skipping TTS synthesis: empty or whitespace text.');
+      return null;
+    }
 
-    if (cleanText.length > 250) {
-      const match = cleanText.slice(0, 250).match(/[\s\S]*[.!?]/);
-      cleanText = match ? match[0] : cleanText.slice(0, 250);
+    // Cut short loading time: truncate long text to 180 chars or first complete sentence
+    if (cleanText.length > 180) {
+      const match = cleanText.slice(0, 180).match(/[\s\S]*[.!?]/);
+      cleanText = match ? match[0] : cleanText.slice(0, 180);
     }
 
     const language = options.language || 'twi';
+    const speakerId = options.speaker_id || options.speaker || 'female';
+    const outputFormat = options.format || options.output_format || 'mp3';
+
+    // 2. High-speed TTS memory cache
+    const cacheKey = `${language}:${speakerId}:${cleanText}`;
+    if (this.ttsCache.has(cacheKey)) {
+      console.log(`[Khaya AI] TTS Cache Hit for "${cleanText.slice(0, 25)}..." (${speakerId})`);
+      return this.ttsCache.get(cacheKey)!;
+    }
+
     const keys = this.getApiKeys();
 
     for (const key of keys) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         const response = await fetch(`${this.baseUrl}/tts/v2/synthesize`, {
           method: 'POST',
@@ -104,7 +134,11 @@ export class KhayaAiService {
           },
           body: JSON.stringify({
             text: cleanText,
-            language
+            language,
+            speaker_id: speakerId,
+            speaker: speakerId,
+            stream: false,
+            format: outputFormat
           }),
           signal: controller.signal
         });
@@ -115,7 +149,9 @@ export class KhayaAiService {
           const arrayBuffer = await response.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
           if (buffer.length > 200) {
-            console.log(`[Khaya AI] Synthesized TTS v2 (${language}) (${buffer.length} bytes WAV)`);
+            console.log(`[Khaya AI] Synthesized TTS v2 (${language}, female voice) (${buffer.length} bytes)`);
+            if (this.ttsCache.size > 100) this.ttsCache.clear();
+            this.ttsCache.set(cacheKey, buffer);
             return buffer;
           }
         } else {

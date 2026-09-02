@@ -105,7 +105,8 @@ export default function Ask() {
       const res = await api.synthesizeSpeech({
         text: cleanText,
         language: isTwi ? "tw" : "en",
-        voice: preferredVoice
+        speaker_id: "female",
+        speaker: "female"
       });
 
       if (res && res.success && res.blob && res.blob.size > 200) {

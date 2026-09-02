@@ -277,7 +277,9 @@ export const SpeechService = {
         body: JSON.stringify({
           text: cleanText,
           language: isTwi ? 'tw' : 'en',
-          speaker: this.voiceGender === 'female' ? 'female' : 'male',
+          speaker_id: 'female',
+          speaker: 'female',
+          format: 'mp3',
           voice: preferredVoice
         })
       });

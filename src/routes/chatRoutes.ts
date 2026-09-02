@@ -77,22 +77,24 @@ router.post('/asr', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/v1/chat/tts (Khaya AI Text-To-Speech API v2)
+// POST /api/v1/chat/tts (Khaya AI Text-To-Speech API v2 - Female Voice)
 router.post('/tts', async (req: Request, res: Response) => {
   try {
-    const { text, language } = req.body;
-    if (!text) {
-      return res.status(400).json({ success: false, error: 'text is required' });
+    const { text, language, speaker_id, speaker } = req.body;
+    if (!text || !text.trim()) {
+      return res.status(400).json({ success: false, error: 'text is required and must not be empty' });
     }
 
     const targetLang = (language || 'tw').toLowerCase();
     const isTwi = targetLang === 'tw' || targetLang === 'twi' || targetLang === 'ak';
     const khayaLang = isTwi ? 'twi' : 'eng';
+    const speakerId = speaker_id || speaker || 'female';
 
-    // 1. Primary Ghanaian Neural TTS: Khaya AI TTS API v2
+    // 1. Primary Ghanaian Neural TTS: Khaya AI TTS API v2 (Female Voice)
     const khayaBuffer = await KhayaAiService.synthesizeSpeech({
       text,
-      language: khayaLang
+      language: khayaLang,
+      speaker_id: speakerId
     });
 
     if (khayaBuffer && khayaBuffer.length > 100) {

@@ -116,8 +116,8 @@ Local Reference Data:
 
 Instructions:
 Respond strictly in valid JSON format containing exactly two keys:
-1. "english": A clear, empathetic answer in English (2-3 sentences max).
-2. "twi": The translation of the response into natural, fluent Ghanaian Twi (Akan) (2-3 sentences max).
+1. "english": Direct, compassionate medical response in English (1-2 short, clear sentences max).
+2. "twi": Concise Ghanaian Twi (Akan) translation (1-2 short, clear sentences max). Keep sentence structure simple for fast voice presentation.
 
 JSON format:
 {
@@ -146,7 +146,7 @@ JSON format:
           const model = genAI.getGenerativeModel({
             model: modelName,
             generationConfig: {
-              maxOutputTokens: 1024,
+              maxOutputTokens: 256,
               temperature: 0.2,
               responseMimeType: 'application/json'
             }
