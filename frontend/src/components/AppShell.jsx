@@ -6,6 +6,7 @@ import { useNotifications } from "../context/NotificationContext.jsx";
 import NotificationPanel from "./NotificationPanel.jsx";
 import PWAInstallPromptModal from "./PWAInstallPromptModal.jsx";
 import { startTipScheduler } from "../services/tipScheduler.js";
+import { startPWAReminderEngine } from "../services/reminderEngine.js";
 
 const navItems = [
   { to: "/app", label: { en: "Home", twi: "Fie" }, icon: "home", end: true },
@@ -17,16 +18,21 @@ const navItems = [
 
 export default function AppShell() {
   const { lang } = useLang();
-  const { isDemoMode, isAuthenticated } = useAuth();
+  const { isDemoMode, isAuthenticated, user } = useAuth();
   const { unreadCount, addNotification } = useNotifications();
   const [panelOpen, setPanelOpen] = useState(false);
 
-  // Start pregnancy tip scheduler when user is logged in
+  // Start pregnancy tip scheduler and PWA reminder engine when user is logged in
   useEffect(() => {
     if (!isAuthenticated) return;
-    const stop = startTipScheduler(lang, addNotification);
-    return stop;
-  }, [isAuthenticated, lang, addNotification]);
+    const activeUid = user?.id || localStorage.getItem("mama_ba_active_user_id") || "guest";
+    const stopTips = startTipScheduler(lang, addNotification);
+    const stopReminders = startPWAReminderEngine(addNotification, activeUid);
+    return () => {
+      stopTips();
+      stopReminders();
+    };
+  }, [isAuthenticated, lang, addNotification, user?.id]);
 
   return (
     <div className="min-h-screen bg-background">

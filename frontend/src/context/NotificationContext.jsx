@@ -13,9 +13,8 @@ export function NotificationProvider({ children }) {
   // Request device permission on mount
   useEffect(() => { requestNotificationPermission(); }, []);
 
-  // Load notifications when token is available
+  // Load notifications from local storage / API
   useEffect(() => {
-    if (!accessToken) return;
     setLoading(true);
     notifAPI.list(accessToken)
       .then(setItems)

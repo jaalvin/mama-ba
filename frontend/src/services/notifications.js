@@ -1,8 +1,9 @@
 /**
  * src/services/notifications.js
- * Browser Web Notifications API helper.
- * Call requestNotificationPermission() once on login.
- * Call showDeviceNotification() to fire a native OS notification.
+ *
+ * PWA & Web Notifications API helper.
+ * Supports ServiceWorkerRegistration.showNotification() for mobile PWAs (iOS & Android)
+ * with a fallback to the standard window.Notification constructor.
  */
 
 /** Ask the user for notification permission (idempotent). */
@@ -14,32 +15,52 @@ export async function requestNotificationPermission() {
 }
 
 /**
- * Fire a native device notification if permission is granted.
+ * Fire a native device/PWA notification if permission is granted.
  * Silently no-ops when permission is not granted or API is unsupported.
  */
-export function showDeviceNotification(title, body, options = {}) {
-  if (typeof window === "undefined" || !("Notification" in window)) return;
-  if (Notification.permission !== "granted") return;
+export async function showDeviceNotification(title, body, options = {}) {
+  if (typeof window === "undefined" || !("Notification" in window)) return false;
+
+  let permission = Notification.permission;
+  if (permission === "default") {
+    try { permission = await Notification.requestPermission(); } catch {}
+  }
+  if (permission !== "granted") return false;
+
+  const notifOptions = {
+    body,
+    icon: "/favicon.png",
+    badge: "/favicon.png",
+    vibrate: [200, 100, 200],
+    tag: options.tag || `mama-ba-${Date.now()}`,
+    ...options,
+  };
+
+  // 1. Mobile PWA requires ServiceWorkerRegistration.showNotification
   try {
-    new Notification(title, {
-      body,
-      icon: "/favicon.png",
-      badge: "/favicon.png",
-      ...options,
-    });
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      if (registration && registration.showNotification) {
+        await registration.showNotification(title, notifOptions);
+        return true;
+      }
+    }
+  } catch (e) {
+    /* Fall through to window.Notification fallback */
+  }
+
+  // 2. Desktop / standard browser fallback
+  try {
+    new Notification(title, notifOptions);
+    return true;
   } catch {
-    /* silently ignore in environments that don't support it */
+    return false;
   }
 }
 
 /**
  * Schedule a one-shot device notification at a specific epoch timestamp.
  * Returns a cleanup function that cancels the timer.
- *
- * @param {number}   targetMs  - epoch ms when the notification should fire
- * @param {string}   title
- * @param {string}   body
- * @returns {() => void}  cancel function
  */
 export function scheduleAlarm(targetMs, title, body) {
   const delay = targetMs - Date.now();

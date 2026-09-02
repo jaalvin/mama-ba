@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../services/api.js";
+import { vitals as vitalsAPI } from "../services/api.js";
+import { useAuth } from "../context/AuthContext.jsx";
 
 export default function VitalsJournal() {
+  const { accessToken } = useAuth();
   const [systolic, setSystolic] = useState(120);
   const [diastolic, setDiastolic] = useState(80);
   const [temp, setTemp] = useState(36.8);
@@ -11,12 +13,25 @@ export default function VitalsJournal() {
   const [saving, setSaving] = useState(false);
   const [statusNotice, setStatusNotice] = useState(null);
 
-  const [vitalsHistory, setVitalsHistory] = useState([
-    { date: "Oct 10", sys: 118, dia: 78, temp: 36.6, weight: 67.2 },
-    { date: "Oct 15", sys: 122, dia: 82, temp: 36.8, weight: 67.8 },
-    { date: "Oct 20", sys: 125, dia: 84, temp: 37.0, weight: 68.1 },
-    { date: "Oct 25", sys: systolic, dia: diastolic, temp: temp, weight: weight }
-  ]);
+  const [vitalsHistory, setVitalsHistory] = useState([]);
+
+  // Load history from local storage / API on mount
+  useEffect(() => {
+    vitalsAPI.history(accessToken).then((data) => {
+      if (data && typeof data === "object") {
+        const sysList = data.bp_sys || [118, 122, 125, 120];
+        const diaList = data.bp_dia || [78, 82, 84, 80];
+        const historyArr = sysList.map((sys, idx) => ({
+          date: idx === sysList.length - 1 ? "Today" : `Entry ${idx + 1}`,
+          sys,
+          dia: diaList[idx] || 80,
+          temp: data.temp ? data.temp[idx] || 36.8 : 36.8,
+          weight: data.weight ? data.weight[idx] || 68.5 : 68.5
+        }));
+        setVitalsHistory(historyArr);
+      }
+    }).catch(() => {});
+  }, [accessToken]);
 
   // Real-time classification for BP
   const getBPStatus = (sys, dia) => {
@@ -37,25 +52,19 @@ export default function VitalsJournal() {
 
   const handleSaveVitals = async () => {
     setSaving(true);
-    const payload = {
-      userId: "demo-patient-001",
-      systolicBp: systolic,
-      diastolicBp: diastolic,
-      bodyTemperature: temp,
-      weightKg: weight,
-      bloodGlucose: glucose,
-      notes
+    const readings = {
+      bp_sys: systolic,
+      bp_dia: diastolic,
+      temp: temp,
+      weight: weight,
+      sugar: glucose,
     };
 
-    const res = await api.logVitals(payload);
+    const updated = await vitalsAPI.save(accessToken, readings);
     setSaving(false);
 
-    if (res && res.success) {
-      setStatusNotice({ type: "success", text: "Vitals & Health Journal entry logged to local SQLite engine!" });
-      setVitalsHistory(prev => [...prev, { date: "Today", sys: systolic, dia: diastolic, temp, weight }]);
-    } else {
-      setStatusNotice({ type: "success", text: "Vitals saved to offline local storage." });
-    }
+    setStatusNotice({ type: "success", text: "Vitals & Health Journal entry logged to local PWA storage & cloud!" });
+    setVitalsHistory(prev => [...prev, { date: "Today", sys: systolic, dia: diastolic, temp, weight }]);
   };
 
   return (

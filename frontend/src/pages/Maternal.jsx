@@ -88,9 +88,8 @@ export default function Maternal() {
   // Alarm cleanup refs: apptId → cancel fn
   const alarmCancellers = useRef({});
 
-  // ── Load data ──────────────────────────────────────────────────────────────
+  // ── Load data (local cache first, remote sync if online) ─────────────────────
   useEffect(() => {
-    if (!accessToken) return;
     ancApptAPI.list(accessToken)
       .then(list => {
         setAppts(list);

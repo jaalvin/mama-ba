@@ -133,6 +133,10 @@ export default function Vitals() {
 
       const updatedRes = await vitalsAPI.save(accessToken, readings);
       
+      // Instantly update local history state so sparklines update on screen
+      const freshHistory = await vitalsAPI.history(accessToken);
+      if (freshHistory && typeof freshHistory === "object") setHistory(freshHistory);
+
       if (updatedRes && updatedRes.vitalStatus) {
         setEvaluation(updatedRes);
       } else {

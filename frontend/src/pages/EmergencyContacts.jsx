@@ -16,9 +16,8 @@ export default function EmergencyContacts() {
   const [phone, setPhone]       = useState("");
   const [relation, setRelation] = useState("");
 
-  // Load contacts on mount
+  // Load contacts on mount (local storage first)
   useEffect(() => {
-    if (!accessToken) return;
     contactsAPI.list(accessToken)
       .then(setContacts)
       .catch(() => setContacts([]))
