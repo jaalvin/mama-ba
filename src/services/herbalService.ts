@@ -1,5 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { CONFIG, getOfflineDb } from '../config';
+import { supabaseAdmin } from '../lib/supabaseAdmin';
+import crypto from 'crypto';
 
 export interface HerbalSafetyRequest {
   herbName?: string;
@@ -154,7 +156,23 @@ export class HerbalService {
     const norm2 = normalizeQuery(rawItem2);
     const comboKey = [norm1, norm2].sort().join('___');
 
-    // ── 1. Check Local SQLite Cache ──────────────────────────────────────────
+    // ── 1. Check Supabase Cloud Cache & Local SQLite Cache ───────────────────
+    const comboHash = crypto.createHash('md5').update(`combo:${comboKey}`).digest('hex');
+    try {
+      const { data: cached } = await supabaseAdmin
+        .from('safety_searches_cache')
+        .select('verdict_json')
+        .eq('query_hash', comboHash)
+        .maybeSingle();
+
+      if (cached && cached.verdict_json) {
+        console.log(`[Supabase Cloud Cache HIT] for "${rawItem1} + ${rawItem2}"`);
+        return { ...cached.verdict_json, source: 'supabase_cloud_cache' };
+      }
+    } catch (e) {
+      /* Supabase fallback notice ignored */
+    }
+
     try {
       const cachedStmt = db.prepare(`SELECT * FROM herb_combo_cache WHERE combo_key = ?`);
       const row = cachedStmt.get(comboKey) as any;
@@ -354,7 +372,23 @@ Return ONLY valid JSON matching this exact structure:
 
     const queryKey = normalizeQuery(rawQuery);
 
-    // 1. Check Local SQLite Cache
+    // 1. Check Supabase Cloud Cache & Local SQLite Cache
+    const queryHash = crypto.createHash('md5').update(`single:${queryKey}`).digest('hex');
+    try {
+      const { data: cached } = await supabaseAdmin
+        .from('safety_searches_cache')
+        .select('verdict_json')
+        .eq('query_hash', queryHash)
+        .maybeSingle();
+
+      if (cached && cached.verdict_json) {
+        console.log(`[Supabase Cloud Cache HIT] for single item "${rawQuery}"`);
+        return { ...cached.verdict_json, source: 'supabase_cloud_cache' };
+      }
+    } catch (e) {
+      /* Supabase fallback notice ignored */
+    }
+
     try {
       const cachedStmt = db.prepare(`SELECT * FROM herb_safety_cache WHERE query_key = ? OR name LIKE ? OR local_names LIKE ?`);
       const row = cachedStmt.get(queryKey, `%${queryKey}%`, `%${queryKey}%`) as any;
@@ -562,6 +596,19 @@ Return ONLY valid JSON matching this exact structure:
       console.log(`[Hybrid Safety Pipeline] Write-through cache saved for "${queryKey}" ("${card.name}")`);
     } catch (e) {
       console.warn('[Hybrid Safety Pipeline] Cache write error:', e);
+    }
+
+    try {
+      await supabaseAdmin.from('safety_searches_cache').upsert([
+        {
+          query_hash: queryHash,
+          search_type: 'single_item',
+          item1: card.name || rawQuery,
+          verdict_json: card,
+        }
+      ], { onConflict: 'query_hash' });
+    } catch (e) {
+      /* Supabase write notice ignored */
     }
 
     return card;
