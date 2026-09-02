@@ -19,27 +19,23 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Serve Full Functioning Patient App SPA & Developer Playground UI
-const frontendDistPath = path.join(__dirname, '../frontend/dist');
-const publicPath = path.join(__dirname, '../public');
-const appPath = path.join(__dirname, '../public/app');
+const frontendDistPath = path.resolve(process.cwd(), 'frontend/dist');
+const publicPath = path.resolve(process.cwd(), 'public');
+const appPath = path.resolve(process.cwd(), 'public/app');
 
 import fs from 'fs';
 
 // Dynamically serve static assets from frontend/dist if built, otherwise public/app
-app.use((req: Request, res: Response, next: NextFunction) => {
-  if (fs.existsSync(frontendDistPath)) {
-    return express.static(frontendDistPath)(req, res, next);
-  }
-  return express.static(appPath)(req, res, next);
-});
+app.use(express.static(frontendDistPath));
+app.use(express.static(appPath));
 
 app.use('/docs', express.static(publicPath));
 
 app.get('/docs', (_req: Request, res: Response) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
+  res.sendFile(path.resolve(publicPath, 'index.html'));
 });
 app.get('/openapi.json', (_req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, '../openapi.json'));
+  res.sendFile(path.resolve(process.cwd(), 'openapi.json'));
 });
 
 // Medical Disclaimer Header Middleware
@@ -72,8 +68,15 @@ app.use('/api/v1/reminders', remindersRoutes);
 
 // SPA Fallback Routing for React Router
 app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/docs') && fs.existsSync(frontendDistPath)) {
-    return res.sendFile(path.join(frontendDistPath, 'index.html'));
+  if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/docs') && !req.path.startsWith('/openapi.json')) {
+    const frontendIndex = path.resolve(frontendDistPath, 'index.html');
+    const appIndex = path.resolve(appPath, 'index.html');
+
+    if (fs.existsSync(frontendIndex)) {
+      return res.sendFile(frontendIndex);
+    } else if (fs.existsSync(appIndex)) {
+      return res.sendFile(appIndex);
+    }
   }
   next();
 });
