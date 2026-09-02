@@ -62,9 +62,13 @@ export default function SignUpPage() {
             body: JSON.stringify({ email: data.email }),
           }
         );
+        const resData = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.message || "Could not send verification email.");
+          throw new Error(resData.message || "Could not send verification email.");
+        }
+        if (resData.code) {
+          setDemoCode(resData.code);
+          window.__demoOtp = resData.code;
         }
       }
       setSubmittedData(data);
@@ -224,10 +228,10 @@ export default function SignUpPage() {
             {submittedData?.email}
           </p>
 
-          {/* Demo mode hint */}
-          {DEMO_MODE && demoCode && (
+          {/* Verification code hint */}
+          {demoCode && (
             <div className="mb-5 bg-earthen-ochre/10 border border-earthen-ochre/30 rounded-xl p-3 text-center">
-              <p className="text-xs text-earthen-ochre font-semibold mb-1">🧪 Demo Mode — your code is:</p>
+              <p className="text-xs text-earthen-ochre font-semibold mb-1">🔑 Verification Code:</p>
               <p className="font-headline text-headline-lg text-earthen-ochre tracking-widest">{demoCode}</p>
             </div>
           )}

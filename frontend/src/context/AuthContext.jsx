@@ -220,29 +220,24 @@ export function AuthProvider({ children }) {
     };
 
     // 2. Register with Supabase Auth as well
-    let supaRes = null;
     try {
       if (supabase && supabase.auth) {
-        supaRes = await supabase.auth.signUp({
+        await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/app/`,
             data: { full_name: name }
           }
-        }).catch(() => null);
+        }).catch((e) => {
+          console.warn("Supabase Auth signup notice:", e);
+        });
       }
     } catch (e) {
       console.warn("Supabase Auth signup notice:", e);
     }
 
-    // Check if email confirmation is required by Supabase (user object created, session null)
-    const verificationPending = Boolean(supaRes?.data?.user && !supaRes?.data?.session);
-
-    if (verificationPending) {
-      return { user: newUser, verificationPending: true };
-    }
-
+    // Always log the user in immediately so they enter the app directly without blocking
     setAccessToken(data.accessToken);
     setUserState(newUser);
     persistUser(newUser, data.accessToken);
