@@ -60,8 +60,8 @@ export class VitalsService {
 
       if (sys >= 140 || dia >= 90) {
         isHigh = true;
-        const msgEn = `Blood Pressure (${sys}/${dia} mmHg) is HIGH DANGER — Pre-eclampsia Risk`;
-        const msgTwi = `Mogya Tumi (${sys}/${dia} mmHg) wo soro dodo — Pre-eclampsia risk`;
+        const msgEn = `High Blood Pressure Detected: (${sys}/${dia} mmHg) is HIGH DANGER — Pre-eclampsia Risk`;
+        const msgTwi = `Mogya mmoroso / Mogya Tumi (${sys}/${dia} mmHg) wo soro dodo — Pre-eclampsia risk`;
         alerts.push(msgEn);
         alertsTwi.push(msgTwi);
 
@@ -149,8 +149,8 @@ export class VitalsService {
       const temp = entry.bodyTemperature;
       if (temp >= 38.0) {
         isHigh = true;
-        const msgEn = `Body Temperature (${temp}°C) is HIGH FEVER DANGER — Malaria/Infection Risk`;
-        const msgTwi = `Onipa Hye (${temp}°C) dɔɔso denden — Malaria/Yareɛ risk`;
+        const msgEn = `High Fever Detected: (${temp}°C) is HIGH FEVER DANGER — Malaria/Infection Risk`;
+        const msgTwi = `Onipa Hye / Mogya mmoroso (${temp}°C) dɔɔso denden — Malaria/Yareɛ risk`;
         alerts.push(msgEn);
         alertsTwi.push(msgTwi);
 

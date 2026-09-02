@@ -93,4 +93,40 @@ export class SyncService {
       syncedAt: new Date().toISOString()
     };
   }
+
+  /**
+   * Bidirectional push and pull sync for a specific user ID.
+   */
+  static pushPullSync(userId: string, clientData?: Partial<SyncPayload>) {
+    const db = getOfflineDb();
+
+    if (clientData) {
+      this.processSyncPayload({
+        deviceTimestamp: new Date().toISOString(),
+        ...clientData,
+        userId
+      });
+    }
+
+    const vitals = db.prepare(`SELECT * FROM vitals_logs WHERE user_id = ? ORDER BY logged_at DESC`).all(userId);
+    const journalEntries = db.prepare(`SELECT * FROM health_journal WHERE user_id = ? ORDER BY entry_date DESC`).all(userId);
+    let schedules: any[] = [];
+    try {
+      schedules = db.prepare(`SELECT * FROM user_maternal_schedules WHERE user_id = ?`).all(userId);
+    } catch { /* if table doesn't exist yet */ }
+    
+    const profile = db.prepare(`SELECT user_id, full_name, email, language_preference, is_pregnant, gestational_weeks, due_date FROM user_profile WHERE user_id = ?`).get(userId);
+
+    return {
+      status: 'success',
+      userId,
+      syncedAt: new Date().toISOString(),
+      serverData: {
+        profile,
+        vitals,
+        journalEntries,
+        schedules
+      }
+    };
+  }
 }

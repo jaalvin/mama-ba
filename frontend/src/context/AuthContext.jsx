@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { clearLocalUserCache } from "../services/api";
 
 const AuthContext = createContext(null);
 
@@ -204,6 +205,9 @@ export function AuthProvider({ children }) {
     try {
       const token = getSavedToken();
       const userObj = getSavedUser();
+      if (userObj?.id) {
+        clearLocalUserCache(userObj.id);
+      }
       const headers = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
       if (userObj?.id) headers["x-user-id"] = userObj.id;
@@ -225,6 +229,9 @@ export function AuthProvider({ children }) {
 
     if (typeof window !== "undefined") {
       localStorage.removeItem("mama_ba_active_user_id");
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PERSIST_USER_KEY);
+      localStorage.removeItem(TOKEN_KEY);
       sessionStorage.clear();
     }
   }, []);

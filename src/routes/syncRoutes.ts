@@ -17,10 +17,25 @@ router.get('/bundle', (_req: Request, res: Response) => {
 router.post('/upload', (req: Request, res: Response) => {
   try {
     const payload = req.body;
-    if (!payload.userId) {
+    const userId = payload.userId || (req.headers['x-user-id'] as string);
+    if (!userId) {
       return res.status(400).json({ success: false, error: 'userId is required in sync payload' });
     }
-    const result = SyncService.processSyncPayload(payload);
+    const result = SyncService.processSyncPayload({ ...payload, userId });
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/v1/sync/push-pull
+router.post('/push-pull', (req: Request, res: Response) => {
+  try {
+    const userId = req.body.userId || (req.headers['x-user-id'] as string) || (req.query.userId as string);
+    if (!userId) {
+      return res.status(400).json({ success: false, error: 'userId is required for push-pull sync' });
+    }
+    const result = SyncService.pushPullSync(userId, req.body);
     res.json({ success: true, data: result });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

@@ -64,6 +64,20 @@ function store(baseKey, defaultValue = []) {
   };
 }
 
+export function clearLocalUserCache(userId) {
+  const uid = userId || getActiveUserId();
+  if (!uid || uid === "guest") return;
+  try {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith(`mama_ba_usr_${uid}_`)) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (e) {
+    console.warn("[LocalStore] Cache clear notice:", e);
+  }
+}
+
 // ─── Notifications ───────────────────────────────────────────────────────────
 const notifStore = store("mama-ba-notifications", []);
 
