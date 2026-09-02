@@ -115,6 +115,47 @@ export function AuthProvider({ children }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // ── Supabase Auth Listener (Handles OAuth redirects like Google Sign-In) ──
+  useEffect(() => {
+    if (!supabase || !supabase.auth) return;
+
+    // Check active session on initial load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && session.user) {
+        console.log("Logged in as:", session.user.email);
+        const authenticatedUser = {
+          id: session.user.id,
+          userId: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split("@")[0],
+          fullName: session.user.user_metadata?.full_name || session.user.user_metadata?.name,
+        };
+        setUserState(authenticatedUser);
+        setAccessToken(session.access_token);
+        persistUser(authenticatedUser, session.access_token);
+      }
+    });
+
+    // Listen for login / logout transitions
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session && session.user) {
+        console.log("Session updated:", session.user.email);
+        const authenticatedUser = {
+          id: session.user.id,
+          userId: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split("@")[0],
+          fullName: session.user.user_metadata?.full_name || session.user.user_metadata?.name,
+        };
+        setUserState(authenticatedUser);
+        setAccessToken(session.access_token);
+        persistUser(authenticatedUser, session.access_token);
+      }
+    });
+
+    return () => subscription?.unsubscribe();
+  }, []);
+
   const login = useCallback(async (credentials) => {
     const { email, password } = credentials || {};
     if (!email || !password) throw new Error("Email and password are required");
