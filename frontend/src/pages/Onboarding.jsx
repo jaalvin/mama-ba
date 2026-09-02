@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import { useLang, playVoiceSample, stopSpeech } from "../context/LanguageContext.jsx";
-import { Volume2, Square, Mic, CheckCircle2, Shield } from "lucide-react";
+import { useLang, stopSpeech } from "../context/LanguageContext.jsx";
+import { Mic, CheckCircle2, Shield } from "lucide-react";
 
 const TRIMESTERS = [
   { id: "t1", label: "Trimester 1", twi: "Bɔbea 1", icon: "pregnant_woman" },
@@ -24,7 +24,6 @@ export default function Onboarding() {
   const { lang, setLang, voiceLang, setVoiceLang } = useLang();
 
   const [selectedVoice, setSelectedVoice] = useState(voiceLang || "twi");
-  const [playingVoice, setPlayingVoice]   = useState(null); // "twi" | "en" | null
   const [status, setStatus]               = useState("t1");
   const [conditions, setConditions]       = useState([]);
 
@@ -37,26 +36,8 @@ export default function Onboarding() {
 
   const handleSelectVoice = (vl) => {
     stopSpeech();
-    setPlayingVoice(null);
     setSelectedVoice(vl);
     setVoiceLang(vl);
-  };
-
-  const handleTogglePlaySample = (vl, e) => {
-    if (e) e.stopPropagation();
-    if (playingVoice === vl) {
-      stopSpeech();
-      setPlayingVoice(null);
-    } else {
-      stopSpeech();
-      setSelectedVoice(vl);
-      setVoiceLang(vl);
-      playVoiceSample(
-        vl,
-        () => setPlayingVoice(vl),
-        () => setPlayingVoice(null)
-      );
-    }
   };
 
   const toggleCondition = (id) =>
@@ -150,99 +131,41 @@ export default function Onboarding() {
                 {/* Twi Card */}
                 <div
                   onClick={() => handleSelectVoice("twi")}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 ${
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
                     selectedVoice === "twi"
                       ? "bg-surface-container-lowest border-primary shadow-sm ring-1 ring-primary"
                       : "bg-surface-container-lowest border-outline-variant hover:border-primary/50"
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-lg">🇬🇭</span>
-                        <h3 className="font-headline font-bold text-on-surface text-sm">Twi</h3>
-                      </div>
-                      <p className="text-xs text-on-surface-variant mt-1">
-                        Kasa wɔ Twi mu na tie nkyerɛkyerɛmu
-                      </p>
-                    </div>
-                    {selectedVoice === "twi" ? (
-                      <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
-                    ) : (
-                      <span className="w-5 h-5 rounded-full border-2 border-outline-variant block shrink-0" />
-                    )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🇬🇭</span>
+                    <h3 className="font-headline font-bold text-on-surface text-sm">Asante Twi</h3>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => handleTogglePlaySample("twi", e)}
-                    className={`flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-xl transition-all w-full ${
-                      playingVoice === "twi"
-                        ? "bg-error text-on-error animate-pulse shadow-sm"
-                        : "bg-primary/10 text-primary hover:bg-primary/20"
-                    }`}
-                  >
-                    {playingVoice === "twi" ? (
-                      <>
-                        <Square className="w-3.5 h-3.5 fill-current" />
-                        <span>Stop Voice</span>
-                      </>
-                    ) : (
-                      <>
-                        <Volume2 className="w-3.5 h-3.5" />
-                        <span>{lang === "twi" ? "Tie Mfitiaseɛ (Preview)" : "Listen to Preview"}</span>
-                      </>
-                    )}
-                  </button>
+                  {selectedVoice === "twi" ? (
+                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                  ) : (
+                    <span className="w-5 h-5 rounded-full border-2 border-outline-variant block shrink-0" />
+                  )}
                 </div>
 
                 {/* English Card */}
                 <div
                   onClick={() => handleSelectVoice("en")}
-                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex flex-col justify-between gap-3 ${
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between ${
                     selectedVoice === "en"
                       ? "bg-surface-container-lowest border-primary shadow-sm ring-1 ring-primary"
                       : "bg-surface-container-lowest border-outline-variant hover:border-primary/50"
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-lg">🇬🇧</span>
-                        <h3 className="font-headline font-bold text-on-surface text-sm">English</h3>
-                      </div>
-                      <p className="text-xs text-on-surface-variant mt-1">
-                        Speak in English &amp; receive spoken guidance
-                      </p>
-                    </div>
-                    {selectedVoice === "en" ? (
-                      <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
-                    ) : (
-                      <span className="w-5 h-5 rounded-full border-2 border-outline-variant block shrink-0" />
-                    )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🇬🇧</span>
+                    <h3 className="font-headline font-bold text-on-surface text-sm">English</h3>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={(e) => handleTogglePlaySample("en", e)}
-                    className={`flex items-center justify-center gap-1.5 text-xs font-semibold py-2 px-3 rounded-xl transition-all w-full ${
-                      playingVoice === "en"
-                        ? "bg-error text-on-error animate-pulse shadow-sm"
-                        : "bg-primary/10 text-primary hover:bg-primary/20"
-                    }`}
-                  >
-                    {playingVoice === "en" ? (
-                      <>
-                        <Square className="w-3.5 h-3.5 fill-current" />
-                        <span>Stop Voice</span>
-                      </>
-                    ) : (
-                      <>
-                        <Volume2 className="w-3.5 h-3.5" />
-                        <span>{lang === "twi" ? "Tie Mfitiaseɛ (Preview)" : "Listen to Preview"}</span>
-                      </>
-                    )}
-                  </button>
+                  {selectedVoice === "en" ? (
+                    <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                  ) : (
+                    <span className="w-5 h-5 rounded-full border-2 border-outline-variant block shrink-0" />
+                  )}
                 </div>
               </div>
             </div>

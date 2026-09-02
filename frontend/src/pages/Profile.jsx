@@ -6,10 +6,6 @@ import {
   User,
   Calendar,
   Mic,
-  Volume2,
-  Square,
-  Pause,
-  Play,
   Globe,
   PhoneCall,
   ShieldAlert,
@@ -64,12 +60,6 @@ function getTrimester(week) {
   return { en: "3rd Trimester", twi: "Bɔbea 3 (Awoɔ bere)" };
 }
 
-const TWI_SAMPLE =
-  "“Akwaaba! Me ne Mama Ba, wo nnamfo pa wɔ nyinsɛn mu. Metumi aboa wo wɔ apomuden ne wo ba no ho.”";
-
-const ENG_SAMPLE =
-  "“Welcome to Mama Ba! I am your personal maternal health companion, here to support you through your pregnancy and early motherhood.”";
-
 export default function Profile() {
   const { user, updateUser, logout } = useAuth();
   const {
@@ -77,11 +67,7 @@ export default function Profile() {
     setLang,
     voiceLang,
     setVoiceLang,
-    isSpeaking,
-    isPaused,
-    speakingLanguage,
     stopSpeech,
-    playVoiceSample,
   } = useLang();
   const navigate = useNavigate();
 
@@ -283,188 +269,72 @@ export default function Profile() {
             </h2>
             <p className="text-xs text-on-surface-variant">
               {lang === "twi"
-                ? "Sesa kasa a Mama Ba de kasa kyerɛ wo na tie mfitiaseɛ"
-                : "Choose the language Mama Ba speaks & test voice audio samples"}
+                ? "Sesa kasa a Mama Ba de kasa kyerɛ wo"
+                : "Choose your primary language for Mama Ba"}
             </p>
           </div>
         </div>
 
         {/* ── CARD 1: TWI VOICE ASSISTANT ── */}
         <div
-          className={`rounded-2xl border-2 p-4 flex flex-col gap-3 transition-all ${
+          onClick={() => handleSelectActiveVoice("twi")}
+          className={`rounded-2xl border-2 p-4 flex items-center justify-between cursor-pointer transition-all ${
             voiceLang === "twi"
               ? "bg-primary-container/15 border-primary shadow-xs ring-1 ring-primary/40"
-              : "bg-surface-container-low border-outline-variant"
+              : "bg-surface-container-low border-outline-variant hover:border-primary/50"
           }`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🇬🇭</span>
-              <div>
-                <h3 className="font-headline font-bold text-sm text-on-surface">
-                  Twi Voice Assistant (Asante Twi)
-                </h3>
-                <span className="text-[11px] text-on-surface-variant">
-                  {voiceLang === "twi" ? "Active Voice Assistant" : "Tap radio to activate"}
-                </span>
-              </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🇬🇭</span>
+            <div>
+              <h3 className="font-headline font-bold text-sm text-on-surface">
+                Asante Twi
+              </h3>
             </div>
-
-            <button
-              type="button"
-              onClick={() => handleSelectActiveVoice("twi")}
-              className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all flex items-center gap-1 ${
-                voiceLang === "twi"
-                  ? "bg-primary text-on-primary border-primary shadow-xs"
-                  : "bg-surface-container text-on-surface-variant border-outline-variant hover:border-primary"
-              }`}
-            >
-              {voiceLang === "twi" && <CheckCircle2 className="w-3.5 h-3.5" />}
-              <span>{voiceLang === "twi" ? "Selected" : "Set as Active"}</span>
-            </button>
           </div>
 
-          <div className="bg-surface p-3 rounded-xl border border-outline-variant/60">
-            <span className="text-[11px] font-semibold text-primary block mb-1">
-              🇬🇭 Twi Sample Statement:
-            </span>
-            <p className="text-xs italic text-on-surface-variant leading-relaxed">
-              {TWI_SAMPLE}
-            </p>
-          </div>
-
-          {/* Twi Audio Controls */}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => playVoiceSample("twi")}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                isTwiSpeaking && !isPaused
-                  ? "bg-primary text-on-primary shadow-sm"
-                  : isTwiSpeaking && isPaused
-                  ? "bg-earthen-ochre text-white shadow-sm"
-                  : "bg-primary text-on-primary hover:bg-primary/90 shadow-xs"
-              }`}
-            >
-              {isTwiSpeaking && !isPaused ? (
-                <>
-                  <Pause className="w-3.5 h-3.5 fill-current" />
-                  <span>Pause Twi Speech</span>
-                </>
-              ) : isTwiSpeaking && isPaused ? (
-                <>
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>Resume Twi Speech</span>
-                </>
-              ) : (
-                <>
-                  <Volume2 className="w-3.5 h-3.5" />
-                  <span>Play Full Twi Statement</span>
-                </>
-              )}
-            </button>
-
-            {isTwiSpeaking && (
-              <button
-                type="button"
-                onClick={stopSpeech}
-                className="py-2.5 px-4 rounded-xl bg-error text-on-error text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm hover:bg-error/90 cursor-pointer"
-                title="Stop Speech"
-              >
-                <Square className="w-3.5 h-3.5 fill-current" />
-                <span>Stop</span>
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all flex items-center gap-1 ${
+              voiceLang === "twi"
+                ? "bg-primary text-on-primary border-primary shadow-xs"
+                : "bg-surface-container text-on-surface-variant border-outline-variant"
+            }`}
+          >
+            {voiceLang === "twi" && <CheckCircle2 className="w-3.5 h-3.5" />}
+            <span>{voiceLang === "twi" ? "Selected" : "Select"}</span>
+          </button>
         </div>
 
         {/* ── CARD 2: ENGLISH VOICE ASSISTANT ── */}
         <div
-          className={`rounded-2xl border-2 p-4 flex flex-col gap-3 transition-all ${
+          onClick={() => handleSelectActiveVoice("en")}
+          className={`rounded-2xl border-2 p-4 flex items-center justify-between cursor-pointer transition-all ${
             voiceLang === "en"
               ? "bg-primary-container/15 border-primary shadow-xs ring-1 ring-primary/40"
-              : "bg-surface-container-low border-outline-variant"
+              : "bg-surface-container-low border-outline-variant hover:border-primary/50"
           }`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🇬🇧</span>
-              <div>
-                <h3 className="font-headline font-bold text-sm text-on-surface">
-                  English Voice Assistant
-                </h3>
-                <span className="text-[11px] text-on-surface-variant">
-                  {voiceLang === "en" ? "Active Voice Assistant" : "Tap radio to activate"}
-                </span>
-              </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">🇬🇧</span>
+            <div>
+              <h3 className="font-headline font-bold text-sm text-on-surface">
+                English
+              </h3>
             </div>
-
-            <button
-              type="button"
-              onClick={() => handleSelectActiveVoice("en")}
-              className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all flex items-center gap-1 ${
-                voiceLang === "en"
-                  ? "bg-primary text-on-primary border-primary shadow-xs"
-                  : "bg-surface-container text-on-surface-variant border-outline-variant hover:border-primary"
-              }`}
-            >
-              {voiceLang === "en" && <CheckCircle2 className="w-3.5 h-3.5" />}
-              <span>{voiceLang === "en" ? "Selected" : "Set as Active"}</span>
-            </button>
           </div>
 
-          <div className="bg-surface p-3 rounded-xl border border-outline-variant/60">
-            <span className="text-[11px] font-semibold text-primary block mb-1">
-              🇬🇧 English Sample Statement:
-            </span>
-            <p className="text-xs italic text-on-surface-variant leading-relaxed">
-              {ENG_SAMPLE}
-            </p>
-          </div>
-
-          {/* English Audio Controls */}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => playVoiceSample("en")}
-              className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                isEngSpeaking && !isPaused
-                  ? "bg-primary text-on-primary shadow-sm"
-                  : isEngSpeaking && isPaused
-                  ? "bg-earthen-ochre text-white shadow-sm"
-                  : "bg-primary text-on-primary hover:bg-primary/90 shadow-xs"
-              }`}
-            >
-              {isEngSpeaking && !isPaused ? (
-                <>
-                  <Pause className="w-3.5 h-3.5 fill-current" />
-                  <span>Pause English Speech</span>
-                </>
-              ) : isEngSpeaking && isPaused ? (
-                <>
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>Resume English Speech</span>
-                </>
-              ) : (
-                <>
-                  <Volume2 className="w-3.5 h-3.5" />
-                  <span>Play Full English Statement</span>
-                </>
-              )}
-            </button>
-
-            {isEngSpeaking && (
-              <button
-                type="button"
-                onClick={stopSpeech}
-                className="py-2.5 px-4 rounded-xl bg-error text-on-error text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm hover:bg-error/90 cursor-pointer"
-                title="Stop Speech"
-              >
-                <Square className="w-3.5 h-3.5 fill-current" />
-                <span>Stop</span>
-              </button>
-            )}
-          </div>
+          <button
+            type="button"
+            className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all flex items-center gap-1 ${
+              voiceLang === "en"
+                ? "bg-primary text-on-primary border-primary shadow-xs"
+                : "bg-surface-container text-on-surface-variant border-outline-variant"
+            }`}
+          >
+            {voiceLang === "en" && <CheckCircle2 className="w-3.5 h-3.5" />}
+            <span>{voiceLang === "en" ? "Selected" : "Select"}</span>
+          </button>
         </div>
 
         {/* App UI Language Toggle */}
