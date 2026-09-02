@@ -11,13 +11,13 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["icons/icon-192.png", "icons/icon-512.png"],
       manifest: {
-        name: "Mama Ba",
+        name: "Mama Ba - Empowering Ghanaian Motherhood",
         short_name: "Mama Ba",
         description: "Guided maternal health care for Ghanaian mothers, in your own language.",
         theme_color: "#84250f",
-        background_color: "#fdf9f3",
+        background_color: "#000000",
         display: "standalone",
-        start_url: "/",
+        start_url: "/app",
         scope: "/",
         icons: [
           { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
