@@ -23,6 +23,7 @@ export interface AppointmentBookingRequest {
   facilityName: string;
   appointmentType: 'IN_PERSON' | 'VIRTUAL_TELEHEALTH';
   requestedDate: string;
+  notes?: string;
 }
 
 export interface PrescriptionOrderRequest {
@@ -98,14 +99,16 @@ export class LogisticsService {
     );
 
     if (supabaseAdmin) {
-      await supabaseAdmin.from('hospital_appointments').upsert({
-        id,
-        user_id: userId,
-        facility_name: req.facilityName,
-        appointment_type: req.appointmentType || 'IN_PERSON',
-        requested_date: req.requestedDate || new Date().toISOString().split('T')[0],
-        status: 'CONFIRMED'
-      }).catch(() => {});
+      try {
+        await supabaseAdmin.from('hospital_appointments').upsert({
+          id,
+          user_id: userId,
+          facility_name: req.facilityName,
+          appointment_type: req.appointmentType || 'IN_PERSON',
+          requested_date: req.requestedDate || new Date().toISOString().split('T')[0],
+          status: 'CONFIRMED'
+        });
+      } catch { /* ignore */ }
     }
 
     return {

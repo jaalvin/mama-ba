@@ -103,13 +103,15 @@ export class MaternalService {
       insertStmt.run(id, userId, item.type, item.titleEng, item.titleTwi, item.dueDate, item.vaccineCode || null, item.isCompleted ? 1 : 0, completedAt);
 
       if (supabaseAdmin) {
-        await supabaseAdmin.from('user_maternal_schedules').upsert({
-          id,
-          user_id: userId,
-          title: item.titleEng,
-          due_date: item.dueDate,
-          is_completed: item.isCompleted ?? false,
-        }).catch(() => {});
+        try {
+          await supabaseAdmin.from('user_maternal_schedules').upsert({
+            id,
+            user_id: userId,
+            title: item.titleEng,
+            due_date: item.dueDate,
+            is_completed: item.isCompleted ?? false,
+          });
+        } catch { /* ignore */ }
       }
     }
   }
@@ -128,9 +130,11 @@ export class MaternalService {
     stmt.run(isCompleted ? 1 : 0, completedAt, itemId, userId);
 
     if (supabaseAdmin) {
-      await supabaseAdmin.from('user_maternal_schedules').update({
-        is_completed: isCompleted,
-      }).eq('id', itemId).catch(() => {});
+      try {
+        await supabaseAdmin.from('user_maternal_schedules').update({
+          is_completed: isCompleted,
+        }).eq('id', itemId);
+      } catch { /* ignore */ }
     }
 
     return { success: true, id: itemId, isCompleted };

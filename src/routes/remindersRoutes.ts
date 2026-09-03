@@ -15,13 +15,13 @@ router.get('/:userId', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/reminders
-router.post('/', (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { userId, title, reminderType, scheduledTime, recurrence, dosageInfo } = req.body;
     if (!title || !scheduledTime) {
       return res.status(400).json({ success: false, error: 'title and scheduledTime are required' });
     }
-    const result = RemindersService.createReminder({
+    const result = await RemindersService.createReminder({
       userId,
       title,
       reminderType,

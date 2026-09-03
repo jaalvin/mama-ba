@@ -14,7 +14,7 @@ const getUserIdFromReq = (req: AuthenticatedRequest): string | null => {
   );
 };
 
-const handleLogVitals = (req: AuthenticatedRequest, res: Response) => {
+const handleLogVitals = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = getUserIdFromReq(req);
     if (!userId) {
@@ -38,7 +38,7 @@ const handleLogVitals = (req: AuthenticatedRequest, res: Response) => {
     const w = weightKg ?? weight;
     const p = pulseRate ?? pulse;
 
-    const result = VitalsService.logVitals({
+    const result = await VitalsService.logVitals({
       userId,
       systolicBp: sys !== undefined && sys !== '' ? Number(sys) : undefined,
       diastolicBp: dia !== undefined && dia !== '' ? Number(dia) : undefined,

@@ -41,7 +41,7 @@ export class VitalsService {
   /**
    * Log patient vitals and evaluate maternal health status focusing specifically on danger and attention factors.
    */
-  static logVitals(entry: VitalsEntry): VitalsEvaluationResult {
+  static async logVitals(entry: VitalsEntry): Promise<VitalsEvaluationResult> {
     const db = getOfflineDb();
     const alerts: string[] = [];
     const alertsTwi: string[] = [];
@@ -363,19 +363,21 @@ export class VitalsService {
 
       // Sync to Supabase Cloud Postgres
       if (supabaseAdmin) {
-        await supabaseAdmin.from('vitals_logs').upsert({
-          id,
-          user_id: userId,
-          bp_systolic: entry.systolicBp || null,
-          bp_diastolic: entry.diastolicBp || null,
-          body_temperature: entry.bodyTemperature || null,
-          pulse_rate: entry.pulseRate || null,
-          blood_glucose: entry.bloodGlucose || null,
-          weight_kg: entry.weightKg || null,
-          vital_status: vitalStatus,
-          notes: entry.notes || null,
-          logged_at: loggedAt
-        }).catch(() => {});
+        try {
+          await supabaseAdmin.from('patient_vitals_logs').insert({
+            id,
+            user_id: entry.userId,
+            bp_systolic: entry.systolicBp || null,
+            bp_diastolic: entry.diastolicBp || null,
+            body_temperature: entry.bodyTemperature || null,
+            pulse_rate: entry.pulseRate || null,
+            blood_glucose: entry.bloodGlucose || null,
+            weight_kg: entry.weightKg || null,
+            vital_status: vitalStatus,
+            notes: entry.notes || null,
+            logged_at: loggedAt
+          });
+        } catch { /* ignore */ }
       }
     } catch (e) {
       console.warn('[VitalsService] Log warning:', e);

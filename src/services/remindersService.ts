@@ -42,16 +42,18 @@ export class RemindersService {
     // Sync to Supabase Cloud Postgres
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('reminders').upsert({
-          id,
-          user_id: userId,
-          title: item.title,
-          reminder_type: item.reminderType || 'MEDICATION',
-          scheduled_time: item.scheduledTime,
-          recurrence: item.recurrence || 'DAILY',
-          is_active: item.isActive ?? true,
-          is_completed: item.isCompleted ?? false,
-        }).catch(() => {});
+        try {
+          await supabaseAdmin.from('reminders').upsert({
+            id,
+            user_id: userId,
+            title: item.title,
+            reminder_type: item.reminderType || 'MEDICATION',
+            scheduled_time: item.scheduledTime,
+            recurrence: item.recurrence || 'DAILY',
+            is_active: item.isActive ?? true,
+            is_completed: item.isCompleted ?? false,
+          });
+        } catch { /* ignore */ }
       }
     } catch {}
 

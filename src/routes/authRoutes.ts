@@ -234,7 +234,7 @@ router.get('/profile/:userId', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/auth/profile
-router.post('/profile', (req: Request, res: Response) => {
+router.post('/profile', async (req: Request, res: Response) => {
   try {
     const {
       userId,
@@ -286,18 +286,20 @@ router.post('/profile', (req: Request, res: Response) => {
     // Sync to Supabase Cloud Postgres
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from('user_profile').upsert({
-          user_id: userId,
-          full_name: fullName || 'Ghanaian Patient',
-          email: email || null,
-          language_preference: languagePreference || 'twi',
-          is_pregnant: isPregnant ?? true,
-          gestational_weeks: gestationalWeeks || 0,
-          due_date: dueDate || null,
-          primary_contact_name: primaryContactName || null,
-          primary_contact_phone: primaryContactPhone || null,
-          relationship: relationship || null
-        }).catch(() => {});
+        try {
+          await supabaseAdmin.from('user_profile').upsert({
+            user_id: userId,
+            full_name: fullName || 'Ghanaian Patient',
+            email: email || null,
+            language_preference: languagePreference || 'twi',
+            is_pregnant: isPregnant ?? true,
+            gestational_weeks: gestationalWeeks || 0,
+            due_date: dueDate || null,
+            primary_contact_name: primaryContactName || null,
+            primary_contact_phone: primaryContactPhone || null,
+            relationship: relationship || null
+          });
+        } catch { /* ignore */ }
       }
     } catch {}
 

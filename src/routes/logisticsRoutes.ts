@@ -19,13 +19,13 @@ router.get('/pharmacies', (req: Request, res: Response) => {
 });
 
 // POST /api/v1/logistics/appointments/book
-router.post('/appointments/book', (req: Request, res: Response) => {
+router.post('/appointments/book', async (req: Request, res: Response) => {
   try {
     const { userId, facilityName, appointmentType, requestedDate, notes } = req.body;
     if (!facilityName) {
       return res.status(400).json({ success: false, error: 'facilityName is required' });
     }
-    const result = LogisticsService.bookAppointment({
+    const result = await LogisticsService.bookAppointment({
       userId,
       facilityName,
       appointmentType,
