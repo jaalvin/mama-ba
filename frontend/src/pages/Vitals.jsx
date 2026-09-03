@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { vitals as vitalsAPI } from "../services/api.js";
 import { playNeuralSpeech, stopNeuralSpeech } from "../services/speech.js";
 import {
-  Loader2, AlertTriangle, CheckCircle2, HeartPulse,
+  Loader2, AlertTriangle, CheckCircle2,
   Volume2, Square, Sparkles, Activity, Stethoscope, Leaf
 } from "lucide-react";
 
@@ -59,21 +59,111 @@ const VITALS_CONFIG = [
   },
 ];
 
-function Sparkline({ values, color = "#84250f" }) {
-  if (values.length < 2) return null;
+const TIMEFRAMES = [
+  { id: "3d", label: { en: "3 Days", twi: "Nnansa 3" }, days: 3 },
+  { id: "1w", label: { en: "1 Week", twi: "Nnawɔtwe 1" }, days: 7 },
+  { id: "2w", label: { en: "2 Weeks", twi: "Nnawɔtwe 2" }, days: 14 },
+  { id: "1m", label: { en: "1 Month", twi: "Bosome 1" }, days: 30 },
+  { id: "2m", label: { en: "2 Months", twi: "Bosome 2" }, days: 60 },
+];
+
+function MultiTimeframeChart({ historyData, timeframeId, vitalConfig, lang }) {
+  const tf = TIMEFRAMES.find((t) => t.id === timeframeId) || TIMEFRAMES[1];
+  const rawList = historyData[vitalConfig.id] || [];
+  const rawDates = historyData.dates || [];
+
+  const sliceCount = Math.min(rawList.length, tf.days);
+  const values = rawList.slice(-sliceCount);
+  const dates = rawDates.slice(-sliceCount);
+
+  if (values.length < 1) {
+    return (
+      <div className="py-6 text-center text-xs text-on-surface-variant italic">
+        {lang === "twi" ? "Nkae biara nni hɔ ma bere yi." : "No logs available for this timeframe yet."}
+      </div>
+    );
+  }
+
   const min = Math.min(...values);
   const max = Math.max(...values);
+  const avg = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
+  const latest = values[values.length - 1];
+  const previous = values.length >= 2 ? values[values.length - 2] : null;
+  const diff = previous !== null ? Number((latest - previous).toFixed(1)) : null;
+
+  const W = 300, H = 80;
   const range = max - min || 1;
-  const W = 100, H = 30;
-  const pts = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * W;
-    const y = H - ((v - min) / range) * H;
-    return `${x},${y}`;
+  const points = values.map((v, i) => {
+    const x = values.length === 1 ? W / 2 : (i / (values.length - 1)) * (W - 20) + 10;
+    const y = H - 15 - ((v - min) / range) * (H - 30);
+    return { x, y, v, date: dates[i] || `Day ${i + 1}` };
   });
+
+  const polylinePts = points.map((p) => `${p.x},${p.y}`).join(" ");
+
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-8" preserveAspectRatio="none">
-      <polyline points={pts.join(" ")} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <div className="bg-surface-container-low border border-outline-variant/60 rounded-xl p-3 mt-3">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <span className="text-xs font-semibold text-on-surface-variant">
+            {lang === "twi" ? vitalConfig.label.twi : vitalConfig.label.en}
+          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-lg font-bold text-on-surface">
+              {latest} {vitalConfig.unit}
+            </span>
+            {diff !== null && (
+              <span
+                className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5 ${
+                  diff > 0
+                    ? "bg-amber-500/10 text-amber-700 border border-amber-500/30"
+                    : diff < 0
+                    ? "bg-forest-green/10 text-forest-green border border-forest-green/30"
+                    : "bg-surface-container text-on-surface-variant"
+                }`}
+              >
+                {diff > 0 ? `↑ +${diff}` : diff < 0 ? `↓ ${diff}` : "→ 0"} {vitalConfig.unit} {lang === "twi" ? "nnɛ/ɔkyena" : "vs prev"}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="text-right text-[11px] text-on-surface-variant">
+          <p>Avg: <span className="font-semibold text-on-surface">{avg}</span></p>
+          <p>Min: {min} | Max: {max}</p>
+        </div>
+      </div>
+
+      <div className="relative w-full overflow-hidden">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-24 overflow-visible" preserveAspectRatio="none">
+          <line x1="0" y1="15" x2={W} y2="15" stroke="currentColor" className="text-outline-variant/30" strokeDasharray="3,3" />
+          <line x1="0" y1={H - 15} x2={W} y2={H - 15} stroke="currentColor" className="text-outline-variant/30" strokeDasharray="3,3" />
+
+          {values.length >= 2 && (
+            <polyline
+              points={polylinePts}
+              fill="none"
+              stroke="#84250f"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+
+          {points.map((p, idx) => (
+            <g key={idx}>
+              <circle cx={p.x} cy={p.y} r="4" fill="#84250f" stroke="#ffffff" strokeWidth="1.5" />
+            </g>
+          ))}
+        </svg>
+
+        <div className="flex justify-between text-[10px] text-on-surface-variant mt-1 px-1">
+          <span>{dates[0] || "Start"}</span>
+          {dates.length > 2 && <span>{dates[Math.floor(dates.length / 2)]}</span>}
+          <span>{dates[dates.length - 1] || "Latest"}</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -93,6 +183,9 @@ export default function Vitals() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const [selectedTimeframe, setSelectedTimeframe] = useState("1w");
+  const [selectedGraphVital, setSelectedGraphVital] = useState("bp_sys");
+
   const [evaluation, setEvaluation] = useState(null);
   const [speaking, setSpeaking] = useState(false);
 
@@ -111,6 +204,15 @@ export default function Vitals() {
   }, [accessToken]);
 
   const handleChange = (id, val) => setValues((prev) => ({ ...prev, [id]: val }));
+
+  const getDailyComparison = (id) => {
+    const list = history[id] || [];
+    if (list.length < 2) return null;
+    const latest = list[list.length - 1];
+    const prev = list[list.length - 2];
+    const diff = Number((latest - prev).toFixed(1));
+    return { latest, prev, diff };
+  };
 
   const handleSave = async () => {
     const hasValues = VITALS_CONFIG.some(({ id }) => values[id] !== undefined && values[id] !== "");
@@ -133,255 +235,71 @@ export default function Vitals() {
 
       const updatedRes = await vitalsAPI.save(accessToken, readings);
       
-      // Instantly update local history state so sparklines update on screen
       const freshHistory = await vitalsAPI.history(accessToken);
       if (freshHistory && typeof freshHistory === "object") setHistory(freshHistory);
 
       if (updatedRes && updatedRes.vitalStatus) {
         setEvaluation(updatedRes);
       } else {
-        // Evaluate client side filtering for danger & attention factors only if offline
         const sys = parseFloat(values.bp_sys);
         const dia = parseFloat(values.bp_dia);
         const temp = parseFloat(values.temp);
-        const sugar = parseFloat(values.sugar);
 
         const factorAssessments = [];
-        const highFactors = [];
-        const elevatedFactors = [];
-
-        // BP
         if (!isNaN(sys) || !isNaN(dia)) {
           const s = sys || 120;
           const d = dia || 80;
           if (s >= 140 || d >= 90) {
-            highFactors.push(`Blood Pressure (${s}/${d} mmHg)`);
             factorAssessments.push({
               factor: "Blood Pressure",
               value: `${s}/${d} mmHg`,
               status: "HIGH_WARNING",
               statusLabelEn: "DANGER — High BP / Pre-Eclampsia Risk",
               statusLabelTwi: "ƆHAW DENDEN — Mogya Soro Dodo",
-              doctorActionsEn: [
-                "Contact your ANC midwife or visit nearest hospital immediately for pre-eclampsia screening (proteinuria & BP check).",
-                "Lie down on your left side immediately to increase blood flow to your baby and placenta."
-              ],
-              doctorActionsTwi: [
-                "Kɔ asibiti anaa kasa kyerɛ wo nɛɛse ntɛm ara.",
-                "Da wo benkum so ntɛm ma mogya nkɔ wo ba hɔ yie."
-              ],
-              lifestyleCurbEn: [
-                "Dramatically cut salt and sodium seasoning (avoid bouillon cubes/Maggi, salted fish).",
-                "Eat potassium-rich Kontomire, green plantain, ripe bananas, and avocados.",
-                "Rest for 30 minutes twice daily with elevated legs."
-              ],
-              lifestyleCurbTwi: [
-                "Tew nkyene ne bouillon cubes so koraa.",
-                "Di kontomire ne kwadu a potassium wɔ mu.",
-                "Gye wo ho ahome nnɔnhwerew fa da biara."
-              ]
-            });
-          } else if (s >= 125 || d >= 83) {
-            elevatedFactors.push(`Blood Pressure (${s}/${d} mmHg)`);
-            factorAssessments.push({
-              factor: "Blood Pressure",
-              value: `${s}/${d} mmHg`,
-              status: "ELEVATED",
-              statusLabelEn: "KEEP AN EYE ON — Mild Elevation",
-              statusLabelTwi: "HWEHWƐ MU YIE — Mogya Soro Kakra",
-              doctorActionsEn: [
-                "Mention this reading at your next ANC visit and monitor BP twice daily."
-              ],
-              doctorActionsTwi: [
-                "Ka kyerɛ wo nɛɛse wɔ wo ANC visit a ɛreba no mu."
-              ],
-              lifestyleCurbEn: [
-                "Limit salt in soups and drink 8+ glasses of clean water.",
-                "Eat Kontomire greens and avoid heavy physical labor."
-              ],
-              lifestyleCurbTwi: [
-                "Tew nkyene so na nom nsuo pii da biara."
-              ]
+              doctorActionsEn: ["Contact your ANC midwife or visit nearest hospital immediately."],
+              doctorActionsTwi: ["Kɔ asibiti anaa kasa kyerɛ wo nɛɛse ntɛm ara."],
+              lifestyleCurbEn: ["Cut salt and sodium seasoning dramatically."],
+              lifestyleCurbTwi: ["Tew nkyene so koraa."]
             });
           }
         }
-
-        // Temp
-        if (!isNaN(temp)) {
-          if (temp >= 38.0) {
-            highFactors.push(`Body Temperature (${temp}°C)`);
-            factorAssessments.push({
-              factor: "Body Temperature",
-              value: `${temp}°C`,
-              status: "HIGH_WARNING",
-              statusLabelEn: "DANGER — High Fever / Malaria Risk",
-              statusLabelTwi: "ƆHAW DENDEN — Ho Hye Denden",
-              doctorActionsEn: [
-                "Go to the hospital or ANC clinic immediately for a Malaria Rapid Diagnostic Test (RDT).",
-                "Take Paracetamol only if explicitly prescribed by your ANC midwife."
-              ],
-              doctorActionsTwi: [
-                "Kɔ asibiti ntɛm ara kɔyɛ malaria test.",
-                "Nom Paracetamol sɛ dɔkota anaa nɛɛse kyerɛɛ wo sɛ nom a."
-              ],
-              lifestyleCurbEn: [
-                "Sip clean water or fresh coconut water continuously to avoid dehydration.",
-                "Apply lukewarm damp cloth to forehead, neck, and armpits."
-              ],
-              lifestyleCurbTwi: [
-                "Nom nsuo pa anaa nkutu nsuo pii da biara.",
-                "Fa ntoma a nsuo wɔ mu bɔ wo mpotɔmu."
-              ]
-            });
-          } else if (temp >= 37.3) {
-            elevatedFactors.push(`Body Temperature (${temp}°C)`);
-            factorAssessments.push({
-              factor: "Body Temperature",
-              value: `${temp}°C`,
-              status: "ELEVATED",
-              statusLabelEn: "KEEP AN EYE ON — Mild Fever",
-              statusLabelTwi: "HWEHWƐ MU YIE — Ho Hye Kakra",
-              doctorActionsEn: [
-                "Monitor temperature every 4 hours. If it reaches 38°C, visit clinic."
-              ],
-              doctorActionsTwi: [
-                "Hwɛ wo ho hye. Sɛ ɛkɔ 38°C a, kɔ asibiti."
-              ],
-              lifestyleCurbEn: [
-                "Sip cool clean water and wear lightweight cotton clothing."
-              ],
-              lifestyleCurbTwi: [
-                "Nom nsuo dɛdɛɛdɛ da biara."
-              ]
-            });
-          }
-        }
-
-        // Sugar
-        if (!isNaN(sugar)) {
-          if (sugar >= 10.0) {
-            highFactors.push(`Blood Sugar (${sugar} mmol/L)`);
-            factorAssessments.push({
-              factor: "Blood Sugar",
-              value: `${sugar} mmol/L`,
-              status: "HIGH_WARNING",
-              statusLabelEn: "DANGER — High Glucose / Diabetes Risk",
-              statusLabelTwi: "ƆHAW DENDEN — Mogya Sukaa Soro",
-              doctorActionsEn: [
-                "Schedule an Oral Glucose Tolerance Test (OGTT) with your ANC midwife.",
-                "Keep a 3-day food & blood sugar log to show your doctor."
-              ],
-              doctorActionsTwi: [
-                "Kasa kyerɛ wo nɛɛse ma wɔnhwɛ wo mogya sukaa yie.",
-                "Kyerɛw aduane a wodi da biara mma dɔkota no nhwɛ."
-              ],
-              lifestyleCurbEn: [
-                "Eliminate sodas/mineral drinks, refined white bread, and added sugars.",
-                "Switch to complex fiber meals (boiled plantain, garden eggs, Kontomire).",
-                "Take a 15-minute gentle walk after lunch and dinner."
-              ],
-              lifestyleCurbTwi: [
-                "Kwati mineral drinks ne sukye dodo.",
-                "Di bɔfrɛ, nyaadewa, ne bɔrodɛ a fiber wɔ mu.",
-                "Nante kakra bɛyɛ simma 15 aduane akyi."
-              ]
-            });
-          } else if (sugar >= 7.9) {
-            elevatedFactors.push(`Blood Sugar (${sugar} mmol/L)`);
-            factorAssessments.push({
-              factor: "Blood Sugar",
-              value: `${sugar} mmol/L`,
-              status: "ELEVATED",
-              statusLabelEn: "KEEP AN EYE ON — Elevated Glucose",
-              statusLabelTwi: "HWEHWƐ MU YIE — Mogya Sukaa Soro Kakra",
-              doctorActionsEn: [
-                "Inform your ANC midwife about your blood sugar level at your next visit."
-              ],
-              doctorActionsTwi: [
-                "Ka kyerɛ wo nɛɛse wɔ wo clinic visit a ɛreba no mu."
-              ],
-              lifestyleCurbEn: [
-                "Replace soft drinks with clean water or unsweetened koko.",
-                "Walk 15 minutes after main meals."
-              ],
-              lifestyleCurbTwi: [
-                "Nom nsuo pa anaa koko a sukye nni mu."
-              ]
-            });
-          }
-        }
-
-        const isHigh = highFactors.length > 0;
-        const isElev = elevatedFactors.length > 0;
-
-        const overallEn = isHigh
-          ? `CRITICAL DANGER WARNING FOR ${highFactors.join(", ").toUpperCase()}: Immediate medical evaluation required! Your recorded ${highFactors.join(", ")} is dangerously high. Please visit a clinic immediately.`
-          : isElev
-          ? `ELEVATED READINGS TO KEEP AN EYE ON FOR ${elevatedFactors.join(", ").toUpperCase()}: Mild elevation detected in ${elevatedFactors.join(", ")}. Follow the clinical and lifestyle recommendations below.`
-          : "EXCELLENT & HEALTHY: All recorded vital readings are within normal target range for a healthy pregnancy!";
-
-        const overallTwi = isHigh
-          ? `ƆHAW DENDEN — ${highFactors.join(", ").toUpperCase()}: Kɔ asibiti ntɛm ara! Wo ${highFactors.join(", ")} a woagye no wo soro dodo. Kasa kyerɛ wo nɛɛse ntɛm.`
-          : isElev
-          ? `HWEHWƐ MU YIE — ${elevatedFactors.join(", ").toUpperCase()}: Wo ${elevatedFactors.join(", ")} wo soro kakra. Di afotu a ɛwɔ aseɛ yi akyi.`
-          : "APOMUDEN PA PAA: Wo apomuden nneɛma nyinaa kɔ so pɛpɛɛpɛ wɔ nyinsɛn mu!";
-
         setEvaluation({
-          vitalStatus: isHigh ? "HIGH_WARNING" : isElev ? "ELEVATED" : "NORMAL",
-          overallAssessmentEn: overallEn,
-          overallAssessmentTwi: overallTwi,
-          factorAssessments,
+          vitalStatus: factorAssessments.length > 0 ? "HIGH_WARNING" : "NORMAL",
+          factorAssessments
         });
       }
 
-      if (typeof updatedRes === "object" && !updatedRes.vitalStatus) {
-        setHistory(updatedRes);
-      }
-
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (err) {
-      console.warn('[Vitals] Save notice:', err);
+    } catch (e) {
+      alert(e.message || "Failed to save vitals.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleToggleSpeak = () => {
-    if (!evaluation) return;
-    if (speaking) {
-      stopNeuralSpeech();
-      setSpeaking(false);
+  const startDiaryVoice = () => {
+    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+      alert(lang === "twi" ? "Wo browser nni nne nhyɛsoɔ ho kwan." : "Speech recognition is not supported in this browser.");
       return;
     }
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const r = new SpeechRec();
+    r.lang = lang === "twi" ? "ak-GH" : "en-US";
+    r.continuous = false;
+    r.interimResults = false;
 
-    const textToSpeak = lang === "twi"
-      ? evaluation.overallAssessmentTwi
-      : evaluation.overallAssessmentEn;
-
-    setSpeaking(true);
-    playNeuralSpeech(
-      textToSpeak,
-      voiceLang,
-      () => setSpeaking(true),
-      () => setSpeaking(false),
-      () => setSpeaking(false)
-    );
-  };
-
-  const startDiaryVoice = () => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    const r = new SR();
-    r.lang = "en-US";
     r.onstart = () => setDiaryRec(true);
     r.onend = () => setDiaryRec(false);
-    r.onresult = (e) => setDiary((prev) => prev + " " + e.results[0][0].transcript);
+    r.onerror = () => setDiaryRec(false);
+    r.onresult = (e) => {
+      const t = e.results[0][0].transcript;
+      setDiary((prev) => (prev ? prev + " " + t : t));
+    };
+
     recognitionRef.current = r;
     r.start();
   };
 
-  // Filter out normal factors — ONLY show Danger & Keep An Eye On factors!
   const attentionFactors = (evaluation?.factorAssessments || []).filter(
     (f) => f.status === "HIGH_WARNING" || f.status === "ELEVATED"
   );
@@ -390,20 +308,82 @@ export default function Vitals() {
     <div className="px-4 py-6 md:px-6 max-w-lg mx-auto pb-24">
       {/* Header */}
       <h1 className="font-headline text-headline-md text-on-background mb-1 flex items-center gap-2">
-        <span>{lang === "twi" ? "Apomuden Nkae & Nhwehwɛmu" : "Daily Vitals & Health Evaluation"}</span>
+        <span>{lang === "twi" ? "Apomuden Nkae & Nhwehwɛmu" : "Daily Vitals & Health Analytics"}</span>
         <Activity className="w-5 h-5 text-primary" />
       </h1>
       <p className="text-on-surface-variant mb-5 text-sm leading-relaxed">
         {lang === "twi"
-          ? "Gye wo mogya tumi, hye ne sukaa nkae nnɛ ma yɛn-AI pipeline nhwehwɛ wo banbɔ mu mma wo afotu pa."
-          : "Log today's blood pressure, temperature, & blood sugar to get instant clinical evaluation & guidance."}
+          ? "Gye wo mogya tumi, hye ne sukaa nkae nnɛ na hwɛ kwan a wo apomuden resesa fa."
+          : "Log today's blood pressure, temperature, & blood sugar to track daily trends & clinical changes."}
       </p>
 
-      {/* ═══ VITALS INPUT CARDS ═══ */}
+      {/* ═══ MULTI-TIMEFRAME ANALYTICS TABS ═══ */}
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 mb-6 shadow-2xs">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-on-surface flex items-center gap-1.5">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <span>{lang === "twi" ? "Apomuden Nseseaeɛ" : "Vitals Progress Analytics"}</span>
+          </h2>
+          <span className="text-[11px] text-on-surface-variant font-medium">
+            {lang === "twi" ? "Bere Hwɛ" : "Select Range"}
+          </span>
+        </div>
+
+        {/* Timeframe Selector Buttons */}
+        <div className="grid grid-cols-5 gap-1 bg-surface-container p-1 rounded-xl mb-3">
+          {TIMEFRAMES.map((tf) => (
+            <button
+              key={tf.id}
+              onClick={() => setSelectedTimeframe(tf.id)}
+              className={`py-1.5 text-[11px] font-bold rounded-lg transition-colors ${
+                selectedTimeframe === tf.id
+                  ? "bg-primary text-on-primary shadow-xs"
+                  : "text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              {lang === "twi" ? tf.label.twi : tf.label.en}
+            </button>
+          ))}
+        </div>
+
+        {/* Vital Metric Selector Tabs */}
+        <div className="flex gap-1 overflow-x-auto pb-1 mb-2 scrollbar-none">
+          {VITALS_CONFIG.map((cfg) => (
+            <button
+              key={cfg.id}
+              onClick={() => setSelectedGraphVital(cfg.id)}
+              className={`px-3 py-1 text-xs font-semibold rounded-full border whitespace-nowrap transition-colors ${
+                selectedGraphVital === cfg.id
+                  ? "bg-surface-container-high border-primary text-primary"
+                  : "border-outline-variant text-on-surface-variant hover:bg-surface-container"
+              }`}
+            >
+              {lang === "twi" ? cfg.label.twi : cfg.label.en}
+            </button>
+          ))}
+        </div>
+
+        {/* Interactive Multi-Timeframe Chart */}
+        {histLoading ? (
+          <div className="py-6 flex items-center justify-center gap-2 text-xs text-on-surface-variant">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            <span>{lang === "twi" ? "Ɛreloading..." : "Loading chart..."}</span>
+          </div>
+        ) : (
+          <MultiTimeframeChart
+            historyData={history}
+            timeframeId={selectedTimeframe}
+            vitalConfig={VITALS_CONFIG.find((c) => c.id === selectedGraphVital) || VITALS_CONFIG[0]}
+            lang={lang}
+          />
+        )}
+      </div>
+
+      {/* ═══ VITALS INPUT CARDS WITH DAILY COMPARISON ═══ */}
       <div className="flex flex-col gap-4 mb-6">
         {VITALS_CONFIG.map((cfg) => {
           const status = getStatus(cfg, values[cfg.id]);
-          const hist = history[cfg.id] || [];
+          const comp = getDailyComparison(cfg.id);
           return (
             <div key={cfg.id} className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 shadow-2xs">
               <div className="flex items-center justify-between mb-2">
@@ -427,17 +407,25 @@ export default function Vitals() {
                 />
                 <span className="text-on-surface-variant text-sm font-medium">{cfg.unit}</span>
               </div>
-              {histLoading ? (
-                <div className="mt-3 flex items-center gap-2 text-xs text-on-surface-variant">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  {lang === "twi" ? "Ɛreloading..." : "Loading history..."}
-                </div>
-              ) : hist.length >= 2 && (
-                <div className="mt-3">
-                  <p className="text-xs text-on-surface-variant mb-1">
-                    {lang === "twi" ? "Nkae nnansa" : "Recent trend"}
-                  </p>
-                  <Sparkline values={hist} />
+
+              {/* Daily Comparison Badge vs Yesterday */}
+              {comp && comp.diff !== 0 && (
+                <div className="mt-2.5 flex items-center justify-between text-xs px-2.5 py-1.5 rounded-xl bg-surface-container-low border border-outline-variant/40">
+                  <span className="text-on-surface-variant font-medium">
+                    {lang === "twi" ? "Ɛnnɛ vs Ɔkyena (Daily Comparison):" : "Daily Comparison:"}
+                  </span>
+                  <span
+                    className={`font-bold flex items-center gap-1 ${
+                      comp.diff > 0
+                        ? "text-amber-700 font-semibold"
+                        : "text-forest-green font-semibold"
+                    }`}
+                  >
+                    {comp.diff > 0 ? `↑ +${comp.diff}` : `↓ ${comp.diff}`} {cfg.unit}
+                    <span className="text-[10px] text-on-surface-variant opacity-80">
+                      ({comp.latest} vs {comp.prev})
+                    </span>
+                  </span>
                 </div>
               )}
             </div>
@@ -449,103 +437,41 @@ export default function Vitals() {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="w-full bg-primary text-on-primary font-headline text-button py-4 rounded-2xl active:scale-95 transition-transform mb-6 flex items-center justify-center gap-2 disabled:opacity-70 shadow-sm"
+        className="w-full h-12 rounded-2xl bg-primary text-on-primary font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:opacity-95 transition-all disabled:opacity-50 mb-6"
       >
         {saving ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span>{lang === "twi" ? "Ɛrekora mu..." : "Evaluating Vitals..."}</span>
+          </>
         ) : (
-          <HeartPulse className="w-5 h-5" />
+          <>
+            <Stethoscope className="w-5 h-5" />
+            <span>{lang === "twi" ? "Kora Mu & Hwehwɛ Banbɔ" : "Save Daily Vitals & Evaluate"}</span>
+          </>
         )}
-        <span>
-          {saved
-            ? (lang === "twi" ? "Agye & Ankyerɛkyerɛ Yie! ✓" : "Saved & Evaluated! ✓")
-            : (lang === "twi" ? "Kora So & Hwɛ Banbɔ" : "Save & Evaluate Vitals")}
-        </span>
       </button>
 
-      {/* ═══ SPECIFIC MATERNAL CLINICAL EVALUATION CARD ═══ */}
+      {/* ═══ CLINICAL EVALUATION RESULTS ═══ */}
       {evaluation && (
-        <div className="mb-6 animate-scale-in flex flex-col gap-4">
-          {/* Main Status Header Card */}
-          <div
-            className={`rounded-3xl border p-5 md:p-6 shadow-md ${
-              evaluation.vitalStatus === "HIGH_WARNING"
-                ? "bg-error-container border-error/50 text-error"
-                : evaluation.vitalStatus === "ELEVATED"
-                ? "bg-earthen-ochre/10 border-earthen-ochre/40 text-earthen-ochre"
-                : "bg-forest-green/10 border-forest-green/40 text-forest-green"
-            }`}
-          >
-            <div className="flex items-start justify-between gap-2 mb-3 border-b border-current/15 pb-3">
-              <div>
-                <span
-                  className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-1.5 ${
-                    evaluation.vitalStatus === "HIGH_WARNING"
-                      ? "bg-error text-white"
-                      : evaluation.vitalStatus === "ELEVATED"
-                      ? "bg-earthen-ochre text-white"
-                      : "bg-forest-green text-white"
-                  }`}
-                >
-                  {evaluation.vitalStatus === "HIGH_WARNING"
-                    ? (lang === "twi" ? "🔴 HIA AYARESABEA DANGER" : "🔴 CLINICAL DANGER WARNING")
-                    : evaluation.vitalStatus === "ELEVATED"
-                    ? (lang === "twi" ? "🟡 HWEHWƐ MU YIE" : "🟡 KEEP AN EYE ON THIS")
-                    : (lang === "twi" ? "🟢 APOMUDEN PA" : "🟢 ALL VITALS HEALTHY & NORMAL")}
-                </span>
-                <h2 className="font-headline font-bold text-lg text-on-surface">
-                  {lang === "twi" ? "Maternal Health Evaluation" : "Maternal Health Evaluation"}
-                </h2>
-              </div>
-
-              {/* Read Aloud Button */}
-              <button
-                onClick={handleToggleSpeak}
-                aria-label="Read health evaluation aloud"
-                className={`p-2 rounded-full border transition-all ${
-                  speaking
-                    ? "bg-primary text-on-primary border-primary animate-pulse"
-                    : "bg-surface-container hover:bg-surface-container-high text-primary border-outline-variant"
-                }`}
-              >
-                {speaking ? <Square className="w-4 h-4 fill-current" /> : <Volume2 className="w-4 h-4" />}
-              </button>
-            </div>
-
-            {/* Dynamic Specific Assessment Statement */}
-            <p className="text-sm font-semibold leading-relaxed text-on-surface">
-              {lang === "twi" ? evaluation.overallAssessmentTwi : evaluation.overallAssessmentEn}
-            </p>
-          </div>
-
-          {/* DANGER & ATTENTION FACTORS CARDS ONLY (Normal factors strictly filtered out) */}
+        <div className="mb-6 flex flex-col gap-4">
           {attentionFactors.length > 0 ? (
             <div className="flex flex-col gap-3">
-              <h3 className="text-xs font-bold text-error uppercase tracking-wider px-1 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-error" />
-                <span>
-                  {lang === "twi"
-                    ? "Ɔhaw ne Nneɛma a ɛnsɛ sɛ woma wo ani da so (Danger Signs & Factors to Keep an Eye On):"
-                    : "Danger Signs & Factors to Keep an Eye On:"}
-                </span>
-              </h3>
-
               {attentionFactors.map((factor, idx) => {
                 const isDanger = factor.status === "HIGH_WARNING";
-                const docActions = lang === "twi" ? (factor.doctorActionsTwi || factor.recommendationsTwi) : (factor.doctorActionsEn || factor.recommendationsEn);
-                const lifeActions = lang === "twi" ? (factor.lifestyleCurbTwi || factor.recommendationsTwi) : (factor.lifestyleCurbEn || factor.recommendationsEn);
+                const docActions = lang === "twi" ? factor.doctorActionsTwi : factor.doctorActionsEn;
+                const lifeActions = lang === "twi" ? factor.lifestyleCurbTwi : factor.lifestyleCurbEn;
 
                 return (
                   <div
                     key={idx}
-                    className={`bg-surface-container-lowest border rounded-2xl p-4 shadow-2xs transition-all ${
+                    className={`border rounded-3xl p-5 shadow-sm transition-all ${
                       isDanger
-                        ? "border-error/40 bg-error-container/15"
-                        : "border-earthen-ochre/40 bg-earthen-ochre/10"
+                        ? "bg-error-container/20 border-error/40"
+                        : "bg-amber-500/10 border-amber-500/40"
                     }`}
                   >
-                    {/* Factor Header & Badge */}
-                    <div className="flex items-center justify-between mb-3 border-b border-outline-variant/40 pb-2">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="font-headline font-bold text-base text-on-surface">
                           {factor.factor}
@@ -566,7 +492,6 @@ export default function Vitals() {
                       </span>
                     </div>
 
-                    {/* Section 1: Doctor Consultation Actions */}
                     {docActions && docActions.length > 0 && (
                       <div className="mb-3">
                         <p className="text-[11px] font-bold text-error uppercase tracking-wider mb-1.5 flex items-center gap-1">
@@ -588,7 +513,6 @@ export default function Vitals() {
                       </div>
                     )}
 
-                    {/* Section 2: General Lifestyle & Dietary Ways to Curb It */}
                     {lifeActions && lifeActions.length > 0 && (
                       <div className="pt-2 border-t border-outline-variant/40">
                         <p className="text-[11px] font-bold text-forest-green uppercase tracking-wider mb-1.5 flex items-center gap-1">

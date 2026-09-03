@@ -136,25 +136,55 @@ export default function Ask() {
         assistTextTwi = res.data.answerTwi || assistTextTwi;
       }
 
+      setLoading(false);
+
+      // ── Progressive Line-by-Line Streaming Output ─────────────────────────
+      const enLines = assistTextEn.split("\n");
+      const twiLines = assistTextTwi.split("\n");
+      const totalSteps = Math.max(enLines.length, twiLines.length);
+
+      // Create initial empty assistant message
+      setMessages((prev) => [
+        ...prev,
+        { id: newAssisId, role: "assistant", en: "", twi: "" },
+      ]);
+
+      let step = 0;
+      const streamInterval = setInterval(() => {
+        step++;
+        const currentEn = enLines.slice(0, step).join("\n");
+        const currentTwi = twiLines.slice(0, step).join("\n");
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === newAssisId
+              ? { ...msg, en: currentEn, twi: currentTwi }
+              : msg
+          )
+        );
+
+        if (step >= totalSteps) {
+          clearInterval(streamInterval);
+          // Trigger speech playback when streaming completes
+          speakText(
+            voiceLang === "twi" ? assistTextTwi : assistTextEn,
+            voiceLang === "twi" ? "ak" : "en",
+            newAssisId
+          );
+        }
+      }, 50);
+
+    } catch (err) {
+      setLoading(false);
       setMessages((prev) => [
         ...prev,
         {
           id: newAssisId,
           role: "assistant",
-          en: assistTextEn,
-          twi: assistTextTwi,
+          en: "I'm having trouble connecting right now, but please stay hydrated and rest.",
+          twi: "Mewɔ ɔhaw kakra mu, nso kɔ so nom nsuo na gye wo ho ahome.",
         },
       ]);
-
-      speakText(
-        voiceLang === "twi" ? assistTextTwi : assistTextEn,
-        voiceLang,
-        `${newAssisId}-${voiceLang}`
-      );
-    } catch (err) {
-      console.warn('[Ask] AI Query notice:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
