@@ -106,10 +106,10 @@ export default function SignUpPage() {
 
   const [emailSent, setEmailSent]         = useState(false);
 
-  // ── Step 2: verify 8-digit OTP with Supabase → create account ────────────
+  // ── Step 2: verify OTP code with Supabase → create account ──────────────────
   const verifyOtp = async () => {
-    const code = otpValues.join("");
-    if (code.length < 8) { setOtpError("Please enter all 8 digits."); return; }
+    const code = otpValues.join("").trim();
+    if (code.length < 6) { setOtpError("Please enter your verification code."); return; }
     setOtpError("");
     setVerifying(true);
     try {
@@ -342,7 +342,7 @@ export default function SignUpPage() {
 
           <button
             onClick={verifyOtp}
-            disabled={verifying || otpValues.join("").length < 8}
+            disabled={verifying || otpValues.join("").length < 6}
             className="w-full bg-primary text-on-primary font-headline text-button py-4 rounded-full shadow-md active:scale-95 transition-transform disabled:opacity-60 disabled:cursor-not-allowed mb-4"
           >
             {verifying ? "Verifying..." : "Verify Email"}

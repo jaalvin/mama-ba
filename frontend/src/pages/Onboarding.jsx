@@ -58,10 +58,13 @@ export default function Onboarding() {
     };
     setUser((prev) => ({ ...prev, ...profile }));
 
+    // Record onboarding completed flag
+    const activeUid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id") || "guest";
+    localStorage.setItem(`mama_ba_onboarded_${activeUid}`, "true");
+
     // Sync to Supabase user_profile table
     try {
       if (supabase) {
-        const activeUid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id") || "guest";
         await supabase.from("user_profile").upsert({
           user_id: activeUid,
           email: user?.email || undefined,

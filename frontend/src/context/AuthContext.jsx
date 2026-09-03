@@ -121,6 +121,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!supabase || !supabase.auth) return;
 
+    const isOAuthCallback = window.location.hash.includes("access_token") || window.location.search.includes("code=");
+    if (isOAuthCallback) {
+      setIsLoading(true);
+    }
+
     // Check active session on initial load
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && session.user) {
@@ -135,7 +140,16 @@ export function AuthProvider({ children }) {
         setUserState(authenticatedUser);
         setAccessToken(session.access_token);
         persistUser(authenticatedUser, session.access_token);
+
+        // If user hasn't onboarded yet and landed on /app, direct them to /onboarding
+        const hasOnboarded = localStorage.getItem(`mama_ba_onboarded_${session.user.id}`);
+        if (!hasOnboarded && window.location.pathname.startsWith("/app")) {
+          window.location.href = "/onboarding";
+        }
       }
+      setIsLoading(false);
+    }).catch(() => {
+      setIsLoading(false);
     });
 
     // Listen for login / logout transitions
