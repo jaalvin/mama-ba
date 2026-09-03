@@ -91,7 +91,7 @@ export default function AppShell() {
                 {unreadCount > 0 ? "notifications_active" : "notifications"}
               </span>
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-error text-on-error text-[10px] font-bold rounded-full flex items-center justify-center leading-none shadow-sm">
+                <span className="absolute top-0 right-0 min-w-[13px] h-[13px] px-0.5 bg-error text-on-error text-[8px] font-extrabold rounded-full flex items-center justify-center leading-none shadow-xs border border-white/90 transform translate-x-0.5 -translate-y-0.5">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
