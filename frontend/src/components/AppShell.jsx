@@ -114,9 +114,11 @@ export default function AppShell() {
         {/* Floating WhatsApp-Style iOS Translucent Liquid Glass Navigation Bar */}
         <nav
           style={{
-            bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 0.85rem), 0.85rem)",
+            bottom: typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent)
+              ? "max(calc(env(safe-area-inset-bottom, 0px) * 0.25), 6px)"
+              : "6px",
           }}
-          className="fixed inset-x-3.5 mx-auto w-[calc(100%-1.75rem)] md:w-[410px] z-50 flex justify-between items-center px-3 py-2 rounded-[30px] whatsapp-glass-nav transition-all duration-300 shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
+          className="fixed inset-x-3.5 mx-auto w-[calc(100%-1.75rem)] md:w-[410px] z-50 flex justify-between items-center px-3 py-1.5 rounded-[26px] whatsapp-glass-nav transition-all duration-300 shadow-[0_16px_40px_rgba(0,0,0,0.6)]"
         >
           {navItems.map((item) => (
             <NavLink
