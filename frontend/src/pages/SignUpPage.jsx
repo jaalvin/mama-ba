@@ -24,11 +24,11 @@ export default function SignUpPage() {
   const [showConfirm, setShowConfirm]     = useState(false);
   const [serverError, setServerError]     = useState("");
 
-  // OTP step state
+  // OTP step state (8-digit Supabase Auth Token)
   const [otpStep, setOtpStep]             = useState(false);   // false = form, true = OTP entry
   const [submittedData, setSubmittedData] = useState(null);    // holds form values between steps
   const [demoCode, setDemoCode]           = useState("");       // shown only in demo mode
-  const [otpValues, setOtpValues]         = useState(Array(6).fill("")); // individual digit inputs
+  const [otpValues, setOtpValues]         = useState(Array(8).fill("")); // 8-digit inputs for Supabase
   const [otpError, setOtpError]           = useState("");
   const [verifying, setVerifying]         = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -81,13 +81,13 @@ export default function SignUpPage() {
     }
   };
 
-  // ── OTP input helpers ────────────────────────────────────────
+  // ── OTP input helpers (8-digit) ─────────────────────────────
   const handleOtpChange = (idx, val) => {
     const digit = val.replace(/\D/g, "").slice(-1);
     const next = [...otpValues];
     next[idx] = digit;
     setOtpValues(next);
-    if (digit && idx < 5) inputRefs.current[idx + 1]?.focus();
+    if (digit && idx < 7) inputRefs.current[idx + 1]?.focus();
   };
 
   const handleOtpKeyDown = (idx, e) => {
@@ -97,19 +97,19 @@ export default function SignUpPage() {
   };
 
   const handleOtpPaste = (e) => {
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasted.length === 6) {
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 8);
+    if (pasted.length === 8) {
       setOtpValues(pasted.split(""));
-      inputRefs.current[5]?.focus();
+      inputRefs.current[7]?.focus();
     }
   };
 
   const [emailSent, setEmailSent]         = useState(false);
 
-  // ── Step 2: verify OTP with Supabase → create account ───────────────────
+  // ── Step 2: verify 8-digit OTP with Supabase → create account ────────────
   const verifyOtp = async () => {
     const code = otpValues.join("");
-    if (code.length < 6) { setOtpError("Please enter all 6 digits."); return; }
+    if (code.length < 8) { setOtpError("Please enter all 8 digits."); return; }
     setOtpError("");
     setVerifying(true);
     try {
@@ -203,7 +203,7 @@ export default function SignUpPage() {
       }
     } catch { /* ignore */ }
 
-    setOtpValues(Array(6).fill(""));
+    setOtpValues(Array(8).fill(""));
     setOtpError("");
     startResendCooldown();
   };
@@ -262,31 +262,52 @@ export default function SignUpPage() {
             Check your email
           </h1>
           <p className="text-on-surface-variant text-center mb-2 text-sm">
-            We sent a 6-digit code to
+            We sent an 8-digit verification code to
           </p>
           <p className="text-primary font-semibold text-center mb-6 text-sm break-all">
             {submittedData?.email}
           </p>
 
-          {/* Verification code is sent directly to user's email address via Supabase Auth */}
+          {/* 8-digit OTP input with mobile keyboard auto-fill */}
+          <div className="relative flex justify-center items-center my-6" onPaste={handleOtpPaste}>
+            {/* Transparent input overlay for iOS/Android native keyboard auto-fill */}
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="\d{8}"
+              maxLength={8}
+              value={otpValues.join("")}
+              onChange={(e) => {
+                const cleaned = e.target.value.replace(/\D/g, "").slice(0, 8);
+                const arr = cleaned.split("");
+                while (arr.length < 8) arr.push("");
+                setOtpValues(arr);
+              }}
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10 tracking-widest text-transparent caret-transparent"
+              autoFocus
+            />
 
-          {/* 6-digit OTP input */}
-          <div className="flex justify-center gap-2 mb-5" onPaste={handleOtpPaste}>
-            {otpValues.map((digit, idx) => (
-              <input
-                key={idx}
-                ref={(el) => (inputRefs.current[idx] = el)}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleOtpChange(idx, e.target.value)}
-                onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                className={`w-11 h-14 text-center text-xl font-bold rounded-xl border-2 bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary transition-colors ${
-                  otpError ? "border-error" : digit ? "border-primary" : "border-outline-variant"
-                }`}
-              />
-            ))}
+            {/* Visual 8-Box Grid (compact mobile responsive sizing) */}
+            <div className="flex gap-1 sm:gap-2 pointer-events-none">
+              {otpValues.map((digit, idx) => {
+                const isCurrent = idx === otpValues.join("").length;
+                return (
+                  <div
+                    key={idx}
+                    className={`w-8 h-12 sm:w-10 sm:h-14 flex items-center justify-center text-lg sm:text-xl font-bold rounded-lg sm:rounded-xl border transition-all duration-150 ${
+                      digit
+                        ? "border-primary bg-primary/5 text-on-surface"
+                        : isCurrent
+                        ? "border-primary ring-2 ring-primary/20 bg-surface"
+                        : "border-outline-variant bg-surface text-on-surface-variant/40"
+                    }`}
+                  >
+                    {digit}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {otpError && (
@@ -295,7 +316,7 @@ export default function SignUpPage() {
 
           <button
             onClick={verifyOtp}
-            disabled={verifying || otpValues.join("").length < 6}
+            disabled={verifying || otpValues.join("").length < 8}
             className="w-full bg-primary text-on-primary font-headline text-button py-4 rounded-full shadow-md active:scale-95 transition-transform disabled:opacity-60 disabled:cursor-not-allowed mb-4"
           >
             {verifying ? "Verifying..." : "Verify Email"}
