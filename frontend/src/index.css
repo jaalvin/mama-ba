@@ -162,6 +162,36 @@ a:active,
 /* iOS Liquid Glass & Futuristic Translucent Glassmorphism Design     */
 /* ══════════════════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════════════════════════════ */
+/* WhatsApp-style iOS Curved Glass Floating Tab Bar & Glassmorphism   */
+/* ══════════════════════════════════════════════════════════════════ */
+
+.whatsapp-glass-nav {
+  background: rgba(16, 25, 20, 0.84) !important;
+  backdrop-filter: blur(32px) saturate(220%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(220%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.24) !important;
+  box-shadow: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.42), 0 20px 50px -5px rgba(0, 0, 0, 0.65) !important;
+}
+
+.whatsapp-glass-tab-active {
+  background: rgba(255, 255, 255, 0.24) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: inset 0 1px 2px 0 rgba(255, 255, 255, 0.55), 0 4px 18px rgba(37, 211, 102, 0.3) !important;
+  color: #ffffff !important;
+}
+
+.whatsapp-glass-tab-inactive {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.whatsapp-glass-tab-inactive:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
 .ios-liquid-nav {
   background: rgba(18, 26, 22, 0.76) !important;
   backdrop-filter: blur(28px) saturate(210%) !important;

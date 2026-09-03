@@ -111,12 +111,12 @@ export default function AppShell() {
           <Outlet />
         </main>
 
-        {/* Floating iOS Translucent Liquid Glass Navigation Bar */}
+        {/* Floating WhatsApp-Style iOS Translucent Liquid Glass Navigation Bar */}
         <nav
           style={{
-            bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 0.75rem), 0.75rem)",
+            bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 0.85rem), 0.85rem)",
           }}
-          className="fixed inset-x-3 mx-auto w-[calc(100%-1.5rem)] md:w-[calc(100%-2rem)] md:max-w-[420px] z-40 flex justify-between items-center px-2 py-1.5 rounded-full ios-liquid-nav transition-all duration-300"
+          className="fixed inset-x-3.5 mx-auto w-[calc(100%-1.75rem)] md:w-[410px] z-50 flex justify-between items-center px-3 py-2 rounded-[30px] whatsapp-glass-nav transition-all duration-300 shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
         >
           {navItems.map((item) => (
             <NavLink
@@ -124,20 +124,26 @@ export default function AppShell() {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `relative flex flex-col items-center justify-center px-3.5 py-1.5 rounded-full transition-all duration-200 ${
+                `relative flex flex-col items-center justify-center px-3 py-1.5 rounded-[20px] transition-all duration-200 ${
                   isActive
-                    ? "ios-glass-pill-active scale-105 font-bold"
-                    : "ios-glass-pill-inactive"
+                    ? "whatsapp-glass-tab-active scale-105"
+                    : "whatsapp-glass-tab-inactive hover:bg-white/10"
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
-                  <span className="text-[10px] tracking-tight mt-0.5">{lang === "twi" ? item.label.twi : item.label.en}</span>
-                  {isActive && (
-                    <span className="absolute -bottom-1 w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-xs shadow-emerald-400/80 animate-pulse" />
-                  )}
+                  <div className="relative flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                    {item.to === "/app" && unreadCount > 0 && (
+                      <span className="absolute -top-1.5 -right-2 px-1 min-w-[15px] h-[15px] bg-[#25d366] text-black font-extrabold text-[9px] rounded-full flex items-center justify-center leading-none shadow-sm">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? "text-white font-bold" : "text-white/70"}`}>
+                    {lang === "twi" ? item.label.twi : item.label.en}
+                  </span>
                 </>
               )}
             </NavLink>
