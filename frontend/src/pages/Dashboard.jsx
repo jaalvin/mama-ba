@@ -692,26 +692,26 @@ export default function Dashboard() {
           {lang === "twi" ? "Yɛ biribi ntɛm" : "Quick Actions"}
         </h2>
         <div className="grid grid-cols-2 gap-3">
-          <Link to="/app/maternal" className="bg-primary-container/30 border border-primary/20 rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:bg-primary-container/50 transition-colors">
+          <Link to="/app/maternal" className="ios-glass-card rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:scale-[1.02] transition-all">
             <Baby className="w-7 h-7 text-primary" strokeWidth={1.5} />
-            <span className="text-label-md text-on-surface text-sm leading-tight">{lang === "twi" ? "Maame & Ba" : "Maternal & Baby Tracker"}</span>
+            <span className="text-label-md text-on-surface text-sm leading-tight font-semibold">{lang === "twi" ? "Maame & Ba" : "Maternal & Baby Tracker"}</span>
           </Link>
-          <Link to="/app/safety" className="bg-forest-green/10 border border-forest-green/20 rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:bg-forest-green/20 transition-colors">
+          <Link to="/app/safety" className="ios-glass-card rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:scale-[1.02] transition-all">
             <Leaf className="w-7 h-7 text-forest-green" strokeWidth={1.5} />
-            <span className="text-label-md text-on-surface text-sm leading-tight">{lang === "twi" ? "Afifide & Nnuro" : "Herbal & Medication Safety"}</span>
+            <span className="text-label-md text-on-surface text-sm leading-tight font-semibold">{lang === "twi" ? "Afifide & Nnuro" : "Herbal & Medication Safety"}</span>
           </Link>
-          <Link to="/app/triage" className="bg-secondary-container/30 border border-secondary/30 rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:bg-secondary-container/50 transition-colors">
+          <Link to="/app/triage" className="ios-glass-card rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:scale-[1.02] transition-all">
             <HelpCircle className="w-7 h-7 text-secondary" strokeWidth={1.5} />
-            <span className="text-label-md text-on-surface text-sm leading-tight">{lang === "twi" ? "Nsɛmmisa (FAQs)" : "Maternal Health FAQs"}</span>
+            <span className="text-label-md text-on-surface text-sm leading-tight font-semibold">{lang === "twi" ? "Nsɛmmisa (FAQs)" : "Maternal Health FAQs"}</span>
           </Link>
-          <Link to="/app/vitals" className="bg-tertiary-container/20 border border-tertiary/20 rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:bg-tertiary-container/40 transition-colors">
+          <Link to="/app/vitals" className="ios-glass-card rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:scale-[1.02] transition-all">
             <HeartPulse className="w-7 h-7 text-tertiary" strokeWidth={1.5} />
-            <span className="text-label-md text-on-surface text-sm leading-tight">{lang === "twi" ? "Gye Apomuden Nkae" : "Log Daily Vitals"}</span>
+            <span className="text-label-md text-on-surface text-sm leading-tight font-semibold">{lang === "twi" ? "Gye Apomuden Nkae" : "Log Daily Vitals"}</span>
           </Link>
-          <Link to="/app/care" className="col-span-2 bg-secondary-container/20 border border-secondary/20 rounded-2xl p-4 flex items-center gap-4 hover:bg-secondary-container/40 transition-colors">
+          <Link to="/app/care" className="col-span-2 ios-glass-card rounded-2xl p-4 flex items-center gap-4 hover:scale-[1.01] transition-all">
             <MapPin className="w-7 h-7 text-secondary shrink-0" strokeWidth={1.5} />
             <div className="text-left flex-1">
-              <span className="text-label-md text-on-surface block">{lang === "twi" ? "Hwɛ Adwumakuw a Ɛbɛn Wo" : "Find Nearby Pharmacy"}</span>
+              <span className="text-label-md text-on-surface font-semibold block">{lang === "twi" ? "Hwɛ Adwumakuw a Ɛbɛn Wo" : "Find Nearby Pharmacy"}</span>
               <span className="text-sm text-on-surface-variant">{lang === "twi" ? "Ayaresabea ne Adwumakuw" : "Book appointments & order meds"}</span>
             </div>
             <ChevronRight className="ml-auto text-outline w-6 h-6" strokeWidth={1.5} />
@@ -735,19 +735,19 @@ export default function Dashboard() {
         </div>
 
         {addOpen && (
-          <form onSubmit={handleAddMed} className="mb-3 bg-surface-container-lowest border border-outline-variant rounded-2xl p-4 flex flex-col gap-3">
+          <form onSubmit={handleAddMed} className="mb-3 ios-glass-card rounded-2xl p-4 flex flex-col gap-3">
             <p className="text-sm font-semibold text-on-surface">{lang === "twi" ? "Fa Nnuro Foforo" : "Add Medication"}</p>
             <input
               type="text" required
               placeholder={lang === "twi" ? "Nnuro din (e.g. Iron & Folic Acid)" : "Medication name (e.g. Iron & Folic Acid)"}
               value={medName} onChange={e => setMedName(e.target.value)}
-              className="w-full bg-surface-container border border-outline-variant rounded-xl px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary"
+              className="w-full bg-surface-container/70 border border-outline-variant rounded-xl px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary"
             />
             <div>
               <label className="text-xs text-on-surface-variant mb-1 block">{lang === "twi" ? "Bere a wubegye" : "Time to take"}</label>
               <input
                 type="time" required value={medTime} onChange={e => setMedTime(e.target.value)}
-                className="w-full bg-surface-container border border-outline-variant rounded-xl px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary"
+                className="w-full bg-surface-container/70 border border-outline-variant rounded-xl px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary"
               />
             </div>
             <div className="flex gap-2">
@@ -764,7 +764,7 @@ export default function Dashboard() {
           </form>
         )}
 
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden">
+        <div className="ios-glass-card rounded-2xl overflow-hidden shadow-sm">
           {medsLoading && <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>}
 
           {!medsLoading && meds.length === 0 && (

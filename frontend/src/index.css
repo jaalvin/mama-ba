@@ -157,3 +157,54 @@ a:active,
     opacity: 0;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* iOS Liquid Glass & Futuristic Translucent Glassmorphism Design     */
+/* ══════════════════════════════════════════════════════════════════ */
+
+.ios-liquid-nav {
+  background: rgba(18, 26, 22, 0.76) !important;
+  backdrop-filter: blur(28px) saturate(210%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(210%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.38), 0 20px 45px -8px rgba(0, 0, 0, 0.55) !important;
+}
+
+.ios-liquid-header {
+  background: rgba(253, 249, 243, 0.85) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border-bottom: 1px solid rgba(222, 192, 185, 0.4) !important;
+  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.04) !important;
+}
+
+.ios-glass-pill-active {
+  background: rgba(255, 255, 255, 0.22) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: inset 0 1px 2px 0 rgba(255, 255, 255, 0.45), 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+  color: #ffffff !important;
+}
+
+.ios-glass-pill-inactive {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+.ios-glass-pill-inactive:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.ios-glass-card {
+  background: rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.5) !important;
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.06), inset 0 1px 1px 0 rgba(255, 255, 255, 0.7) !important;
+}
+
+.ios-glass-badge {
+  background: rgba(57, 103, 83, 0.15) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(57, 103, 83, 0.3) !important;
+}

@@ -64,18 +64,18 @@ export default function AppShell() {
             paddingTop: "max(env(safe-area-inset-top, 0px), 0.75rem)",
             height: "calc(3.75rem + env(safe-area-inset-top, 0px))",
           }}
-          className={`fixed inset-x-0 mx-auto w-full md:max-w-md z-40 flex items-center justify-between px-4 bg-background/95 backdrop-blur-sm border-b border-outline-variant ${
+          className={`fixed inset-x-0 mx-auto w-full md:max-w-md z-40 flex items-center justify-between px-4 ios-liquid-header ${
             isDemoMode ? "top-6" : "top-0"
           }`}
         >
-          <span className="font-headline text-headline-md text-primary font-bold">Mama Ba</span>
+          <span className="font-headline text-headline-md text-primary font-bold tracking-tight">Mama Ba</span>
 
-          {/* Right-side header actions — perfectly aligned on a single straight horizontal line */}
+          {/* Right-side header actions — aligned with iOS glassy pill badges */}
           <div className="flex items-center gap-2">
             {/* Pharmacy button */}
             <NavLink
               to="/app/care"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container hover:bg-surface-container-high text-xs font-medium text-on-surface-variant hover:text-primary transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 dark:bg-black/30 backdrop-blur-md border border-white/40 text-xs font-semibold text-on-surface-variant hover:text-primary transition-all shadow-xs"
             >
               <span className="material-symbols-outlined text-[18px] text-primary">local_pharmacy</span>
               <span>{lang === "twi" ? "Nnuro Dwa" : "Pharmacy"}</span>
@@ -85,7 +85,7 @@ export default function AppShell() {
             <button
               onClick={() => setPanelOpen(true)}
               aria-label={lang === "twi" ? "Hwɛ Nkra" : "View notifications"}
-              className="relative p-2 rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center"
+              className="relative p-2 rounded-full bg-white/60 dark:bg-black/30 backdrop-blur-md border border-white/40 text-on-surface-variant hover:text-primary transition-all flex items-center justify-center shadow-xs"
             >
               <span className="material-symbols-outlined text-[20px]">
                 {unreadCount > 0 ? "notifications_active" : "notifications"}
@@ -104,23 +104,19 @@ export default function AppShell() {
             paddingTop: isDemoMode
               ? "calc(5.75rem + env(safe-area-inset-top, 0px))"
               : "calc(4.25rem + env(safe-area-inset-top, 0px))",
-            paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))",
+            paddingBottom: "calc(6.5rem + env(safe-area-inset-bottom, 0px))",
           }}
           className="min-h-screen"
         >
           <Outlet />
         </main>
 
+        {/* Floating iOS Translucent Liquid Glass Navigation Bar */}
         <nav
           style={{
-            paddingBottom: typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent)
-              ? "max(calc(env(safe-area-inset-bottom, 0px) * 0.25), 4px)"
-              : "calc(0.5rem + env(safe-area-inset-bottom, 0px))",
-            paddingTop: typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent)
-              ? "4px"
-              : "8px",
+            bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 0.75rem), 0.75rem)",
           }}
-          className="fixed bottom-0 inset-x-0 mx-auto w-full md:max-w-md z-40 flex justify-around items-center px-2 bg-surface-container border-t border-outline-variant rounded-t-xl"
+          className="fixed inset-x-3 mx-auto w-[calc(100%-1.5rem)] md:w-[calc(100%-2rem)] md:max-w-[420px] z-40 flex justify-between items-center px-2 py-1.5 rounded-full ios-liquid-nav transition-all duration-300"
         >
           {navItems.map((item) => (
             <NavLink
@@ -128,15 +124,22 @@ export default function AppShell() {
               to={item.to}
               end={item.end}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center px-3 py-1 rounded-2xl transition-colors ${
+                `relative flex flex-col items-center justify-center px-3.5 py-1.5 rounded-full transition-all duration-200 ${
                   isActive
-                    ? "bg-primary-container text-on-primary-container"
-                    : "text-on-surface-variant hover:bg-surface-variant"
+                    ? "ios-glass-pill-active scale-105 font-bold"
+                    : "ios-glass-pill-inactive"
                 }`
               }
             >
-              <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
-              <span className="text-xs mt-1">{lang === "twi" ? item.label.twi : item.label.en}</span>
+              {({ isActive }) => (
+                <>
+                  <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                  <span className="text-[10px] tracking-tight mt-0.5">{lang === "twi" ? item.label.twi : item.label.en}</span>
+                  {isActive && (
+                    <span className="absolute -bottom-1 w-1.5 h-1.5 bg-emerald-400 rounded-full shadow-xs shadow-emerald-400/80 animate-pulse" />
+                  )}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
