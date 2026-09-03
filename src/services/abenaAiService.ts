@@ -28,6 +28,7 @@ export class AbenaAiService {
 
   private static getApiKeys(): (string | null)[] {
     const rawKeys = [
+      null, // Priority 1: Anonymous Free Tier — verified instant 200 OK for both English & Twi
       process.env.ABENA_KEY_1 || CONFIG.ABENA_KEY_1 || 'sk_99e14864877b47f7a121313b87602aec',
       process.env.ABENA_KEY_2 || CONFIG.ABENA_KEY_2 || 'sk_23d2b9e5b24c4ab7ae82bc2dc105491c',
       process.env.ABENA_KEY_3 || CONFIG.ABENA_KEY_3 || 'sk_5565023c4fe143f99801f0253823ad0f',
@@ -38,11 +39,9 @@ export class AbenaAiService {
       process.env.ABENA_KEY_8 || CONFIG.ABENA_KEY_8 || 'sk_062ac4b25cc44479b6eda14e4a0f1f7d',
       process.env.ABENA_API_KEY || CONFIG.ABENA_API_KEY || '',
       process.env.ABENA_FALLBACK_API_KEY || CONFIG.ABENA_FALLBACK_API_KEY || ''
-    ].filter(k => k && k.length > 5);
+    ];
 
-    const uniqueKeys: (string | null)[] = [...new Set(rawKeys)];
-    // Append null as the final Abena tier to attempt anonymous call (IP-based free tier)
-    uniqueKeys.push(null);
+    const uniqueKeys: (string | null)[] = [...new Set(rawKeys.filter(k => k === null || (typeof k === 'string' && k.length > 5)))];
     return uniqueKeys;
   }
 
@@ -51,8 +50,7 @@ export class AbenaAiService {
 
   /**
    * Synthesizes text into high-quality fluent Ghanaian speech (Twi or Ghanaian English WAV)
-   * Cycles through all 8 Abena AI API keys before any fallback.
-   * Note: Initial model warm-up can take up to ~15s, so timeout is set to 20s.
+   * Prioritizes instant Anonymous Tier and rotates through API keys.
    */
   static async synthesizeSpeech(options: TtsOptions): Promise<Buffer | null> {
     let cleanText = options.text
@@ -80,25 +78,19 @@ export class AbenaAiService {
     }
 
     const keyPool = this.getApiKeys();
-    // If all keys were previously marked exhausted, reset for a fresh attempt
-    if (this.exhaustedKeys.size >= keyPool.length - 1) {
-      this.exhaustedKeys.clear();
-    }
-
-    console.log(`[Abena AI TTS] Attempting synthesis across all ${keyPool.length - 1} Abena AI keys for voice "${voice}"...`);
+    console.log(`[Abena AI TTS] Attempting synthesis for voice "${voice}"...`);
 
     for (let idx = 0; idx < keyPool.length; idx++) {
       const key = keyPool[idx];
       if (key && this.exhaustedKeys.has(key)) {
-        continue; // Skip temporarily rate-limited keys
+        continue; // Skip keys marked exhausted
       }
 
-      const keyLabel = key ? `Key ${idx + 1}/${keyPool.length - 1} (${key.slice(0, 8)}...)` : `Anonymous Tier`;
+      const keyLabel = key ? `Key ${idx} (${key.slice(0, 8)}...)` : `Anonymous Free Tier`;
 
       try {
-        // Abena AI models can take ~10-25s to warm up on initial call, so set timeout to 40,000ms (40s)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 40000);
+        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
 
         const headers: Record<string, string> = {
           'Content-Type': 'application/json'
@@ -106,10 +98,9 @@ export class AbenaAiService {
 
         if (key) {
           headers['Authorization'] = `Bearer ${key}`;
-          headers['X-API-Key'] = key;
         }
 
-        console.log(`[Abena AI TTS] Requesting ${keyLabel}...`);
+        console.log(`[Abena AI TTS] Requesting via ${keyLabel}...`);
         const response = await fetch(`${this.baseUrl}/tts/synthesize/`, {
           method: 'POST',
           headers,
@@ -139,17 +130,17 @@ export class AbenaAiService {
         } else if (response.status === 402 || response.status === 429) {
           if (key) this.exhaustedKeys.add(key);
           const errText = await response.text().catch(() => '');
-          console.warn(`[Abena AI] ${keyLabel} quota/rate limit exhausted (HTTP ${response.status}): ${errText}. Rotating to next key...`);
+          console.warn(`[Abena AI] ${keyLabel} limit notice (HTTP ${response.status}): ${errText}. Rotating...`);
         } else {
           const errText = await response.text().catch(() => '');
-          console.warn(`[Abena AI] ${keyLabel} TTS Error HTTP ${response.status}: ${errText}. Rotating to next key...`);
+          console.warn(`[Abena AI] ${keyLabel} TTS Error HTTP ${response.status}: ${errText}. Rotating...`);
         }
       } catch (err: any) {
         console.warn(`[Abena AI] ${keyLabel} TTS request notice:`, err.message || err);
       }
     }
 
-    console.warn('[Abena AI] All 8 Abena keys and anonymous tier exhausted for TTS synthesis.');
+    console.warn('[Abena AI] All Abena tiers exhausted for TTS synthesis.');
     return null;
   }
 
