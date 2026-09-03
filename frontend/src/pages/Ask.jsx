@@ -202,6 +202,8 @@ export default function Ask() {
       setInputText("");
       processUserQuery(q);
     }
+  };
+
   const toggleListening = async () => {
     stopNeuralSpeech();
     setCurrentlySpeaking(null);
