@@ -7,6 +7,7 @@ import { medications as medsAPI, api } from "../services/api.js";
 import { showDeviceNotification, scheduleAlarm, nextOccurrenceMs } from "../services/notifications.js";
 import { playNeuralSpeech, stopNeuralSpeech } from "../services/speech.js";
 import { startVoiceRecording, stopVoiceRecording } from "../services/voiceRecorder.js";
+import { supabase } from "../lib/supabase.js";
 import {
   Baby, Leaf, HelpCircle, HeartPulse, MapPin,
   ChevronRight, Mic, Check, Clock, Plus, Trash2, Loader2,
@@ -207,14 +208,6 @@ export default function Dashboard() {
       setModalDueDate(stored);
     } else if (user?.dueDate) {
       setModalDueDate(user.dueDate);
-    } else if (supabase) {
-      supabase.from("user_profile").select("due_date").eq("user_id", activeUid).single().then(({ data }) => {
-        if (data?.due_date) {
-          localStorage.setItem(`mama_ba_usr_${activeUid}_due_date`, data.due_date);
-          updateUser({ dueDate: data.due_date });
-          setModalDueDate(data.due_date);
-        }
-      }).catch(() => {});
     }
   }, [activeUid, user?.dueDate]);
 

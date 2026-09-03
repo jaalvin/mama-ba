@@ -103,7 +103,8 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
     return false;
   }
 
-  const isTwi = langCode === "twi" || langCode === "tw" || langCode === "ak";
+  const normalizedLang = (langCode || "").toLowerCase().trim();
+  const isTwi = normalizedLang === "twi" || normalizedLang === "tw" || normalizedLang === "ak" || normalizedLang === "twi_only" || normalizedLang === "akan";
   const voice = isTwi ? "abena_twi_high" : "akua_eng";
   const cacheKey = `${voice}:${cleanText.toLowerCase()}`;
   const lsKey = getStorageKey(cacheKey);
