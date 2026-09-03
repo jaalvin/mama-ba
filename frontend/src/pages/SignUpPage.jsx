@@ -186,25 +186,51 @@ export default function SignUpPage() {
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
+    const targetEmail = submittedData?.email;
+    if (!targetEmail) {
+      setOtpError("Email address missing. Please go back to sign up.");
+      return;
+    }
+
+    setOtpError("");
     try {
       if (supabase && supabase.auth) {
-        await supabase.auth.resend({
+        // 1. Try Supabase Auth signup resend
+        const { error: resendErr } = await supabase.auth.resend({
           type: "signup",
-          email: submittedData.email,
-        }).catch(async () => {
-          await supabase.auth.signInWithOtp({ email: submittedData.email }).catch(() => {});
+          email: targetEmail,
         });
+
+        if (resendErr) {
+          console.warn("Supabase resend notice:", resendErr.message);
+          // 2. Try OTP resend via signInWithOtp
+          const { error: otpErr } = await supabase.auth.signInWithOtp({
+            email: targetEmail
+          });
+          if (otpErr) {
+            setOtpError(otpErr.message || resendErr.message || "Please wait 60 seconds before requesting another code.");
+            return;
+          }
+        }
       } else {
-        await fetch(`${import.meta.env.VITE_API_BASE_URL || "/api/v1"}/auth/send-verification`, {
+        // Express backend fallback
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "/api/v1"}/auth/send-verification`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: submittedData.email }),
-        }).catch(() => {});
+          body: JSON.stringify({ email: targetEmail }),
+        });
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          setOtpError(errJson.message || "Could not resend verification email.");
+          return;
+        }
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      setOtpError(err.message || "Could not resend verification email.");
+      return;
+    }
 
     setOtpValues(Array(8).fill(""));
-    setOtpError("");
     startResendCooldown();
   };
 
