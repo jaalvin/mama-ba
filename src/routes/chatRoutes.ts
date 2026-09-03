@@ -120,14 +120,21 @@ router.post('/tts', async (req: Request, res: Response) => {
     const targetLang = (language || 'tw').toLowerCase();
     const isTwi = targetLang === 'tw' || targetLang === 'twi' || targetLang === 'ak';
     const preferredVoice = voice || (isTwi ? 'abena_twi_high' : 'akua_eng');
-    const khayaLang = isTwi ? 'twi' : 'eng';
-    const speakerId = speaker_id || speaker || 'female';
 
     // 1. Primary Ghanaian Neural TTS: Abena AI Engine (Cascades Key 1 -> Key 8 -> Anonymous)
-    const abenaBuffer = await AbenaAiService.synthesizeSpeech({
+    let abenaBuffer = await AbenaAiService.synthesizeSpeech({
       text,
       voice: preferredVoice
     });
+
+    // Retry Abena AI pool once more if model was warming up on first pass
+    if (!abenaBuffer || abenaBuffer.length <= 100) {
+      console.log('[TTS Route] Retrying Abena AI 8-key pool for model warm-up...');
+      abenaBuffer = await AbenaAiService.synthesizeSpeech({
+        text,
+        voice: preferredVoice
+      });
+    }
 
     if (abenaBuffer && abenaBuffer.length > 100) {
       res.setHeader('Content-Type', 'audio/wav');
@@ -136,23 +143,8 @@ router.post('/tts', async (req: Request, res: Response) => {
       return res.send(abenaBuffer);
     }
 
-    // 2. Secondary Neural TTS Fallback: Khaya AI TTS API v2
-    console.log('[TTS Route] Abena AI exhausted/unavailable. Triggering Khaya AI TTS fallback...');
-    const khayaBuffer = await KhayaAiService.synthesizeSpeech({
-      text,
-      language: khayaLang,
-      speaker_id: speakerId
-    });
-
-    if (khayaBuffer && khayaBuffer.length > 100) {
-      res.setHeader('Content-Type', 'audio/wav');
-      res.setHeader('Content-Length', khayaBuffer.length);
-      res.setHeader('X-Speech-Provider', 'Khaya AI');
-      return res.send(khayaBuffer);
-    }
-
-    // 3. Tertiary Neural TTS Fallback: Meta MMS Akan or Cloud Speech Pipeline
-    console.log('[TTS Route] Khaya AI unavailable. Triggering Meta MMS Twi TTS fallback...');
+    // 2. Secondary Neural TTS Fallback: Meta MMS Akan or Cloud Speech Pipeline (No Khaya AI)
+    console.log('[TTS Route] Triggering Meta MMS Twi TTS fallback...');
     const mmsBuffer = await MmsTtsService.synthesizeTwiAudio(text);
     if (mmsBuffer && mmsBuffer.length > 100) {
       res.setHeader('Content-Type', 'audio/mpeg');
@@ -161,7 +153,7 @@ router.post('/tts', async (req: Request, res: Response) => {
       return res.send(mmsBuffer);
     }
 
-    const fallbackBuffer = await MmsTtsService.synthesizeFallbackAudio(text, khayaLang);
+    const fallbackBuffer = await MmsTtsService.synthesizeFallbackAudio(text, isTwi ? 'twi' : 'eng');
     if (fallbackBuffer && fallbackBuffer.length > 100) {
       res.setHeader('Content-Type', 'audio/mpeg');
       res.setHeader('Content-Length', fallbackBuffer.length);

@@ -16,55 +16,7 @@ let currentMediaRecorder = null;
 let currentAudioStream = null;
 
 export async function startVoiceRecording({ voiceLang, onStart, onResult, onError, onEnd }) {
-  const isEnglish = voiceLang === "en" || voiceLang === "english";
-
-  // ── 1. ENGLISH MODE: Try native browser SpeechRecognition first (fastest) ──
-  if (isEnglish) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      try {
-        const recognition = new SpeechRecognition();
-        recognition.lang = "en-US";
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
-
-        let hasResult = false;
-
-        recognition.onstart = () => { if (onStart) onStart(); };
-        recognition.onend = () => {
-          if (!hasResult && onEnd) onEnd();
-        };
-        recognition.onerror = async (event) => {
-          if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-            if (onError) onError("Microphone permission denied. Please allow microphone access.");
-            return;
-          }
-          // For other errors: fall through to Abena ASR for English
-          console.warn("[VoiceRecorder] Browser SpeechRecognition error, falling through to Abena ASR:", event.error);
-          if (onEnd) onEnd();
-          await startAbenaRecording({ voiceLang: "en", onStart, onResult, onError, onEnd });
-        };
-        recognition.onresult = (event) => {
-          hasResult = true;
-          const transcript = event.results[0][0]?.transcript;
-          if (transcript && onResult) {
-            onResult(transcript);
-          } else {
-            if (onEnd) onEnd();
-          }
-        };
-
-        recognition.start();
-        return recognition;
-      } catch (e) {
-        console.warn("[VoiceRecorder] SpeechRecognition instantiation failed, using Abena ASR:", e);
-        // Fall through to Abena ASR
-      }
-    }
-  }
-
-  // ── 2. TWI MODE + English fallback: MediaRecorder → Abena AI Neural ASR ──
+  // Use Abena AI ASR via MediaRecorder for both English and Twi for 100% reliable first-click recording
   return startAbenaRecording({ voiceLang, onStart, onResult, onError, onEnd });
 }
 
@@ -95,12 +47,18 @@ async function startAbenaRecording({ voiceLang, onStart, onResult, onError, onEn
     const audioChunks = [];
 
     mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) audioChunks.push(event.data);
+      if (event.data && event.data.size > 0) audioChunks.push(event.data);
     };
 
     mediaRecorder.onstart = () => {
       if (onStart) onStart();
     };
+
+    // Start recording immediately with 100ms timeslices to capture first spoken words cleanly
+    mediaRecorder.start(100);
+
+    // Notify UI immediately that recording is active
+    if (onStart) onStart();
 
     mediaRecorder.onstop = async () => {
       if (onEnd) onEnd();

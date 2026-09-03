@@ -80,20 +80,25 @@ export class AbenaAiService {
     }
 
     const keyPool = this.getApiKeys();
-    console.log(`[Abena AI TTS] Attempting synthesis across ${keyPool.length - 1} Abena AI keys for voice "${voice}"...`);
+    // If all keys were previously marked exhausted, reset for a fresh attempt
+    if (this.exhaustedKeys.size >= keyPool.length - 1) {
+      this.exhaustedKeys.clear();
+    }
+
+    console.log(`[Abena AI TTS] Attempting synthesis across all ${keyPool.length - 1} Abena AI keys for voice "${voice}"...`);
 
     for (let idx = 0; idx < keyPool.length; idx++) {
       const key = keyPool[idx];
       if (key && this.exhaustedKeys.has(key)) {
-        continue; // Skip exhausted keys
+        continue; // Skip temporarily rate-limited keys
       }
 
-      const keyLabel = key ? `Key ${idx + 1} (${key.slice(0, 8)}...)` : `Anonymous Tier`;
+      const keyLabel = key ? `Key ${idx + 1}/${keyPool.length - 1} (${key.slice(0, 8)}...)` : `Anonymous Tier`;
 
       try {
-        // Abena AI models take ~10-15s to warm up on initial call, so set timeout to 35,000ms
+        // Abena AI models can take ~10-25s to warm up on initial call, so set timeout to 40,000ms (40s)
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 35000);
+        const timeoutId = setTimeout(() => controller.abort(), 40000);
 
         const headers: Record<string, string> = {
           'Content-Type': 'application/json'
