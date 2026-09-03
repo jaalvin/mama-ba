@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import { getOfflineDb } from '../config';
+import { supabaseAdmin } from '../lib/supabaseAdmin';
 import { generateToken, verifyToken } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -281,6 +282,24 @@ router.post('/profile', (req: Request, res: Response) => {
       secondaryContactName || null,
       secondaryContactPhone || null
     );
+
+    // Sync to Supabase Cloud Postgres
+    try {
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('user_profile').upsert({
+          user_id: userId,
+          full_name: fullName || 'Ghanaian Patient',
+          email: email || null,
+          language_preference: languagePreference || 'twi',
+          is_pregnant: isPregnant ?? true,
+          gestational_weeks: gestationalWeeks || 0,
+          due_date: dueDate || null,
+          primary_contact_name: primaryContactName || null,
+          primary_contact_phone: primaryContactPhone || null,
+          relationship: relationship || null
+        }).catch(() => {});
+      }
+    } catch {}
 
     res.json({ success: true, message: 'Profile updated successfully', userId });
   } catch (error: any) {

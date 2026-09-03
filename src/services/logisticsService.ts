@@ -1,4 +1,5 @@
 import { getOfflineDb } from '../config';
+import { supabaseAdmin } from '../lib/supabaseAdmin';
 
 export interface PharmacyQuery {
   region?: string;
@@ -18,19 +19,18 @@ export interface Pharmacy {
 }
 
 export interface AppointmentBookingRequest {
-  userId: string;
+  userId?: string;
   facilityName: string;
-  appointmentType: 'IN_PERSON' | 'VIRTUAL';
+  appointmentType: 'IN_PERSON' | 'VIRTUAL_TELEHEALTH';
   requestedDate: string;
-  notes?: string;
 }
 
 export interface PrescriptionOrderRequest {
-  userId: string;
+  userId?: string;
   pharmacyId: string;
   prescriptionDetails: string;
   deliveryAddress: string;
-  phone: string;
+  phone?: string;
 }
 
 export class LogisticsService {
@@ -79,9 +79,10 @@ export class LogisticsService {
     }));
   }
 
-  static bookAppointment(req: AppointmentBookingRequest) {
+  static async bookAppointment(req: AppointmentBookingRequest) {
     const db = getOfflineDb();
     const id = `BKG-${Math.floor(1000 + Math.random() * 9000)}`;
+    const userId = req.userId || 'demo-patient-001';
     const stmt = db.prepare(`
       INSERT INTO hospital_appointments (id, user_id, facility_name, appointment_type, requested_date, status)
       VALUES (?, ?, ?, ?, ?, ?)
@@ -89,12 +90,23 @@ export class LogisticsService {
 
     stmt.run(
       id,
-      req.userId || 'demo-patient-001',
+      userId,
       req.facilityName,
       req.appointmentType || 'IN_PERSON',
       req.requestedDate || new Date().toISOString().split('T')[0],
       'CONFIRMED'
     );
+
+    if (supabaseAdmin) {
+      await supabaseAdmin.from('hospital_appointments').upsert({
+        id,
+        user_id: userId,
+        facility_name: req.facilityName,
+        appointment_type: req.appointmentType || 'IN_PERSON',
+        requested_date: req.requestedDate || new Date().toISOString().split('T')[0],
+        status: 'CONFIRMED'
+      }).catch(() => {});
+    }
 
     return {
       bookingId: id,

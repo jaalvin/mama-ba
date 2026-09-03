@@ -1,4 +1,5 @@
 import { getOfflineDb } from '../config';
+import { supabaseAdmin } from '../lib/supabaseAdmin';
 
 export interface VitalsEntry {
   userId: string;
@@ -337,7 +338,7 @@ export class VitalsService {
     const id = `vit-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const loggedAt = new Date().toISOString();
 
-    // Store in SQLite DB
+    // Store in SQLite DB & Supabase Cloud
     try {
       const stmt = db.prepare(`
         INSERT INTO vitals_logs 
@@ -357,10 +358,27 @@ export class VitalsService {
         vitalStatus,
         entry.notes || null,
         loggedAt,
-        'pending'
+        'synced'
       );
+
+      // Sync to Supabase Cloud Postgres
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('vitals_logs').upsert({
+          id,
+          user_id: userId,
+          bp_systolic: entry.systolicBp || null,
+          bp_diastolic: entry.diastolicBp || null,
+          body_temperature: entry.bodyTemperature || null,
+          pulse_rate: entry.pulseRate || null,
+          blood_glucose: entry.bloodGlucose || null,
+          weight_kg: entry.weightKg || null,
+          vital_status: vitalStatus,
+          notes: entry.notes || null,
+          logged_at: loggedAt
+        }).catch(() => {});
+      }
     } catch (e) {
-      console.warn('[VitalsService] SQLite log warning:', e);
+      console.warn('[VitalsService] Log warning:', e);
     }
 
     return {

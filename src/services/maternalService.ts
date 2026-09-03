@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getOfflineDb } from '../config';
+import { supabaseAdmin } from '../lib/supabaseAdmin';
 
 export interface ANCScheduleItem {
   visitNumber: number;
@@ -86,9 +87,9 @@ export class MaternalService {
   }
 
   /**
-   * Save maternal care schedule items into local SQLite database.
+   * Save maternal care schedule items into local SQLite database & Supabase Cloud.
    */
-  static saveScheduleToLocalDb(userId: string, items: Array<{ id?: string; type: 'anc_visit' | 'child_immunization'; titleEng: string; titleTwi: string; dueDate: string; vaccineCode?: string; isCompleted?: boolean }>) {
+  static async saveScheduleToLocalDb(userId: string, items: Array<{ id?: string; type: 'anc_visit' | 'child_immunization'; titleEng: string; titleTwi: string; dueDate: string; vaccineCode?: string; isCompleted?: boolean }>) {
     const db = getOfflineDb();
     const insertStmt = db.prepare(`
       INSERT OR REPLACE INTO maternal_schedules
@@ -100,13 +101,23 @@ export class MaternalService {
       const id = item.id || `sched-${userId}-${item.type}-${item.vaccineCode || item.dueDate}`;
       const completedAt = item.isCompleted ? new Date().toISOString() : null;
       insertStmt.run(id, userId, item.type, item.titleEng, item.titleTwi, item.dueDate, item.vaccineCode || null, item.isCompleted ? 1 : 0, completedAt);
+
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('user_maternal_schedules').upsert({
+          id,
+          user_id: userId,
+          title: item.titleEng,
+          due_date: item.dueDate,
+          is_completed: item.isCompleted ?? false,
+        }).catch(() => {});
+      }
     }
   }
 
   /**
-   * Toggle completion status for a schedule item in SQLite database.
+   * Toggle completion status for a schedule item in SQLite database & Supabase Cloud.
    */
-  static toggleScheduleCompletion(userId: string, itemId: string, isCompleted: boolean) {
+  static async toggleScheduleCompletion(userId: string, itemId: string, isCompleted: boolean) {
     const db = getOfflineDb();
     const completedAt = isCompleted ? new Date().toISOString() : null;
     const stmt = db.prepare(`
@@ -115,6 +126,13 @@ export class MaternalService {
       WHERE id = ? AND user_id = ?
     `);
     stmt.run(isCompleted ? 1 : 0, completedAt, itemId, userId);
+
+    if (supabaseAdmin) {
+      await supabaseAdmin.from('user_maternal_schedules').update({
+        is_completed: isCompleted,
+      }).eq('id', itemId).catch(() => {});
+    }
+
     return { success: true, id: itemId, isCompleted };
   }
 

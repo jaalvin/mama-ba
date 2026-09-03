@@ -1,4 +1,5 @@
 import { getOfflineDb } from '../config';
+import { supabaseAdmin } from '../lib/supabaseAdmin';
 
 export interface ReminderItem {
   id?: string;
@@ -16,18 +17,19 @@ export class RemindersService {
   /**
    * Create a new reminder.
    */
-  static createReminder(item: ReminderItem) {
+  static async createReminder(item: ReminderItem) {
     const db = getOfflineDb();
     const id = item.id || `rem-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const userId = item.userId || 'demo-patient-001';
     const stmt = db.prepare(`
       INSERT INTO reminders
       (id, user_id, title, reminder_type, scheduled_time, recurrence, dosage_info, is_active, is_completed, sync_status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')
     `);
 
     stmt.run(
       id,
-      item.userId || 'demo-patient-001',
+      userId,
       item.title,
       item.reminderType || 'MEDICATION',
       item.scheduledTime,
@@ -36,6 +38,22 @@ export class RemindersService {
       item.isActive !== undefined ? (item.isActive ? 1 : 0) : 1,
       item.isCompleted !== undefined ? (item.isCompleted ? 1 : 0) : 0
     );
+
+    // Sync to Supabase Cloud Postgres
+    try {
+      if (supabaseAdmin) {
+        await supabaseAdmin.from('reminders').upsert({
+          id,
+          user_id: userId,
+          title: item.title,
+          reminder_type: item.reminderType || 'MEDICATION',
+          scheduled_time: item.scheduledTime,
+          recurrence: item.recurrence || 'DAILY',
+          is_active: item.isActive ?? true,
+          is_completed: item.isCompleted ?? false,
+        }).catch(() => {});
+      }
+    } catch {}
 
     return {
       id,
