@@ -229,9 +229,9 @@ export default function Ask() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-9rem)] px-4 md:px-6 max-w-lg mx-auto">
+    <div className="relative flex flex-col h-[calc(100vh-4.25rem)] max-w-lg mx-auto overflow-hidden">
       {/* Voice Assistant Language Badge & Switcher shortcut */}
-      <div className="flex items-center justify-between py-2 border-b border-outline-variant text-xs">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-outline-variant text-xs shrink-0 bg-background/80 backdrop-blur-sm z-10">
         <div className="flex items-center gap-1.5 text-on-surface-variant">
           <span className="text-sm">{voiceLang === "twi" ? "🇬🇭" : "🇬🇧"}</span>
           <span className="font-semibold text-on-surface">
@@ -268,8 +268,8 @@ export default function Ask() {
         </div>
       </div>
 
-      {/* Transcript */}
-      <div className="flex-1 overflow-y-auto flex flex-col gap-4 py-4">
+      {/* Transcript Scroll Area */}
+      <div className="flex-1 overflow-y-auto px-4 flex flex-col gap-4 py-4 pb-48">
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
@@ -364,10 +364,15 @@ export default function Ask() {
         <div ref={bottomRef} className="shrink-0 h-0" />
       </div>
 
-      {/* Bottom panel */}
-      <div className="pb-4 flex flex-col gap-3">
+      {/* Static Fixed Bottom Panel (Input bar + Preset chips) */}
+      <div
+        style={{
+          bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 3.6rem), 3.6rem)",
+        }}
+        className="fixed inset-x-0 mx-auto w-full md:max-w-md px-4 pt-2 pb-2 bg-background/95 backdrop-blur-md z-30 flex flex-col gap-2 border-t border-outline-variant/30 shadow-md"
+      >
         {/* Preset Q&A Chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">
           {PRESET_QUESTIONS.map((q, i) => (
             <button
               key={i}
@@ -380,7 +385,7 @@ export default function Ask() {
         </div>
 
         {/* Audio Recording & Text Input Bar */}
-        <form onSubmit={handleSendText} className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant rounded-full px-3 py-2 shadow-sm">
+        <form onSubmit={handleSendText} className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant/80 rounded-full px-3.5 py-2 shadow-sm focus-within:border-primary transition-colors">
           {listening ? (
             <div className="flex items-center gap-0.5 h-6 px-2 flex-1">
               {[2, 4, 6, 4, 3, 5, 3, 2].map((h, i) => (
@@ -404,10 +409,10 @@ export default function Ask() {
               onChange={(e) => setInputText(e.target.value)}
               placeholder={
                 voiceLang === "twi"
-                  ? "Twerɛ anaa kyerɛ wo asɛm (e.g. Kontomire, Mogya)..."
+                  ? "Twerɛ anaa kyerɛ wo asɛm (e.g. Kontomire)..."
                   : "Type or speak your question in English or Twi..."
               }
-              className="flex-1 bg-transparent px-3 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none"
+              className="flex-1 bg-transparent px-2 text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none"
             />
           )}
 
