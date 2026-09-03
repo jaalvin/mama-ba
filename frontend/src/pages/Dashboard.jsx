@@ -198,6 +198,26 @@ export default function Dashboard() {
     }
   };
 
+  // ── Restore / Sync Due Date across Home screen and Profile ─────────────────
+  useEffect(() => {
+    if (!activeUid || activeUid === "guest") return;
+    const stored = localStorage.getItem(`mama_ba_usr_${activeUid}_due_date`);
+    if (stored && stored !== user?.dueDate) {
+      updateUser({ dueDate: stored });
+      setModalDueDate(stored);
+    } else if (user?.dueDate) {
+      setModalDueDate(user.dueDate);
+    } else if (supabase) {
+      supabase.from("user_profile").select("due_date").eq("user_id", activeUid).single().then(({ data }) => {
+        if (data?.due_date) {
+          localStorage.setItem(`mama_ba_usr_${activeUid}_due_date`, data.due_date);
+          updateUser({ dueDate: data.due_date });
+          setModalDueDate(data.due_date);
+        }
+      }).catch(() => {});
+    }
+  }, [activeUid, user?.dueDate]);
+
   const handleDeleteMed = async (id) => {
     // Cancel the alarm for this med
     alarmCancellers.current[id]?.();
@@ -208,10 +228,24 @@ export default function Dashboard() {
     setChecked((prev) => prev.filter(x => x !== id));
   };
 
-  const handleSaveModalDueDate = (e) => {
+  const handleSaveModalDueDate = async (e) => {
     e.preventDefault();
     if (!modalDueDate) return;
+    if (activeUid) {
+      localStorage.setItem(`mama_ba_usr_${activeUid}_due_date`, modalDueDate);
+    }
     updateUser({ dueDate: modalDueDate });
+    try {
+      if (supabase && activeUid) {
+        await supabase.from("user_profile").upsert({
+          user_id: activeUid,
+          due_date: modalDueDate,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+      }
+    } catch (err) {
+      console.warn("[Dashboard] Due date sync notice:", err);
+    }
     setShowDueDateModal(false);
   };
 

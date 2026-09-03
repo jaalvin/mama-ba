@@ -13,7 +13,16 @@ const TOKEN_KEY = "mama-ba-access-token";
 function getSavedUser() {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(PERSIST_USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const uid = parsed?.id || parsed?.userId || localStorage.getItem("mama_ba_active_user_id");
+    if (uid) {
+      const storedDueDate = localStorage.getItem(`mama_ba_usr_${uid}_due_date`);
+      if (storedDueDate) {
+        parsed.dueDate = storedDueDate;
+      }
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -28,9 +37,12 @@ function getSavedToken() {
 }
 
 function persistUser(user, token) {
-  if (user && user.id) {
+  if (user && (user.id || user.userId)) {
     const userId = user.id || user.userId;
     const cleanUser = { ...user, id: userId, userId };
+    if (cleanUser.dueDate) {
+      localStorage.setItem(`mama_ba_usr_${userId}_due_date`, cleanUser.dueDate);
+    }
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(cleanUser));
     localStorage.setItem(PERSIST_USER_KEY, JSON.stringify(cleanUser));
     localStorage.setItem("mama_ba_active_user_id", userId);

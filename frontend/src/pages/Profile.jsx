@@ -86,26 +86,34 @@ export default function Profile() {
     }
   }, [user?.dueDate]);
 
-  // Load due date from Supabase if not in local context
+  // Load due date from local storage or Supabase if not in local context
   useEffect(() => {
     const uid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id");
-    if (!uid || user?.dueDate) return;
-    (async () => {
-      try {
-        if (!supabase) return;
-        const { data } = await supabase
-          .from("user_profile")
-          .select("due_date")
-          .eq("user_id", uid)
-          .single();
-        if (data?.due_date) {
-          setDueDateInput(data.due_date);
-          updateUser({ dueDate: data.due_date });
-        }
-      } catch {}
-    })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+    if (!uid) return;
+    const stored = localStorage.getItem(`mama_ba_usr_${uid}_due_date`);
+    if (stored && stored !== user?.dueDate) {
+      setDueDateInput(stored);
+      updateUser({ dueDate: stored });
+    } else if (user?.dueDate) {
+      setDueDateInput(user.dueDate);
+    } else {
+      (async () => {
+        try {
+          if (!supabase) return;
+          const { data } = await supabase
+            .from("user_profile")
+            .select("due_date")
+            .eq("user_id", uid)
+            .single();
+          if (data?.due_date) {
+            localStorage.setItem(`mama_ba_usr_${uid}_due_date`, data.due_date);
+            setDueDateInput(data.due_date);
+            updateUser({ dueDate: data.due_date });
+          }
+        } catch {}
+      })();
+    }
+  }, [user?.id, user?.dueDate]);
 
   // Stop speech if navigating away
   useEffect(() => {
@@ -118,11 +126,14 @@ export default function Profile() {
     e.preventDefault();
     if (!dueDateInput) return;
     setSavingDate(true);
+    const uid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id");
+    if (uid) {
+      localStorage.setItem(`mama_ba_usr_${uid}_due_date`, dueDateInput);
+    }
     // 1. Update in-memory context + localStorage
     updateUser({ dueDate: dueDateInput });
     // 2. Persist to Supabase user_profile
     try {
-      const uid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id");
       if (supabase && uid) {
         await supabase.from("user_profile").upsert({
           user_id: uid,
