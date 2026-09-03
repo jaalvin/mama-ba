@@ -222,7 +222,7 @@ export function AuthProvider({ children }) {
     // 2. Register with Supabase Auth as well
     try {
       if (supabase && supabase.auth) {
-        await supabase.auth.signUp({
+        const { data: suData } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -231,6 +231,20 @@ export function AuthProvider({ children }) {
           }
         }).catch((e) => {
           console.warn("Supabase Auth signup notice:", e);
+          return { data: null };
+        });
+
+        const sUser = suData?.user;
+        const uid = sUser?.id || newUser.id;
+
+        // Populate public.user_profile table in Supabase
+        await supabase.from('user_profile').upsert({
+          user_id: uid,
+          email: email,
+          full_name: name,
+          language_preference: languagePreference || 'twi'
+        }).catch((e) => {
+          console.warn("Supabase user_profile table notice:", e);
         });
       }
     } catch (e) {

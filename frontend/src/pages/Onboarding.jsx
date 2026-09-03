@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLang, stopSpeech } from "../context/LanguageContext.jsx";
+import { supabase } from "../lib/supabase.js";
 import { Mic, CheckCircle2, Shield } from "lucide-react";
 
 const TRIMESTERS = [
@@ -45,7 +46,7 @@ export default function Onboarding() {
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
     stopSpeech();
     setVoiceLang(selectedVoice);
@@ -56,6 +57,24 @@ export default function Onboarding() {
       voiceLanguage: selectedVoice,
     };
     setUser((prev) => ({ ...prev, ...profile }));
+
+    // Sync to Supabase user_profile table
+    try {
+      if (supabase) {
+        const activeUid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id") || "guest";
+        await supabase.from("user_profile").upsert({
+          user_id: activeUid,
+          email: user?.email || undefined,
+          full_name: user?.name || user?.fullName || undefined,
+          language_preference: lang,
+          is_pregnant: status !== "nursing" && status !== "caregiver",
+          updated_at: new Date().toISOString()
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn("Supabase profile sync notice:", err);
+    }
+
     navigate("/app");
   };
 
