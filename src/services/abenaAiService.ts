@@ -28,17 +28,17 @@ export class AbenaAiService {
 
   private static getApiKeys(): (string | null)[] {
     const rawKeys = [
-      null, // Priority 1: Anonymous Free Tier — verified instant 200 OK for both English & Twi
-      process.env.ABENA_KEY_1 || CONFIG.ABENA_KEY_1 || 'sk_99e14864877b47f7a121313b87602aec',
-      process.env.ABENA_KEY_2 || CONFIG.ABENA_KEY_2 || 'sk_23d2b9e5b24c4ab7ae82bc2dc105491c',
+      process.env.ABENA_KEY_1 || CONFIG.ABENA_KEY_1 || 'sk_b66230787fc54e8ba63b3084a7370521',
+      process.env.ABENA_KEY_2 || CONFIG.ABENA_KEY_2 || 'sk_a47fce0855e54740887c863fa268e423',
       process.env.ABENA_KEY_3 || CONFIG.ABENA_KEY_3 || 'sk_5565023c4fe143f99801f0253823ad0f',
       process.env.ABENA_KEY_4 || CONFIG.ABENA_KEY_4 || 'sk_cc319643c820440d9fa26e94be26e140',
-      process.env.ABENA_KEY_5 || CONFIG.ABENA_KEY_5 || 'sk_b66230787fc54e8ba63b3084a7370521',
-      process.env.ABENA_KEY_6 || CONFIG.ABENA_KEY_6 || 'sk_a47fce0855e54740887c863fa268e423',
+      process.env.ABENA_KEY_5 || CONFIG.ABENA_KEY_5 || 'sk_99e14864877b47f7a121313b87602aec',
+      process.env.ABENA_KEY_6 || CONFIG.ABENA_KEY_6 || 'sk_23d2b9e5b24c4ab7ae82bc2dc105491c',
       process.env.ABENA_KEY_7 || CONFIG.ABENA_KEY_7 || 'sk_b18d6bafae8a4160bbfc8639a593051e',
       process.env.ABENA_KEY_8 || CONFIG.ABENA_KEY_8 || 'sk_062ac4b25cc44479b6eda14e4a0f1f7d',
       process.env.ABENA_API_KEY || CONFIG.ABENA_API_KEY || '',
-      process.env.ABENA_FALLBACK_API_KEY || CONFIG.ABENA_FALLBACK_API_KEY || ''
+      process.env.ABENA_FALLBACK_API_KEY || CONFIG.ABENA_FALLBACK_API_KEY || '',
+      null // Anonymous Free Tier fallback (HTTP 200 OK)
     ];
 
     const uniqueKeys: (string | null)[] = [...new Set(rawKeys.filter(k => k === null || (typeof k === 'string' && k.length > 5)))];

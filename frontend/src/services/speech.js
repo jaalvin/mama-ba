@@ -189,37 +189,17 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
         }
       };
 
-      await audio.play();
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        await playPromise.catch((err) => {
+          console.warn("[Speech] Playback promise notice:", err);
+          if (thisRequestId === currentSpeechId && onEnd) onEnd();
+        });
+      }
       return true;
     }
   } catch (err) {
-    console.warn("[Speech] Speech synthesis notice:", err);
-  }
-
-  // Check again before initiating fallback speech
-  if (thisRequestId !== currentSpeechId) {
-    return false;
-  }
-
-  // High-reliability Web Speech Synthesis fallback for English
-  if (!isTwi && typeof window !== "undefined" && window.speechSynthesis) {
-    const utt = new SpeechSynthesisUtterance(cleanText);
-    utt.lang = "en-GB";
-    utt.rate = 0.95;
-    utt.pitch = 1.0;
-
-    utt.onstart = () => {
-      if (thisRequestId === currentSpeechId && onStart) onStart();
-    };
-    utt.onend = () => {
-      if (thisRequestId === currentSpeechId && onEnd) onEnd();
-    };
-    utt.onerror = () => {
-      if (thisRequestId === currentSpeechId && onEnd) onEnd();
-    };
-
-    window.speechSynthesis.speak(utt);
-    return true;
+    console.warn("[Speech] Abena AI synthesis notice:", err);
   }
 
   if (thisRequestId === currentSpeechId && onEnd) {
