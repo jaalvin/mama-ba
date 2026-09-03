@@ -24,8 +24,7 @@ export interface AbenaAsrResponse {
 }
 
 export class AbenaAiService {
-  private static primaryBaseUrl = process.env.ABENA_API_BASE_URL || CONFIG.ABENA_API_BASE_URL || 'https://abena.mobobi.com/playground/api/v1';
-  private static fallbackBaseUrl = 'https://translation-api.ghananlp.org';
+  private static baseUrl = process.env.ABENA_API_BASE_URL || CONFIG.ABENA_API_BASE_URL || 'https://abena.mobobi.com/playground/api/v1';
 
   private static getApiKeys(): (string | null)[] {
     const rawKeys = [
@@ -51,8 +50,9 @@ export class AbenaAiService {
   private static exhaustedKeys = new Set<string>();
 
   /**
-   * Synthesizes text into high-quality fluent Ghanaian speech (Twi or Ghanaian English WAV/MP3)
+   * Synthesizes text into high-quality fluent Ghanaian speech (Twi or Ghanaian English WAV)
    * Cycles through all 8 Abena AI API keys before any fallback.
+   * Note: Initial model warm-up can take up to ~15s, so timeout is set to 20s.
    */
   static async synthesizeSpeech(options: TtsOptions): Promise<Buffer | null> {
     let cleanText = options.text
@@ -62,14 +62,14 @@ export class AbenaAiService {
 
     if (!cleanText) return null;
 
-    // Truncate at first complete sentence boundary (max ~140 chars) for fast synthesis
-    if (cleanText.length > 140) {
-      const match = cleanText.slice(0, 140).match(/^[^.!?]+[.!?]/);
-      cleanText = match ? match[0] : cleanText.slice(0, 140);
+    // Truncate at max 300 chars for TTS as per Abena docs (up to 500 chars)
+    if (cleanText.length > 300) {
+      const match = cleanText.slice(0, 300).match(/^[^.!?]+[.!?]/);
+      cleanText = match ? match[0] : cleanText.slice(0, 300);
     }
 
     const voice = options.voice || 'abena_twi_high';
-    const speed = options.speed || 1.05;
+    const speed = options.speed || 1.0;
 
     // 1. Check In-Memory TTS Cache for instant (0ms) response
     const cacheKey = `${voice}:${cleanText.toLowerCase()}`;
@@ -80,7 +80,7 @@ export class AbenaAiService {
     }
 
     const keyPool = this.getApiKeys();
-    console.log(`[Abena AI TTS] Attempting synthesis across ${keyPool.length - 1} Abena AI keys...`);
+    console.log(`[Abena AI TTS] Attempting synthesis across ${keyPool.length - 1} Abena AI keys for voice "${voice}"...`);
 
     for (let idx = 0; idx < keyPool.length; idx++) {
       const key = keyPool[idx];
@@ -90,10 +90,10 @@ export class AbenaAiService {
 
       const keyLabel = key ? `Key ${idx + 1} (${key.slice(0, 8)}...)` : `Anonymous Tier`;
 
-      // ── Attempt 1: Abena AI Playground API Endpoint ───────────────────────
       try {
+        // Abena AI models take ~10-15s to warm up on initial call, so set timeout to 20,000ms
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 7000); // 7s timeout per key
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
 
         const headers: Record<string, string> = {
           'Content-Type': 'application/json'
@@ -102,10 +102,10 @@ export class AbenaAiService {
         if (key) {
           headers['Authorization'] = `Bearer ${key}`;
           headers['X-API-Key'] = key;
-          headers['Ocp-Apim-Subscription-Key'] = key;
         }
 
-        const response = await fetch(`${this.primaryBaseUrl}/tts/synthesize/`, {
+        console.log(`[Abena AI TTS] Requesting ${keyLabel}...`);
+        const response = await fetch(`${this.baseUrl}/tts/synthesize/`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -122,7 +122,7 @@ export class AbenaAiService {
           const json = (await response.json()) as AbenaTtsResponse;
           if (json && json.status === 'success' && json.audio_base64) {
             const buffer = Buffer.from(json.audio_base64, 'base64');
-            console.log(`[Abena AI] Synthesized ${voice} audio via ${keyLabel} (${buffer.length} bytes WAV, ${json.duration_seconds || 0}s)`);
+            console.log(`[Abena AI SUCCESS] Synthesized ${voice} audio via ${keyLabel} (${buffer.length} bytes WAV, ${json.duration_seconds || 0}s)`);
             
             if (this.ttsMemoryCache.size > 250) {
               const firstKey = this.ttsMemoryCache.keys().next().value;
@@ -137,47 +137,10 @@ export class AbenaAiService {
           console.warn(`[Abena AI] ${keyLabel} quota/rate limit exhausted (HTTP ${response.status}): ${errText}. Rotating to next key...`);
         } else {
           const errText = await response.text().catch(() => '');
-          console.warn(`[Abena AI] ${keyLabel} TTS Error HTTP ${response.status}: ${errText}. Trying secondary endpoint...`);
+          console.warn(`[Abena AI] ${keyLabel} TTS Error HTTP ${response.status}: ${errText}. Rotating to next key...`);
         }
       } catch (err: any) {
-        console.warn(`[Abena AI] ${keyLabel} Primary TTS endpoint notice:`, err.message || err);
-      }
-
-      // ── Attempt 2: GhanaNLP Abena TTS Endpoint Fallback ───────────────────
-      if (key) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 7000);
-
-          const response = await fetch(`${this.fallbackBaseUrl}/tts/v2/synthesize`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Ocp-Apim-Subscription-Key': key
-            },
-            body: JSON.stringify({
-              text: cleanText,
-              language: voice.includes('eng') ? 'eng' : 'twi',
-              speaker_id: 'female',
-              stream: false
-            }),
-            signal: controller.signal
-          });
-
-          clearTimeout(timeoutId);
-
-          if (response.ok) {
-            const arrayBuffer = await response.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            if (buffer.length > 200) {
-              console.log(`[Abena AI / GhanaNLP] Synthesized ${voice} audio via ${keyLabel} (${buffer.length} bytes)`);
-              this.ttsMemoryCache.set(cacheKey, buffer);
-              return buffer;
-            }
-          }
-        } catch (err: any) {
-          console.warn(`[Abena AI / GhanaNLP] ${keyLabel} Fallback endpoint notice:`, err.message || err);
-        }
+        console.warn(`[Abena AI] ${keyLabel} TTS request notice:`, err.message || err);
       }
     }
 
@@ -189,13 +152,14 @@ export class AbenaAiService {
    * Transcribes Ghanaian audio into Twi / English text using Abena ASR engine
    * Cycles through all 8 Abena AI API keys before any fallback.
    */
-  static async transcribeAudio(audioBuffer: Buffer, language: string = 'twi-only'): Promise<string | null> {
+  static async transcribeAudio(audioBuffer: Buffer, language: string = 'twi-en'): Promise<string | null> {
     if (!audioBuffer || audioBuffer.length < 300) return null;
 
-    const targetLang = (language === 'twi' || language === 'tw' || language === 'twi-only' || language === 'ak') ? 'twi-only' : 'twi-en';
+    // Use twi-en by default for Twi, English, or Twi-English code-switching as recommended by Abena AI docs
+    const targetLang = (language === 'twi-only' || language === 'twi_only') ? 'twi-only' : (language === 'en' || language === 'english') ? 'en' : 'twi-en';
     const keyPool = this.getApiKeys();
 
-    console.log(`[Abena AI ASR] Attempting transcription across ${keyPool.length - 1} Abena AI keys...`);
+    console.log(`[Abena AI ASR] Attempting transcription across ${keyPool.length - 1} Abena AI keys (language: ${targetLang})...`);
 
     for (let idx = 0; idx < keyPool.length; idx++) {
       const key = keyPool[idx];
@@ -219,13 +183,12 @@ export class AbenaAiService {
         if (key) {
           headers['Authorization'] = `Bearer ${key}`;
           headers['X-API-Key'] = key;
-          headers['Ocp-Apim-Subscription-Key'] = key;
         }
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout for ASR
+        const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout for ASR
 
-        const response = await fetch(`${this.primaryBaseUrl}/asr/transcribe/`, {
+        const response = await fetch(`${this.baseUrl}/asr/transcribe/`, {
           method: 'POST',
           headers,
           body: payload,
@@ -238,7 +201,7 @@ export class AbenaAiService {
           const json = (await response.json()) as AbenaAsrResponse;
           if (json && (json.transcription || json.text)) {
             const resultText = json.transcription || json.text || '';
-            console.log(`[Abena AI] ASR Transcription via ${keyLabel}: "${resultText}"`);
+            console.log(`[Abena AI ASR SUCCESS] Transcription via ${keyLabel}: "${resultText}"`);
             return resultText;
           }
         } else if (response.status === 402 || response.status === 429) {

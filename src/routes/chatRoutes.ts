@@ -54,7 +54,7 @@ router.post('/translate', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/v1/chat/asr (Abena AI 4-Key Pool -> Anonymous Abena -> Khaya AI ASR v3 Fallback)
+// POST /api/v1/chat/asr (Abena AI 8-Key Pool -> Anonymous Abena -> Khaya AI ASR v3 Fallback)
 router.post('/asr', async (req: Request, res: Response) => {
   try {
     const { audio_base64, language } = req.body;
@@ -76,10 +76,10 @@ router.post('/asr', async (req: Request, res: Response) => {
 
     const reqLang = (language || 'twi').toLowerCase();
     const isEng = reqLang === 'en' || reqLang === 'eng' || reqLang === 'english';
-    const abenaLang = isEng ? 'twi-en' : 'twi-only';
+    const abenaLang = isEng ? 'en' : 'twi-en';
     const khayaLang = isEng ? 'eng' : 'twi';
 
-    // 1. Primary Ghanaian Neural ASR: Abena AI Engine (Cascades 4 Keys -> Anonymous)
+    // 1. Primary Ghanaian Neural ASR: Abena AI Engine (Cascades 8 Keys -> Anonymous)
     const abenaTranscription = await AbenaAiService.transcribeAudio(audioBuffer, abenaLang);
     if (abenaTranscription && abenaTranscription.trim()) {
       return res.json({
@@ -109,7 +109,7 @@ router.post('/asr', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/v1/chat/tts (Abena AI 4-Key Pool -> Anonymous Abena -> Khaya AI v2 -> Meta MMS Fallback)
+// POST /api/v1/chat/tts (Abena AI 8-Key Pool -> Anonymous Abena -> Khaya AI v2 -> Meta MMS Fallback)
 router.post('/tts', async (req: Request, res: Response) => {
   try {
     const { text, language, speaker_id, speaker, voice } = req.body;
@@ -123,7 +123,7 @@ router.post('/tts', async (req: Request, res: Response) => {
     const khayaLang = isTwi ? 'twi' : 'eng';
     const speakerId = speaker_id || speaker || 'female';
 
-    // 1. Primary Ghanaian Neural TTS: Abena AI Engine (Cascades Key 1 -> Key 2 -> Key 3 -> Key 4 -> Anonymous)
+    // 1. Primary Ghanaian Neural TTS: Abena AI Engine (Cascades Key 1 -> Key 8 -> Anonymous)
     const abenaBuffer = await AbenaAiService.synthesizeSpeech({
       text,
       voice: preferredVoice
