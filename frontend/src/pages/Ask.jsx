@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useLang } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useNotifications } from "../context/NotificationContext.jsx";
 import { api } from "../services/api.js";
 import { playNeuralSpeech, stopNeuralSpeech } from "../services/speech.js";
 import { startVoiceRecording, stopVoiceRecording } from "../services/voiceRecorder.js";
@@ -36,6 +37,7 @@ const DEFAULT_GREETING = {
 export default function Ask() {
   const { lang, voiceLang } = useLang();
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   
   const activeUid = user?.id || (typeof window !== "undefined" && localStorage.getItem("mama_ba_active_user_id")) || "guest";
   const chatStoreKey = `mama_ba_usr_${activeUid}_chat_history`;
@@ -200,8 +202,6 @@ export default function Ask() {
       setInputText("");
       processUserQuery(q);
     }
-  };
-
   const toggleListening = async () => {
     stopNeuralSpeech();
     setCurrentlySpeaking(null);
@@ -216,8 +216,17 @@ export default function Ask() {
       voiceLang,
       onStart: () => setListening(true),
       onEnd: () => setListening(false),
-      onError: () => {
+      onError: (msg) => {
         setListening(false);
+        if (msg) {
+          addNotification({
+            type: "reminder",
+            titleEn: "Microphone Access Needed",
+            titleTwi: "Microphone Kasa Ho Ban",
+            bodyEn: "Please allow microphone access in your browser settings to speak your question.",
+            bodyTwi: "Paa cho bra kɔ browser settings mu na fa permission ma microphone no.",
+          });
+        }
       },
       onResult: (transcript) => {
         setListening(false);

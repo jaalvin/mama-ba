@@ -1,12 +1,30 @@
 import { api } from "./api.js";
 
 let activeRecorderInstance = null;
+let activeStream = null;
 
 export async function startVoiceRecording({ voiceLang, onStart, onResult, onError, onEnd }) {
-  // 1. Instantly trigger onStart so UI changes to active mic/listening mode immediately
+  const isEnglish = voiceLang === "en" || voiceLang === "english";
+  const asrLanguage = isEnglish ? "en" : "twi";
+
+  // 1. Explicitly request microphone stream to trigger browser permission dialog if needed
+  let stream = null;
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      activeStream = stream;
+    }
+  } catch (err) {
+    if (onEnd) onEnd();
+    if (onError) {
+      onError("Microphone permission needed. Please allow microphone access in your browser settings to use voice features.");
+    }
+    return null;
+  }
+
+  // 2. Instantly notify UI that mic recording/listening mode is active
   if (onStart) onStart();
 
-  const isEnglish = voiceLang === "en" || voiceLang === "english";
   const SpeechRecognition =
     typeof window !== "undefined" && (window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -19,6 +37,7 @@ export async function startVoiceRecording({ voiceLang, onStart, onResult, onErro
       recognition.lang = isEnglish ? "en-US" : "ak-GH";
 
       let capturedText = "";
+      let recognitionDone = false;
 
       recognition.onstart = () => {
         if (onStart) onStart();
@@ -31,17 +50,23 @@ export async function startVoiceRecording({ voiceLang, onStart, onResult, onErro
       };
 
       recognition.onerror = () => {
-        // Fallback to MediaRecorder + Abena ASR if SpeechRecognition errors
-        startAbenaMediaRecorder({ voiceLang, onStart, onResult, onError, onEnd });
+        if (!recognitionDone) {
+          recognitionDone = true;
+          startAbenaMediaRecorder(stream, { asrLanguage, onStart, onResult, onError, onEnd });
+        }
       };
 
       recognition.onend = () => {
+        if (recognitionDone) return;
+        recognitionDone = true;
+
         if (capturedText.trim()) {
+          releaseStream();
           if (onEnd) onEnd();
           if (onResult) onResult(capturedText.trim());
         } else {
-          // If ended with no transcript, fallback to Abena ASR MediaRecorder
-          startAbenaMediaRecorder({ voiceLang, onStart, onResult, onError, onEnd });
+          // If ended without transcript, fallback to MediaRecorder + Abena ASR
+          startAbenaMediaRecorder(stream, { asrLanguage, onStart, onResult, onError, onEnd });
         }
       };
 
@@ -49,20 +74,22 @@ export async function startVoiceRecording({ voiceLang, onStart, onResult, onErro
       recognition.start();
       return recognition;
     } catch (err) {
-      console.warn("[VoiceRecorder] SpeechRecognition start notice, trying Abena ASR fallback:", err);
+      console.warn("[VoiceRecorder] SpeechRecognition error, using Abena ASR:", err);
     }
   }
 
-  // Fallback: Use MediaRecorder + Abena AI Neural ASR API
-  return startAbenaMediaRecorder({ voiceLang, onStart, onResult, onError, onEnd });
+  // Fallback: MediaRecorder + Abena AI Neural ASR
+  return startAbenaMediaRecorder(stream, { asrLanguage, onStart, onResult, onError, onEnd });
 }
 
-async function startAbenaMediaRecorder({ voiceLang, onStart, onResult, onError, onEnd }) {
-  const isEnglish = voiceLang === "en" || voiceLang === "english";
-  const asrLanguage = isEnglish ? "en" : "twi";
+function startAbenaMediaRecorder(stream, { asrLanguage, onStart, onResult, onError, onEnd }) {
+  if (!stream) {
+    if (onEnd) onEnd();
+    if (onError) onError("Microphone access is required.");
+    return null;
+  }
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
       ? "audio/webm;codecs=opus"
       : MediaRecorder.isTypeSupported("audio/webm")
@@ -82,7 +109,7 @@ async function startAbenaMediaRecorder({ voiceLang, onStart, onResult, onError, 
 
     mediaRecorder.onstop = async () => {
       if (onEnd) onEnd();
-      stream.getTracks().forEach((track) => track.stop());
+      releaseStream();
 
       const rawBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || "audio/webm" });
       if (rawBlob.size < 50) return;
@@ -107,7 +134,17 @@ async function startAbenaMediaRecorder({ voiceLang, onStart, onResult, onError, 
     return mediaRecorder;
   } catch (err) {
     if (onEnd) onEnd();
+    releaseStream();
     return null;
+  }
+}
+
+function releaseStream() {
+  if (activeStream) {
+    try {
+      activeStream.getTracks().forEach((track) => track.stop());
+    } catch (e) { /* ignore */ }
+    activeStream = null;
   }
 }
 
@@ -122,4 +159,5 @@ export function stopVoiceRecording(activeRecorder) {
     }
   }
   activeRecorderInstance = null;
+  releaseStream();
 }
