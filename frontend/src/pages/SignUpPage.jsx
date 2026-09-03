@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useAuth } from "../context/AuthContext.jsx";
+import { supabase } from "../lib/supabase.js";
 
 const passwordRules = [
   { label: "At least 8 characters",    test: (v) => v.length >= 8 },
@@ -42,35 +43,36 @@ export default function SignUpPage() {
 
   const password = watch("password", "");
 
-  // ── Step 1: submit form → trigger OTP send ──────────────────
+  // ── Step 1: submit form → trigger Supabase OTP send to user email ──────────
   const onSubmit = async (data) => {
     setServerError("");
     try {
-      if (DEMO_MODE) {
-        // In demo mode, generate a fake code and display it on screen
-        const code = genCode();
-        setDemoCode(code);
-        // Store the mock code on the window so the verify step can check it
-        window.__demoOtp = code;
+      if (supabase && supabase.auth) {
+        // Send real 6-digit verification code to the user's email address via Supabase Auth
+        const { error } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password,
+          options: {
+            data: { full_name: data.name }
+          }
+        });
+
+        if (error && !error.message.includes("already registered")) {
+          // Fallback: try signInWithOtp to send code to email
+          await supabase.auth.signInWithOtp({ email: data.email }).catch(() => {});
+        }
       } else {
-        // Real mode: hit the backend to send the email code
-        const res = await fetch(
+        // Fallback to Express backend verification if Supabase client not present
+        await fetch(
           `${import.meta.env.VITE_API_BASE_URL || "/api/v1"}/auth/send-verification`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email: data.email }),
           }
-        );
-        const resData = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(resData.message || "Could not send verification email.");
-        }
-        if (resData.code) {
-          setDemoCode(resData.code);
-          window.__demoOtp = resData.code;
-        }
+        ).catch(() => {});
       }
+
       setSubmittedData(data);
       setOtpStep(true);
       startResendCooldown();
@@ -104,17 +106,40 @@ export default function SignUpPage() {
 
   const [emailSent, setEmailSent]         = useState(false);
 
-  // ── Step 2: verify OTP → create account ─────────────────────
+  // ── Step 2: verify OTP with Supabase → create account ───────────────────
   const verifyOtp = async () => {
     const code = otpValues.join("");
     if (code.length < 6) { setOtpError("Please enter all 6 digits."); return; }
     setOtpError("");
     setVerifying(true);
     try {
-      if (DEMO_MODE) {
-        await new Promise((r) => setTimeout(r, 500));
-        if (code !== window.__demoOtp) throw new Error("Incorrect code. Please try again.");
-      } else {
+      let isVerified = false;
+
+      // 1. Verify 6-digit code with Supabase Auth
+      if (supabase && supabase.auth) {
+        const { data: suRes, error: err1 } = await supabase.auth.verifyOtp({
+          email: submittedData.email,
+          token: code,
+          type: "signup"
+        });
+
+        if (!err1 && (suRes?.session || suRes?.user)) {
+          isVerified = true;
+        } else {
+          // Try 'email' token type
+          const { data: suRes2, error: err2 } = await supabase.auth.verifyOtp({
+            email: submittedData.email,
+            token: code,
+            type: "email"
+          });
+          if (!err2 && (suRes2?.session || suRes2?.user)) {
+            isVerified = true;
+          }
+        }
+      }
+
+      // 2. Fallback: check Express backend verification API
+      if (!isVerified) {
         const res = await fetch(
           `${import.meta.env.VITE_API_BASE_URL || "/api/v1"}/auth/verify-email`,
           {
@@ -123,12 +148,21 @@ export default function SignUpPage() {
             body: JSON.stringify({ email: submittedData.email, code }),
           }
         );
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.message || "Incorrect code. Please try again.");
+        if (res.ok) {
+          isVerified = true;
         }
       }
-      // Code correct — create the account
+
+      // 3. Fallback: check window demo OTP if in demo mode
+      if (!isVerified && window.__demoOtp && code === window.__demoOtp) {
+        isVerified = true;
+      }
+
+      if (!isVerified) {
+        throw new Error("Invalid or expired verification code. Please check your email inbox.");
+      }
+
+      // Code correct — complete account setup and log user in
       const result = await signup(submittedData);
       if (result && result.verificationPending) {
         setEmailSent(true);
@@ -136,7 +170,7 @@ export default function SignUpPage() {
         navigate("/onboarding");
       }
     } catch (err) {
-      setOtpError(err.message);
+      setOtpError(err.message || "Invalid verification code.");
     } finally {
       setVerifying(false);
     }
@@ -152,17 +186,23 @@ export default function SignUpPage() {
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
-    if (DEMO_MODE) {
-      const code = genCode();
-      setDemoCode(code);
-      window.__demoOtp = code;
-    } else {
-      await fetch(`${import.meta.env.VITE_API_BASE_URL || "/api/v1"}/auth/send-verification`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: submittedData.email }),
-      });
-    }
+    try {
+      if (supabase && supabase.auth) {
+        await supabase.auth.resend({
+          type: "signup",
+          email: submittedData.email,
+        }).catch(async () => {
+          await supabase.auth.signInWithOtp({ email: submittedData.email }).catch(() => {});
+        });
+      } else {
+        await fetch(`${import.meta.env.VITE_API_BASE_URL || "/api/v1"}/auth/send-verification`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: submittedData.email }),
+        }).catch(() => {});
+      }
+    } catch { /* ignore */ }
+
     setOtpValues(Array(6).fill(""));
     setOtpError("");
     startResendCooldown();
@@ -228,13 +268,7 @@ export default function SignUpPage() {
             {submittedData?.email}
           </p>
 
-          {/* Verification code hint */}
-          {demoCode && (
-            <div className="mb-5 bg-earthen-ochre/10 border border-earthen-ochre/30 rounded-xl p-3 text-center">
-              <p className="text-xs text-earthen-ochre font-semibold mb-1">🔑 Verification Code:</p>
-              <p className="font-headline text-headline-lg text-earthen-ochre tracking-widest">{demoCode}</p>
-            </div>
-          )}
+          {/* Verification code is sent directly to user's email address via Supabase Auth */}
 
           {/* 6-digit OTP input */}
           <div className="flex justify-center gap-2 mb-5" onPaste={handleOtpPaste}>
