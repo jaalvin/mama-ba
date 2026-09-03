@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLang } from "../context/LanguageContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
-import { medications as medsAPI } from "../services/api.js";
+import { medications as medsAPI, api } from "../services/api.js";
 import { showDeviceNotification, scheduleAlarm, nextOccurrenceMs } from "../services/notifications.js";
+import { playNeuralSpeech, stopNeuralSpeech } from "../services/speech.js";
+import { startVoiceRecording, stopVoiceRecording } from "../services/voiceRecorder.js";
 import {
   Baby, Leaf, HelpCircle, HeartPulse, MapPin,
   ChevronRight, Mic, Check, Clock, Plus, Trash2, Loader2,
-  Calendar, CalendarCheck, X,
+  Calendar, CalendarCheck, X, Square, Volume2, MicOff,
 } from "lucide-react";
 
 // ── Daily checked-med persistence helpers ──────────────────────────────────
@@ -71,9 +73,19 @@ export default function Dashboard() {
   const progressPercent = week ? Math.min(100, Math.round((week / 40) * 100)) : 0;
   const dashOff = week ? 251.2 - (week / 40) * 251.2 : 251.2;
 
-  const [recording, setRecording] = useState(false);
   const [showDueDateModal, setShowDueDateModal] = useState(false);
   const [modalDueDate, setModalDueDate] = useState(user?.dueDate || "");
+
+  // ── Inline Voice Chat State ────────────────────────────────────────────────
+  const [voiceChatOpen, setVoiceChatOpen] = useState(false);
+  const [vcListening, setVcListening] = useState(false);
+  const [vcThinking, setVcThinking] = useState(false);
+  const [vcSpeaking, setVcSpeaking] = useState(false);
+  const [vcTranscript, setVcTranscript] = useState("");
+  const [vcReply, setVcReply] = useState({ en: "", twi: "" });
+  const [vcError, setVcError] = useState("");
+  const vcRecorderRef = useRef(null);
+  const { voiceLang } = useLang();
 
   // Medications
   const activeUid = user?.id || localStorage.getItem("mama_ba_active_user_id") || "guest";
@@ -203,6 +215,88 @@ export default function Dashboard() {
     setShowDueDateModal(false);
   };
 
+  // ── Inline Voice Chat Handlers ─────────────────────────────────────────────
+  const closeVoiceChat = () => {
+    stopNeuralSpeech();
+    stopVoiceRecording(vcRecorderRef.current);
+    vcRecorderRef.current = null;
+    setVoiceChatOpen(false);
+    setVcListening(false);
+    setVcThinking(false);
+    setVcSpeaking(false);
+    setVcTranscript("");
+    setVcReply({ en: "", twi: "" });
+    setVcError("");
+  };
+
+  const vcStartListening = async () => {
+    if (vcListening || vcThinking || vcSpeaking) return;
+    stopNeuralSpeech();
+    setVcError("");
+    setVcTranscript("");
+    setVcReply({ en: "", twi: "" });
+    setVcSpeaking(false);
+
+    const recorder = await startVoiceRecording({
+      voiceLang,
+      onStart: () => setVcListening(true),
+      onEnd: () => setVcListening(false),
+      onError: (msg) => {
+        setVcListening(false);
+        setVcError(msg);
+      },
+      onResult: async (transcript) => {
+        setVcListening(false);
+        setVcTranscript(transcript);
+        setVcThinking(true);
+
+        try {
+          const activeUid = user?.id || localStorage.getItem("mama_ba_active_user_id") || "guest";
+          const res = await api.askChatbot({ query: transcript, language: voiceLang, userId: activeUid });
+
+          let replyEn = "I'm here to help. Please try asking again.";
+          let replyTwi = "Mewɔ ha sɛ meboa wo. Xowa bisa bio.";
+
+          if (res && res.success && res.data) {
+            replyEn = res.data.answerEnglish || res.data.response || replyEn;
+            replyTwi = res.data.answerTwi || replyTwi;
+          }
+
+          setVcThinking(false);
+          setVcReply({ en: replyEn, twi: replyTwi });
+
+          // Speak the reply in the active voice language
+          const textToSpeak = voiceLang === "twi" ? replyTwi : replyEn;
+          const langCode = voiceLang === "twi" ? "ak" : "en";
+          setVcSpeaking(true);
+          await playNeuralSpeech(
+            textToSpeak,
+            langCode,
+            () => setVcSpeaking(true),
+            () => setVcSpeaking(false),
+            () => setVcSpeaking(false)
+          );
+        } catch (err) {
+          setVcThinking(false);
+          setVcError("Connection issue. Please try again.");
+        }
+      },
+    });
+
+    vcRecorderRef.current = recorder;
+  };
+
+  const vcStopListening = () => {
+    stopVoiceRecording(vcRecorderRef.current);
+    vcRecorderRef.current = null;
+    setVcListening(false);
+  };
+
+  const vcStopSpeaking = () => {
+    stopNeuralSpeech();
+    setVcSpeaking(false);
+  };
+
   return (
     <div className="px-4 py-6 md:px-6 flex flex-col gap-6 max-w-lg mx-auto pb-24">
 
@@ -315,17 +409,241 @@ export default function Dashboard() {
 
       {/* ═══ VOICE ASSISTANT MIC BUTTON ═══ */}
       <section className="flex flex-col items-center gap-3">
-        <Link
-          to="/app/ask"
+        <button
+          onClick={() => { setVoiceChatOpen(true); }}
           aria-label={lang === "twi" ? "Bisa me biribiara" : "Ask me anything"}
-          className="w-24 h-24 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer"
+          className="w-24 h-24 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg transition-all hover:scale-105 active:scale-95 cursor-pointer relative"
         >
           <Mic className="w-10 h-10" strokeWidth={1.5} />
-        </Link>
+          {/* Pulse ring to show it's interactive */}
+          <span className="absolute inset-0 rounded-full border-2 border-primary/40 animate-ping" />
+        </button>
         <p className="text-on-surface-variant text-sm font-semibold">
           {lang === "twi" ? "Bisa me biribiara (Ask Voice Assistant)" : "Ask me anything (Voice Assistant)"}
         </p>
       </section>
+
+      {/* ═══ INLINE VOICE CHAT OVERLAY ═══ */}
+      {voiceChatOpen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-end"
+          style={{ background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)" }}
+        >
+          {/* Dismiss overlay on outside tap */}
+          <div className="absolute inset-0" onClick={closeVoiceChat} />
+
+          {/* Chat Panel */}
+          <div
+            className="relative w-full max-w-lg bg-surface-container-lowest rounded-t-3xl p-6 flex flex-col gap-5 shadow-2xl"
+            style={{ minHeight: "56vh", maxHeight: "80vh" }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="w-9 h-9 rounded-full bg-primary/15 flex items-center justify-center">
+                  <Mic className="w-5 h-5 text-primary" />
+                </span>
+                <div>
+                  <p className="font-bold text-sm text-on-surface leading-none">
+                    {lang === "twi" ? "Mama Ba Voice" : "Mama Ba Voice"}
+                  </p>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5">
+                    {vcListening
+                      ? (lang === "twi" ? "Mete wo kasa..." : "Listening...")
+                      : vcThinking
+                      ? (lang === "twi" ? "Meti wo asɛm..." : "Thinking...")
+                      : vcSpeaking
+                      ? (lang === "twi" ? "Meka..." : "Speaking...")
+                      : (lang === "twi" ? "Bɔ mic no na bisa" : "Tap mic to ask")}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={closeVoiceChat}
+                className="p-2 rounded-full text-on-surface-variant hover:bg-surface-container transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Conversation area */}
+            <div className="flex-1 overflow-y-auto flex flex-col gap-4 pb-2">
+              {/* User spoke transcript */}
+              {vcTranscript && (
+                <div className="flex justify-end">
+                  <div className="max-w-[80%] bg-primary text-on-primary rounded-2xl rounded-tr-sm px-4 py-3 text-sm font-medium shadow-sm">
+                    {vcTranscript}
+                  </div>
+                </div>
+              )}
+
+              {/* Thinking shimmer */}
+              {vcThinking && (
+                <div className="flex justify-start">
+                  <div className="bg-surface-container border border-outline-variant rounded-2xl rounded-tl-sm px-5 py-4 flex items-center gap-2">
+                    {[0.1, 0.2, 0.3].map((delay, i) => (
+                      <span
+                        key={i}
+                        className="w-2 h-2 rounded-full bg-primary"
+                        style={{ animation: `bounce 0.9s ease-in-out ${delay}s infinite` }}
+                      />
+                    ))}
+                    <span className="text-xs text-on-surface-variant ml-1">
+                      {lang === "twi" ? "Meti..." : "Thinking..."}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Bot reply */}
+              {(vcReply.en || vcReply.twi) && !vcThinking && (
+                <div className="flex justify-start">
+                  <div className="max-w-[88%] bg-surface-container border border-outline-variant rounded-2xl rounded-tl-sm px-4 py-3 flex flex-col gap-2 shadow-sm">
+                    <p className="text-sm leading-relaxed text-on-surface font-medium">
+                      {voiceLang === "twi" ? vcReply.twi : vcReply.en}
+                    </p>
+                    {/* Secondary language */}
+                    <p className="text-xs text-on-surface-variant leading-relaxed border-t border-outline-variant/30 pt-1.5">
+                      {voiceLang === "twi" ? vcReply.en : vcReply.twi}
+                    </p>
+                    {/* Stop speaking button */}
+                    {vcSpeaking && (
+                      <button
+                        onClick={vcStopSpeaking}
+                        className="self-start flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-error/10 text-error border border-error/30 font-semibold animate-pulse"
+                      >
+                        <Square className="w-3 h-3 fill-current" />
+                        <span>{lang === "twi" ? "Gyae" : "Stop Speaking"}</span>
+                      </button>
+                    )}
+                    {!vcSpeaking && (vcReply.en || vcReply.twi) && (
+                      <button
+                        onClick={() => {
+                          const textToSpeak = voiceLang === "twi" ? vcReply.twi : vcReply.en;
+                          const langCode = voiceLang === "twi" ? "ak" : "en";
+                          setVcSpeaking(true);
+                          playNeuralSpeech(textToSpeak, langCode, () => setVcSpeaking(true), () => setVcSpeaking(false), () => setVcSpeaking(false));
+                        }}
+                        className="self-start flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant border border-outline-variant hover:border-primary transition-colors"
+                      >
+                        <Volume2 className="w-3.5 h-3.5" />
+                        <span>{lang === "twi" ? "Ka Bio" : "Replay"}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Error state */}
+              {vcError && (
+                <div className="text-center">
+                  <p className="text-xs text-error bg-error/10 border border-error/20 rounded-xl px-4 py-2 inline-block">
+                    {vcError}
+                  </p>
+                </div>
+              )}
+
+              {/* Welcome hint when nothing said yet */}
+              {!vcTranscript && !vcThinking && !vcReply.en && !vcError && (
+                <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center py-4">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Mic className="w-8 h-8 text-primary" strokeWidth={1.5} />
+                  </div>
+                  <p className="text-sm text-on-surface font-semibold">
+                    {lang === "twi" ? "Bɔ mic no na bisa me biribiara" : "Tap the mic and ask me anything"}
+                  </p>
+                  <p className="text-xs text-on-surface-variant max-w-[220px]">
+                    {lang === "twi"
+                      ? "Mɛtie wo asɛm na mɛma wo afotu mu tɛ"
+                      : "I'll listen, think, and speak my reply back to you"}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Mic Control Button */}
+            <div className="flex flex-col items-center gap-3">
+              {vcListening ? (
+                <>
+                  {/* Animated waveform while recording */}
+                  <div className="flex items-end gap-0.5 h-8">
+                    {[3, 5, 8, 5, 7, 4, 6, 3, 5, 8].map((h, i) => (
+                      <span
+                        key={i}
+                        className="w-1.5 rounded-full bg-error"
+                        style={{
+                          height: `${h * 3}px`,
+                          animation: `pulse 0.6s ease-in-out ${i * 0.07}s infinite alternate`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={vcStopListening}
+                    className="w-20 h-20 rounded-full bg-error text-white flex items-center justify-center shadow-xl active:scale-95 transition-transform"
+                  >
+                    <MicOff className="w-9 h-9" strokeWidth={1.5} />
+                  </button>
+                  <p className="text-xs text-error font-semibold">
+                    {lang === "twi" ? "Tap sɛ wopɛ sɛ wotwi kasa no" : "Tap to stop recording"}
+                  </p>
+                </>
+              ) : vcThinking ? (
+                <>
+                  <div className="w-20 h-20 rounded-full bg-primary/20 border-4 border-primary/40 flex items-center justify-center animate-pulse">
+                    <Loader2 className="w-9 h-9 text-primary animate-spin" />
+                  </div>
+                  <p className="text-xs text-on-surface-variant font-semibold">
+                    {lang === "twi" ? "Mama Ba reti..." : "Mama Ba is thinking..."}
+                  </p>
+                </>
+              ) : vcSpeaking ? (
+                <>
+                  <div className="flex items-end gap-1 h-10">
+                    {[2, 4, 6, 8, 6, 4, 2].map((h, i) => (
+                      <span
+                        key={i}
+                        className="w-2 rounded-full bg-primary"
+                        style={{
+                          height: `${h * 3}px`,
+                          animation: `pulse 0.8s ease-in-out ${i * 0.1}s infinite alternate`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={vcStopSpeaking}
+                    className="w-20 h-20 rounded-full bg-primary/20 border-4 border-primary text-primary flex items-center justify-center shadow-xl active:scale-95 transition-transform"
+                  >
+                    <Square className="w-9 h-9 fill-current" />
+                  </button>
+                  <p className="text-xs text-primary font-semibold">
+                    {lang === "twi" ? "Mama Ba reka..." : "Mama Ba is speaking..."}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={vcStartListening}
+                    aria-label={lang === "twi" ? "Bisa asɛm" : "Ask a question"}
+                    className="w-20 h-20 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-xl active:scale-95 hover:scale-105 transition-transform relative"
+                  >
+                    <Mic className="w-9 h-9" strokeWidth={1.5} />
+                    {(vcReply.en || vcReply.twi) && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-forest-green rounded-full border-2 border-surface-container-lowest" />
+                    )}
+                  </button>
+                  <p className="text-xs text-on-surface-variant font-semibold">
+                    {vcReply.en
+                      ? (lang === "twi" ? "Bɔ bio sɛ wopɛ sɛ wobisa bio" : "Tap to ask a follow-up")
+                      : (lang === "twi" ? "Bɔ mic no na bisa" : "Tap to speak")}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══ QUICK ACTIONS ═══ */}
       <section>
