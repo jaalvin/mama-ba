@@ -138,12 +138,12 @@ export default function AppShell() {
                   <div className="relative flex items-center justify-center">
                     <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
                     {item.to === "/app" && unreadCount > 0 && (
-                      <span className="absolute -top-1.5 -right-2 px-1 min-w-[15px] h-[15px] bg-[#25d366] text-black font-extrabold text-[9px] rounded-full flex items-center justify-center leading-none shadow-sm">
+                      <span className="absolute -top-1.5 -right-2 px-1 min-w-[14px] h-[14px] bg-primary text-on-primary font-extrabold text-[8px] rounded-full flex items-center justify-center leading-none shadow-xs">
                         {unreadCount > 9 ? "9+" : unreadCount}
                       </span>
                     )}
                   </div>
-                  <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? "text-white font-bold" : "text-white/70"}`}>
+                  <span className={`text-[10px] tracking-tight mt-0.5 ${isActive ? "text-on-surface font-bold" : "text-on-surface-variant/80"}`}>
                     {lang === "twi" ? item.label.twi : item.label.en}
                   </span>
                 </>
