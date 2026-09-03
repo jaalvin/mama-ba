@@ -12,6 +12,7 @@ import syncRoutes from './routes/syncRoutes';
 import authRoutes from './routes/authRoutes';
 import logisticsRoutes from './routes/logisticsRoutes';
 import remindersRoutes from './routes/remindersRoutes';
+import pushRoutes from './routes/pushRoutes';
 
 const app = express();
 
@@ -81,7 +82,8 @@ app.get('/api/v1', (_req: Request, res: Response) => {
       '/api/v1/sync',
       '/api/v1/auth',
       '/api/v1/logistics',
-      '/api/v1/reminders'
+      '/api/v1/reminders',
+      '/api/v1/push'
     ]
   });
 });
@@ -107,6 +109,7 @@ app.use('/api/v1/sync', syncRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/logistics', logisticsRoutes);
 app.use('/api/v1/reminders', remindersRoutes);
+app.use('/api/v1/push', pushRoutes);
 
 // 4. SPA Fallback Routing for React Router
 app.get('/app/*', (_req: Request, res: Response) => {

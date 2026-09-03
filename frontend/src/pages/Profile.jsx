@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLang } from "../context/LanguageContext.jsx";
+import { supabase } from "../lib/supabase";
 import {
   User,
   Calendar,
@@ -84,6 +85,27 @@ export default function Profile() {
     }
   }, [user?.dueDate]);
 
+  // Load due date from Supabase if not in local context
+  useEffect(() => {
+    const uid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id");
+    if (!uid || user?.dueDate) return;
+    (async () => {
+      try {
+        if (!supabase) return;
+        const { data } = await supabase
+          .from("user_profile")
+          .select("due_date")
+          .eq("user_id", uid)
+          .single();
+        if (data?.due_date) {
+          setDueDateInput(data.due_date);
+          updateUser({ dueDate: data.due_date });
+        }
+      } catch {}
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   // Stop speech if navigating away
   useEffect(() => {
     return () => {
@@ -91,11 +113,25 @@ export default function Profile() {
     };
   }, [stopSpeech]);
 
-  const handleSaveDueDate = (e) => {
+  const handleSaveDueDate = async (e) => {
     e.preventDefault();
     if (!dueDateInput) return;
     setSavingDate(true);
+    // 1. Update in-memory context + localStorage
     updateUser({ dueDate: dueDateInput });
+    // 2. Persist to Supabase user_profile
+    try {
+      const uid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id");
+      if (supabase && uid) {
+        await supabase.from("user_profile").upsert({
+          user_id: uid,
+          due_date: dueDateInput,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+      }
+    } catch (err) {
+      console.warn("[Profile] Due date Supabase sync notice:", err);
+    }
     setTimeout(() => {
       setSavingDate(false);
       setNotificationMsg(
@@ -240,7 +276,8 @@ export default function Profile() {
               required
               value={dueDateInput}
               onChange={(e) => setDueDateInput(e.target.value)}
-              className="w-full bg-surface-container border border-outline-variant rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary"
+              style={{ colorScheme: "light" }}
+              className="w-full max-w-full box-border bg-surface-container border border-outline-variant rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary appearance-none"
             />
           </div>
 

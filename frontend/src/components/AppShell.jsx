@@ -6,7 +6,8 @@ import { useNotifications } from "../context/NotificationContext.jsx";
 import NotificationPanel from "./NotificationPanel.jsx";
 import PWAInstallPromptModal from "./PWAInstallPromptModal.jsx";
 import { startTipScheduler } from "../services/tipScheduler.js";
-import { startPWAReminderEngine } from "../services/reminderEngine.js";
+import { startPWAReminderEngine, syncMedicationPushReminders } from "../services/reminderEngine.js";
+import { subscribeToPush } from "../services/notifications.js";
 
 const navItems = [
   { to: "/app", label: { en: "Home", twi: "Fie" }, icon: "home", end: true },
@@ -18,11 +19,11 @@ const navItems = [
 
 export default function AppShell() {
   const { lang } = useLang();
-  const { isDemoMode, isAuthenticated, user } = useAuth();
+  const { isDemoMode, isAuthenticated, user, accessToken } = useAuth();
   const { unreadCount, addNotification } = useNotifications();
   const [panelOpen, setPanelOpen] = useState(false);
 
-  // Start pregnancy tip scheduler and PWA reminder engine when user is logged in
+  // Start reminder engine + tip scheduler when logged in
   useEffect(() => {
     if (!isAuthenticated) return;
     const activeUid = user?.id || localStorage.getItem("mama_ba_active_user_id") || "guest";
@@ -33,6 +34,19 @@ export default function AppShell() {
       stopReminders();
     };
   }, [isAuthenticated, lang, addNotification, user?.id]);
+
+  // Subscribe to Web Push and sync medication reminders to backend scheduler
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) return;
+    const activeUid = user.id;
+    const token = accessToken || "";
+
+    // Subscribe this device to Web Push (enables background/lock-screen notifications)
+    subscribeToPush(activeUid, token).catch(() => {});
+
+    // Sync all medication reminders to backend push scheduler
+    syncMedicationPushReminders(activeUid, token).catch(() => {});
+  }, [isAuthenticated, user?.id, accessToken]);
 
   return (
     <div className="min-h-screen bg-background">

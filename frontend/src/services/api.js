@@ -5,6 +5,7 @@
  * In DEMO_MODE (VITE_DEMO_MODE=true), every call uses a localStorage shim.
  * When a real backend is connected, calls use authenticated fetch.
  */
+import { supabase } from "../lib/supabase.js";
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === "true";
 const API_BASE  = import.meta.env.VITE_API_BASE_URL || "/api/v1";
@@ -229,10 +230,12 @@ export const ancAppointments = {
     try {
       const activeUserId = getActiveUserId();
       const res = await apiFetch(`/maternal/user-schedules/${encodeURIComponent(activeUserId)}`, token);
-      if (res && res.data && Array.isArray(res.data)) {
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        // Save remote data to local cache so it persists on refresh
+        ancApptStore.set(res.data);
         return res.data;
       }
-    } catch { /* fallback */ }
+    } catch { /* fallback to local */ }
     return local;
   },
   create: async (token, appt) => {
@@ -335,12 +338,44 @@ export const ancVisits = {
 // ─── Vaccine status ───────────────────────────────────────────────────────────
 const vaccStore = store("mama-ba-vaccines", []);
 export const vaccines = {
-  listStatus: (token) => DEMO_MODE ? Promise.resolve(vaccStore.get()) : apiFetch("/vaccines", token),
-  toggle: (token, id, done) => {
+  listStatus: async (token) => {
+    const local = vaccStore.get();
+    // Try Supabase for fresh data
+    try {
+      const activeUserId = getActiveUserId();
+      if (supabase && activeUserId && activeUserId !== "guest") {
+        const { data } = await supabase
+          .from("immunization_records")
+          .select("vaccine_id, done")
+          .eq("user_id", activeUserId);
+        if (data && data.length > 0) {
+          const mapped = data.map(r => ({ id: r.vaccine_id, done: r.done }));
+          vaccStore.set(mapped);
+          return mapped;
+        }
+      }
+    } catch { /* fallback */ }
+    return local;
+  },
+  toggle: async (token, id, done) => {
+    // 1. Update localStorage immediately
     const existing = vaccStore.get();
     const idx = existing.findIndex(v => v.id === id);
     const entry = { id, done };
     vaccStore.set(idx >= 0 ? existing.map(v => v.id === id ? entry : v) : [...existing, entry]);
+
+    // 2. Persist to Supabase
+    try {
+      const activeUserId = getActiveUserId();
+      if (supabase && activeUserId && activeUserId !== "guest") {
+        await supabase
+          .from("immunization_records")
+          .upsert({ user_id: activeUserId, vaccine_id: id, done, updated_at: new Date().toISOString() },
+            { onConflict: "user_id,vaccine_id" });
+      }
+    } catch (e) {
+      console.warn("[Vaccines] Supabase sync notice:", e);
+    }
     return Promise.resolve(entry);
   },
 };

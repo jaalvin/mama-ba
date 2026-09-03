@@ -10,8 +10,10 @@ export function NotificationProvider({ children }) {
   const [items, setItems]       = useState([]);
   const [isLoading, setLoading] = useState(true);
 
-  // Request device permission on mount
-  useEffect(() => { requestNotificationPermission(); }, []);
+  // NOTE: requestNotificationPermission() is NOT called on mount.
+  // iOS Safari PWA requires permission requests to originate from a user gesture (e.g. button click).
+  // Permission is requested lazily when the user first subscribes to push notifications
+  // in AppShell via subscribeToPush() after they tap something.
 
   // Load notifications from local storage / API
   useEffect(() => {

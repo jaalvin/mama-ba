@@ -1,6 +1,8 @@
 import app from './app';
 import { CONFIG } from './config';
 import { seedDatabase } from '../database/seed';
+import { runPushSchedulerTick } from './services/pushService';
+import cron from 'node-cron';
 import fs from 'fs';
 
 // Auto-seed local SQLite database if not yet present
@@ -22,4 +24,13 @@ app.listen(PORT, () => {
    🔗 Health Check: http://localhost:${PORT}/api/v1/health
   =============================================================
   `);
+
+  // ── Start Web Push Reminder Scheduler (fires every minute) ────────────────
+  cron.schedule('* * * * *', () => {
+    runPushSchedulerTick().catch(err =>
+      console.error('[PushScheduler] Tick error:', err)
+    );
+  });
+  console.log('[PushScheduler] ✅ Push reminder cron started (every minute)');
 });
+
