@@ -216,9 +216,8 @@ export default function Ask() {
       voiceLang,
       onStart: () => setListening(true),
       onEnd: () => setListening(false),
-      onError: (errMsg) => {
+      onError: () => {
         setListening(false);
-        alert(errMsg);
       },
       onResult: (transcript) => {
         setListening(false);

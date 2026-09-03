@@ -575,17 +575,8 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Error state */}
-              {vcError && (
-                <div className="text-center">
-                  <p className="text-xs text-error bg-error/10 border border-error/20 rounded-xl px-4 py-2 inline-block">
-                    {vcError}
-                  </p>
-                </div>
-              )}
-
               {/* Welcome hint when nothing said yet */}
-              {!vcTranscript && !vcThinking && !vcReply.en && !vcError && (
+              {!vcTranscript && !vcThinking && !vcReply.en && (
                 <div className="flex flex-col items-center justify-center flex-1 gap-3 text-center py-4">
                   <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
                     <Mic className="w-8 h-8 text-primary" strokeWidth={1.5} />
