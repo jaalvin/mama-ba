@@ -22,6 +22,17 @@ export default function AppShell() {
   const { isDemoMode, isAuthenticated, user, accessToken } = useAuth();
   const { unreadCount, addNotification } = useNotifications();
   const [panelOpen, setPanelOpen] = useState(false);
+  const [hideNav, setHideNav] = useState(false);
+
+  useEffect(() => {
+    const handleVoiceToggle = (e) => {
+      if (e && e.detail) {
+        setHideNav(Boolean(e.detail.open));
+      }
+    };
+    window.addEventListener("mama_ba_voice_chat_toggle", handleVoiceToggle);
+    return () => window.removeEventListener("mama_ba_voice_chat_toggle", handleVoiceToggle);
+  }, []);
 
   // Start reminder engine + tip scheduler when logged in
   useEffect(() => {
@@ -118,7 +129,9 @@ export default function AppShell() {
               ? "max(calc(env(safe-area-inset-bottom, 0px) * 0.25), 6px)"
               : "6px",
           }}
-          className="fixed inset-x-3.5 mx-auto w-[calc(100%-1.75rem)] md:w-[410px] z-50 flex justify-between items-center px-3 py-1.5 rounded-[26px] whatsapp-glass-nav transition-all duration-300 shadow-[0_16px_40px_rgba(0,0,0,0.6)]"
+          className={`fixed inset-x-3.5 mx-auto w-[calc(100%-1.75rem)] md:w-[410px] z-50 flex justify-between items-center px-3 py-1.5 rounded-[26px] whatsapp-glass-nav transition-all duration-300 shadow-[0_16px_40px_rgba(0,0,0,0.6)] ${
+            hideNav ? "opacity-0 pointer-events-none translate-y-12 scale-95" : "opacity-100 translate-y-0 scale-100"
+          }`}
         >
           {navItems.map((item) => (
             <NavLink

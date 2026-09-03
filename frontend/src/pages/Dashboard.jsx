@@ -249,7 +249,16 @@ export default function Dashboard() {
     setShowDueDateModal(false);
   };
 
-  // ── Inline Voice Chat Handlers ─────────────────────────────────────────────
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("mama_ba_voice_chat_toggle", { detail: { open: voiceChatOpen } }));
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("mama_ba_voice_chat_toggle", { detail: { open: false } }));
+      }
+    };
+  }, [voiceChatOpen]);
   const closeVoiceChat = () => {
     stopNeuralSpeech();
     stopVoiceRecording(vcRecorderRef.current);
