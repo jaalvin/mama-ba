@@ -45,7 +45,15 @@ export default function AppShell() {
           </div>
         )}
 
-        <header className={`fixed inset-x-0 mx-auto w-full md:max-w-md z-40 flex items-center justify-between h-14 px-4 bg-background/95 backdrop-blur-sm border-b border-outline-variant ${isDemoMode ? "top-6" : "top-0"}`}>
+        <header
+          style={{
+            paddingTop: "max(env(safe-area-inset-top, 0px), 0.75rem)",
+            height: "calc(3.75rem + env(safe-area-inset-top, 0px))",
+          }}
+          className={`fixed inset-x-0 mx-auto w-full md:max-w-md z-40 flex items-center justify-between px-4 bg-background/95 backdrop-blur-sm border-b border-outline-variant ${
+            isDemoMode ? "top-6" : "top-0"
+          }`}
+        >
           <span className="font-headline text-headline-md text-primary font-bold">Mama Ba</span>
 
           {/* Right-side header actions — perfectly aligned on a single straight horizontal line */}
@@ -77,11 +85,24 @@ export default function AppShell() {
           </div>
         </header>
 
-        <main className={`pb-24 min-h-screen ${isDemoMode ? "pt-20" : "pt-14"}`}>
+        <main
+          style={{
+            paddingTop: isDemoMode
+              ? "calc(5.75rem + env(safe-area-inset-top, 0px))"
+              : "calc(4.25rem + env(safe-area-inset-top, 0px))",
+            paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))",
+          }}
+          className="min-h-screen"
+        >
           <Outlet />
         </main>
 
-        <nav className="fixed bottom-0 inset-x-0 mx-auto w-full md:max-w-md z-40 flex justify-around items-center px-2 py-2 bg-surface-container border-t border-outline-variant rounded-t-xl">
+        <nav
+          style={{
+            paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))",
+          }}
+          className="fixed bottom-0 inset-x-0 mx-auto w-full md:max-w-md z-40 flex justify-around items-center px-2 py-2 bg-surface-container border-t border-outline-variant rounded-t-xl"
+        >
           {navItems.map((item) => (
             <NavLink
               key={item.to}
