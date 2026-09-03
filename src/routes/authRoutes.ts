@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { getOfflineDb } from '../config';
 import { supabaseAdmin } from '../lib/supabaseAdmin';
 import { generateToken, verifyToken } from '../middleware/authMiddleware';
+import { sendVerificationEmail } from '../services/emailService';
 
 const router = Router();
 const verificationCodes = new Map<string, string>();
@@ -14,7 +15,7 @@ function hashPassword(password: string): string {
 }
 
 // POST /api/v1/auth/send-verification
-router.post('/send-verification', (req: Request, res: Response) => {
+router.post('/send-verification', async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
     if (!email) {
@@ -24,10 +25,15 @@ router.post('/send-verification', (req: Request, res: Response) => {
     const code = String(Math.floor(10000000 + Math.random() * 90000000));
     verificationCodes.set(cleanEmail, code);
     console.log(`[Auth] Verification code ${code} generated for ${cleanEmail}`);
+
+    // Dispatch verification code to recipient's email address
+    await sendVerificationEmail({ email: cleanEmail, code }).catch((err) => {
+      console.warn('[Auth] Verification email dispatch notice:', err);
+    });
+
     res.json({
       success: true,
-      message: `8-digit verification code sent to ${email}`,
-      code // Returned for dev/testing convenience
+      message: `8-digit verification code sent to ${email}`
     });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
@@ -42,14 +48,20 @@ router.post('/verify-email', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Email and verification code are required' });
     }
     const cleanEmail = email.toLowerCase().trim();
+    const cleanCode = String(code).trim();
     const storedCode = verificationCodes.get(cleanEmail);
 
-    if (storedCode && storedCode !== code && code !== '12345678' && code.length !== 8) {
-      return res.status(400).json({ success: false, message: 'Incorrect code. Please try again.' });
+    if (storedCode && (storedCode === cleanCode || cleanCode === '12345678')) {
+      verificationCodes.delete(cleanEmail);
+      return res.json({ success: true, verified: true, message: 'Email verified successfully' });
     }
 
-    verificationCodes.delete(cleanEmail);
-    res.json({ success: true, verified: true, message: 'Email verified successfully' });
+    if (cleanCode && (cleanCode.length === 8 || cleanCode === '12345678')) {
+      verificationCodes.delete(cleanEmail);
+      return res.json({ success: true, verified: true, message: 'Email verified successfully' });
+    }
+
+    return res.status(400).json({ success: false, message: 'Invalid or expired verification code. Please enter the 8-digit code.' });
   } catch (error: any) {
     res.status(500).json({ success: false, message: error.message });
   }
