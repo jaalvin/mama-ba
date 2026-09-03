@@ -83,26 +83,51 @@ export function clearLocalUserCache(userId) {
 const notifStore = store("mama-ba-notifications", []);
 
 export const notifications = {
-  list:    (token) => DEMO_MODE ? Promise.resolve(notifStore.get()) : apiFetch("/notifications", token),
-  create:  (token, notif) => {
-    if (DEMO_MODE) {
-      const item = { ...notif, id: `notif-${Date.now()}`, createdAt: Date.now(), read: false };
-      notifStore.set([item, ...notifStore.get()]);
-      return Promise.resolve(item);
+  list: async (token) => {
+    const local = notifStore.get();
+    try {
+      if (!DEMO_MODE) {
+        const remote = await apiFetch("/notifications", token).catch(() => null);
+        if (remote && Array.isArray(remote)) {
+          notifStore.set(remote);
+          return remote;
+        }
+      }
+    } catch { /* fallback to local */ }
+    return local;
+  },
+  create: async (token, notif) => {
+    const item = { ...notif, id: `notif-${Date.now()}`, createdAt: Date.now(), read: false };
+    const updated = [item, ...notifStore.get()];
+    notifStore.set(updated);
+    if (!DEMO_MODE) {
+      apiFetch("/notifications", token, { method: "POST", body: JSON.stringify(notif) }).catch(() => {});
     }
-    return apiFetch("/notifications", token, { method: "POST", body: JSON.stringify(notif) });
+    return item;
   },
-  markRead: (token, id) => {
-    if (DEMO_MODE) { notifStore.set(notifStore.get().map(n => n.id === id ? { ...n, read: true } : n)); return Promise.resolve(); }
-    return apiFetch(`/notifications/${id}/read`, token, { method: "PATCH" });
+  markRead: async (token, id) => {
+    const next = notifStore.get().map(n => n.id === id ? { ...n, read: true } : n);
+    notifStore.set(next);
+    if (!DEMO_MODE) {
+      apiFetch(`/notifications/${id}/read`, token, { method: "PATCH" }).catch(() => {});
+    }
+    return Promise.resolve();
   },
-  markAllRead: (token) => {
-    if (DEMO_MODE) { notifStore.set(notifStore.get().map(n => ({ ...n, read: true }))); return Promise.resolve(); }
-    return apiFetch("/notifications/read-all", token, { method: "PATCH" });
+  markAllRead: async (token) => {
+    const next = notifStore.get().map(n => ({ ...n, read: true }));
+    notifStore.set(next);
+    if (!DEMO_MODE) {
+      apiFetch("/notifications/read-all", token, { method: "PATCH" }).catch(() => {});
+    }
+    return Promise.resolve();
   },
-  remove: (token, id) => {
-    if (DEMO_MODE) { notifStore.set(notifStore.get().filter(n => n.id !== id)); return Promise.resolve(); }
-    return apiFetch(`/notifications/${id}`, token, { method: "DELETE" });
+  remove: async (token, id) => {
+    const next = notifStore.get().filter(n => n.id !== id);
+    notifStore.set(next);
+    if (!DEMO_MODE) {
+      apiFetch(`/notifications/${id}`, token, { method: "DELETE" }).catch(() => {});
+    }
+    return Promise.resolve();
   },
 };
 
@@ -454,11 +479,37 @@ async function backendFetch(endpoint, options = {}) {
   }
 }
 
+// ─── Localized Session AI Memory Cache ─────────────────────────────────────────
+const aiMemoryStore = store("mama-ba-session-ai-memory", []);
+
+export function recordAiEvent(type, detail) {
+  try {
+    const existing = aiMemoryStore.get();
+    const event = { type, detail, timestamp: new Date().toISOString() };
+    const updated = [event, ...existing].slice(0, 10);
+    aiMemoryStore.set(updated);
+  } catch (e) { /* ignore */ }
+}
+
+export function getRecentAiContext() {
+  try {
+    const items = aiMemoryStore.get();
+    if (!items || items.length === 0) return "";
+    return items.map(i => `${i.type}: ${typeof i.detail === 'object' ? JSON.stringify(i.detail) : i.detail}`).join("; ");
+  } catch {
+    return "";
+  }
+}
+
 export const api = {
   async askChatbot(params) {
+    const payload = {
+      ...params,
+      sessionMemory: getRecentAiContext(),
+    };
     return backendFetch("/chat/query", {
       method: "POST",
-      body: JSON.stringify(params),
+      body: JSON.stringify(payload),
     });
   },
   async transcribeVoice(params) {
@@ -484,30 +535,35 @@ export const api = {
     }
   },
   async checkHerbalSafety(params) {
+    if (params?.herbName || params?.query) recordAiEvent("Herbal Safety Check", params.herbName || params.query);
     return backendFetch("/herbal-safety/check", {
       method: "POST",
       body: JSON.stringify(params),
     });
   },
   async evaluateHerbSafety(params) {
+    if (params?.herbName) recordAiEvent("Herb Evaluation", params.herbName);
     return backendFetch("/herbal-safety/evaluate", {
       method: "POST",
       body: JSON.stringify(params),
     });
   },
   async checkCombinationSafety(params) {
+    if (params?.herbName || params?.medName) recordAiEvent("Herbal Combo Check", `${params.herbName} + ${params.medName}`);
     return backendFetch("/herbal-safety/check-combination", {
       method: "POST",
       body: JSON.stringify(params),
     });
   },
   async evaluateTriage(params) {
+    if (params?.symptoms) recordAiEvent("Triage Symptoms Check", params.symptoms);
     return backendFetch("/triage/evaluate", {
       method: "POST",
       body: JSON.stringify(params),
     });
   },
   async logVitals(params) {
+    recordAiEvent("Vitals Logged", params);
     return backendFetch("/vitals/log", {
       method: "POST",
       body: JSON.stringify(params),

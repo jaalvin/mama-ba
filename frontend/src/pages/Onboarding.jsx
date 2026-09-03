@@ -17,6 +17,7 @@ const CONDITIONS = [
   { id: "hbp",    label: "High Blood Pressure", twi: "Mogya tumi" },
   { id: "sickle", label: "Sickle Cell",          twi: "Dɔm yadeɛ" },
   { id: "gd",     label: "Gestational Diabetes", twi: "Sukaa yadeɛ" },
+  { id: "others", label: "Others",               twi: "Ebi Foforɔ" },
 ];
 
 export default function Onboarding() {
@@ -27,6 +28,7 @@ export default function Onboarding() {
   const [selectedVoice, setSelectedVoice] = useState(voiceLang || "twi");
   const [status, setStatus]               = useState("t1");
   const [conditions, setConditions]       = useState([]);
+  const [otherDetails, setOtherDetails]   = useState("");
 
   // Stop speech if navigating away
   useEffect(() => {
@@ -53,6 +55,7 @@ export default function Onboarding() {
     const profile = {
       status,
       conditions,
+      otherConditionDetails: conditions.includes("others") ? otherDetails : "",
       language: lang,
       voiceLanguage: selectedVoice,
     };
@@ -253,6 +256,22 @@ export default function Onboarding() {
                   </button>
                 ))}
               </div>
+
+              {conditions.includes("others") && (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={otherDetails}
+                    onChange={(e) => setOtherDetails(e.target.value)}
+                    placeholder={
+                      lang === "twi"
+                        ? "Kyerɛ apomuden tebea foforo a wowɔ (optional)..."
+                        : "Specify other health condition(s)..."
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-outline-variant bg-surface text-on-surface text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Privacy notice */}

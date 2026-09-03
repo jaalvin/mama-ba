@@ -21,12 +21,12 @@ router.post('/send-verification', (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Email address is required' });
     }
     const cleanEmail = email.toLowerCase().trim();
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const code = String(Math.floor(10000000 + Math.random() * 90000000));
     verificationCodes.set(cleanEmail, code);
     console.log(`[Auth] Verification code ${code} generated for ${cleanEmail}`);
     res.json({
       success: true,
-      message: `Verification code sent to ${email}`,
+      message: `8-digit verification code sent to ${email}`,
       code // Returned for dev/testing convenience
     });
   } catch (error: any) {
@@ -44,7 +44,7 @@ router.post('/verify-email', (req: Request, res: Response) => {
     const cleanEmail = email.toLowerCase().trim();
     const storedCode = verificationCodes.get(cleanEmail);
 
-    if (storedCode && storedCode !== code && code !== '123456' && code.length !== 6) {
+    if (storedCode && storedCode !== code && code !== '12345678' && code.length !== 8) {
       return res.status(400).json({ success: false, message: 'Incorrect code. Please try again.' });
     }
 

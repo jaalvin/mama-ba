@@ -272,7 +272,7 @@ export default function Triage() {
 
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery]       = useState("");
-  const [expandedId, setExpandedId]         = useState(FAQ_DATA[0]?.id || null);
+  const [expandedId, setExpandedId]         = useState(null);
   const [playingAudioId, setPlayingAudioId] = useState(null);
 
   // Stop any playing speech on unmount

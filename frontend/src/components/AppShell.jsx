@@ -113,9 +113,14 @@ export default function AppShell() {
 
         <nav
           style={{
-            paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom, 0px))",
+            paddingBottom: typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent)
+              ? "max(calc(env(safe-area-inset-bottom, 0px) * 0.25), 4px)"
+              : "calc(0.5rem + env(safe-area-inset-bottom, 0px))",
+            paddingTop: typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent)
+              ? "4px"
+              : "8px",
           }}
-          className="fixed bottom-0 inset-x-0 mx-auto w-full md:max-w-md z-40 flex justify-around items-center px-2 py-2 bg-surface-container border-t border-outline-variant rounded-t-xl"
+          className="fixed bottom-0 inset-x-0 mx-auto w-full md:max-w-md z-40 flex justify-around items-center px-2 bg-surface-container border-t border-outline-variant rounded-t-xl"
         >
           {navItems.map((item) => (
             <NavLink

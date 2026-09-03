@@ -62,10 +62,10 @@ export class AbenaAiService {
 
     if (!cleanText) return null;
 
-    // Truncate at max 300 chars for TTS as per Abena docs (up to 500 chars)
-    if (cleanText.length > 300) {
-      const match = cleanText.slice(0, 300).match(/^[^.!?]+[.!?]/);
-      cleanText = match ? match[0] : cleanText.slice(0, 300);
+    // Keep full response text for TTS reading (up to 500 chars per Abena API spec)
+    if (cleanText.length > 500) {
+      const match = cleanText.slice(0, 500).match(/^[\s\S]*[.!?]/);
+      cleanText = match ? match[0] : cleanText.slice(0, 500);
     }
 
     const voice = options.voice || 'abena_twi_high';
@@ -91,9 +91,9 @@ export class AbenaAiService {
       const keyLabel = key ? `Key ${idx + 1} (${key.slice(0, 8)}...)` : `Anonymous Tier`;
 
       try {
-        // Abena AI models take ~10-15s to warm up on initial call, so set timeout to 20,000ms
+        // Abena AI models take ~10-15s to warm up on initial call, so set timeout to 35,000ms
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
+        const timeoutId = setTimeout(() => controller.abort(), 35000);
 
         const headers: Record<string, string> = {
           'Content-Type': 'application/json'

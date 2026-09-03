@@ -189,12 +189,12 @@ export default function Maternal() {
   return (
     <div className="px-4 py-6 md:px-6 max-w-lg mx-auto">
       <h1 className="font-headline text-headline-md text-on-background mb-1">
-        {lang === "twi" ? "Maame & Ba" : "Maternal & Childcare"}
+        {lang === "twi" ? "Nyinsɛn & ANC Nhwɛ" : "Maternal & ANC Health Tracker"}
       </h1>
       <p className="text-on-surface-variant mb-6 text-sm">
         {lang === "twi"
-          ? "Hyehyɛ wo ANC nhyiam ne ba nnuro ahorow"
-          : "Schedule your ANC visits and track your child's immunizations"}
+          ? "Hyehyɛ wo ANC nhyiam ne nyinsɛn akwankyerɛ"
+          : "Schedule and track your ANC appointments and pregnancy care"}
       </p>
 
       {/* Reminder Toggles */}
@@ -202,7 +202,6 @@ export default function Maternal() {
         <h2 className="text-label-md text-on-surface">{lang === "twi" ? "Kae Me Kae" : "Reminders"}</h2>
         {[
           { key: "anc",  label: { en: "ANC Visit Reminders (1h & 24h before)", twi: "ANC Nhwɛ Kae" } },
-          { key: "vacc", label: { en: "Vaccine Due Alerts",                    twi: "Nnuro Bere Kae" } },
         ].map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between">
             <span className="text-sm text-on-surface">{lang === "twi" ? label.twi : label.en}</span>
@@ -376,40 +375,6 @@ export default function Maternal() {
               <p className="text-xs text-on-surface-variant mt-0.5">{v.desc}</p>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Immunization Tracker */}
-      <h2 className="font-headline text-headline-md text-on-surface mb-4">
-        {lang === "twi" ? "Ba Nnuro Nhyehyɛeɛ" : "Childhood Immunization Tracker"}
-      </h2>
-
-      {vaccLoading ? (
-        <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-      ) : (
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl divide-y divide-outline-variant overflow-hidden mb-6">
-          {VACCINE_DEFS.map(v => {
-            const done = isVaccDone(v.id);
-            return (
-              <button key={v.id} onClick={() => handleVaccToggle(v.id)}
-                className="w-full flex items-center gap-4 px-4 py-4 text-left hover:bg-surface-container-low transition-colors">
-                <span className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${done ? "bg-forest-green border-forest-green" : "border-outline-variant"}`}>
-                  {done && <span className="material-symbols-outlined text-white text-[14px]">check</span>}
-                </span>
-                <div className="flex-1">
-                  <p className={`text-sm font-semibold ${done ? "line-through text-on-surface-variant" : "text-on-surface"}`}>
-                    {lang === "twi" ? v.twi : v.label}
-                  </p>
-                  <p className="text-xs text-on-surface-variant">{v.when}</p>
-                </div>
-                {done && (
-                  <span className="text-xs bg-forest-green/10 text-forest-green border border-forest-green/30 px-2 py-0.5 rounded-full font-semibold">
-                    {lang === "twi" ? "Asi ho" : "Done"}
-                  </span>
-                )}
-              </button>
-            );
-          })}
         </div>
       )}
     </div>

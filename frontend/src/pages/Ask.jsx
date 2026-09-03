@@ -346,6 +346,21 @@ export default function Ask() {
             </div>
           </div>
         ))}
+
+        {/* Loading Dots Indicator */}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+              <span className="w-2 h-2 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+              <span className="w-2 h-2 rounded-full bg-primary animate-bounce" />
+              <span className="text-xs text-on-surface-variant ml-1 font-medium">
+                {voiceLang === "twi" ? "Mama Ba reti..." : "Mama Ba is thinking..."}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Auto-scroll anchor */}
         <div ref={bottomRef} className="shrink-0 h-0" />
       </div>
@@ -397,11 +412,13 @@ export default function Ask() {
             />
           )}
 
-          {inputText.trim() ? (
+          {inputText.trim() || listening ? (
             <button
-              type="submit"
+              type={listening ? "button" : "submit"}
+              onClick={listening ? toggleListening : undefined}
               disabled={loading}
               className="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm active:scale-95 transition-transform shrink-0"
+              aria-label="Send query"
             >
               <Send className="w-5 h-5" />
             </button>
@@ -410,9 +427,7 @@ export default function Ask() {
               type="button"
               onClick={toggleListening}
               aria-label={voiceLang === "twi" ? "Bisa asɛm wɔ Twi mu" : "Ask a question in English"}
-              className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md active:scale-95 transition-transform shrink-0 ${
-                listening ? "bg-error animate-pulse text-white" : "bg-primary text-on-primary"
-              }`}
+              className="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-md active:scale-95 transition-transform shrink-0"
             >
               <Mic className="w-5 h-5" />
             </button>

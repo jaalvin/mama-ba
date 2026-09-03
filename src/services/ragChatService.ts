@@ -102,30 +102,65 @@ export class RAGChatService {
       }
     }
 
+    // 1b. Clean response helper to strip headers, bold, bullets, hyphens, and put question at the end
+    const sanitizeText = (text: string): string => {
+      if (!text) return "";
+      let clean = text
+        .replace(/(Warm Validation|Common Reasons & Follow-up Question|Common Reasons|Practical Home Measures|Red-Flag Danger Signs|Danger Signs|Home Measures|Validation|Follow-up Question)[:\-\s]*/gi, "")
+        .replace(/^\d+[\.\)]\s*/gm, "")
+        .replace(/\*\*([^*]+)\*\*/g, "$1")
+        .replace(/\*([^*]+)\*/g, "$1")
+        .replace(/__([^_]+)__/g, "$1")
+        .replace(/_([^_]+)_/g, "$1")
+        .replace(/^[\s\*\-•]+\s*/gm, "")
+        .replace(/[\*\-•]/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+
+      const sentences = clean.match(/[^.!?]+[.!?]+/g) || [clean];
+      const nonQuestions: string[] = [];
+      const questions: string[] = [];
+
+      for (const sentence of sentences) {
+        const s = sentence.trim();
+        if (s.endsWith("?")) {
+          questions.push(s);
+        } else if (s) {
+          nonQuestions.push(s);
+        }
+      }
+
+      if (questions.length > 0) {
+        clean = [...nonQuestions, ...questions].join(" ");
+      }
+
+      return clean;
+    };
+
     let englishAnswer = '';
     let twiAnswer = '';
     let responseSource: 'gemini_medical_ai' | 'groq_medical_ai' | 'offline_knowledge_base' = 'offline_knowledge_base';
 
     const prompt = `
 You are "Mama Ba" (The Guided Health Companion) — an empathetic, culturally grounded healthcare AI supporting Ghanaian mothers and caregivers.
-Keep your response concise, empathetic, structured, and conversational (max 120–180 words per language). Do NOT write overwhelming walls of text.
+Keep your response concise, empathetic, and short (max 60–90 words total).
+
+STRICT OUTPUT RULES:
+- Do NOT output any section headers or category titles (such as "Warm Validation", "Common Reasons", "Practical Home Measures", "Red-Flag Danger Signs", etc.).
+- Do NOT use any bolding (**), bullet points (*, -, •), or hyphens before sentences.
+- Write in plain, fluid sentences.
+- If you ask a follow-up question, put it at the VERY END of your response.
 
 User Query: "${englishQuery}"
 
 Local Guidance Reference:
-- English: "${bestMatch ? bestMatch.answer_english : 'Eat iron-rich foods (Kontomire), stay hydrated, space herbal teas 2 hours from iron pills.'}"
-- Twi: "${bestMatch ? bestMatch.answer_twi : 'Di nnuane a dadeɛ wom te sɛ kontomire, nom nsuo pii, na gyae berɛ simma aduonu ansa na woanom tii.'}"
-
-Respond using this brief, clear 4-part structure:
-1. Warm Validation: Acknowledge the user's feeling warmly in 1 short sentence.
-2. 2 Common Reasons & 1 Follow-up Question: Explain briefly what may cause this (e.g. heat, diet, hormones, malaria) and ask 1 quick question.
-3. 2 Practical Home Measures: Give 2 clear, bulleted Ghanaian dietary or home relief steps (e.g. Kontomire, dry toasted bread, ginger tea, hydration).
-4. Red-Flag Danger Signs: 1 short bullet of when to go to hospital immediately.
+- English: "${bestMatch ? bestMatch.answer_english : 'Eat iron-rich foods like Kontomire, stay hydrated, and rest.'}"
+- Twi: "${bestMatch ? bestMatch.answer_twi : 'Di nnuane a dadeɛ wom te sɛ kontomire, nom nsuo pii, na gye wo ho ahome.'}"
 
 JSON Output Format (Strictly valid JSON):
 {
-  "english": "Concise, structured English response here (max 150 words).",
-  "twi": "Authentic, concise Asante Twi translation here."
+  "english": "Concise plain text response without headers or bullet points. Ask any follow-up question at the end.",
+  "twi": "Authentic Asante Twi translation in plain text without headers or bullet points."
 }
 `;
 
@@ -228,9 +263,12 @@ JSON Output Format (Strictly valid JSON):
       }
     }
 
+    const cleanEn = sanitizeText(englishAnswer);
+    const cleanTwi = sanitizeText(twiAnswer);
+
     const response: ChatResponse = {
-      answerEnglish: englishAnswer,
-      answerTwi: twiAnswer,
+      answerEnglish: cleanEn,
+      answerTwi: cleanTwi,
       source: responseSource,
       disclaimer: 'Guidance provided for educational companion use only. Consult a qualified clinician for clinical diagnosis.',
       matchedCategory: bestMatch ? bestMatch.category : 'Maternal Health'

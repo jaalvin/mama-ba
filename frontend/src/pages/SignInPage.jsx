@@ -25,7 +25,7 @@ export default function SignInPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/onboarding`,
+          redirectTo: `${window.location.origin}/app`,
           queryParams: {
             access_type: "offline",
             prompt: "select_account",
@@ -45,7 +45,9 @@ export default function SignInPage() {
   const onSubmit = async (data) => {
     setServerError("");
     try {
-      await login(data);
+      const userObj = await login(data);
+      const activeUid = userObj?.id || userObj?.userId || localStorage.getItem("mama_ba_active_user_id") || "guest";
+      localStorage.setItem(`mama_ba_onboarded_${activeUid}`, "true");
       navigate("/app");
     } catch (err) {
       setServerError(err.message || "Something went wrong. Please try again.");

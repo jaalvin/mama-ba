@@ -236,54 +236,60 @@ export default function Dashboard() {
     setVcTranscript("");
     setVcReply({ en: "", twi: "" });
     setVcSpeaking(false);
+    setVcListening(true);
 
-    const recorder = await startVoiceRecording({
-      voiceLang,
-      onStart: () => setVcListening(true),
-      onEnd: () => setVcListening(false),
-      onError: (msg) => {
-        setVcListening(false);
-        setVcError(msg);
-      },
-      onResult: async (transcript) => {
-        setVcListening(false);
-        setVcTranscript(transcript);
-        setVcThinking(true);
+    try {
+      const recorder = await startVoiceRecording({
+        voiceLang,
+        onStart: () => setVcListening(true),
+        onEnd: () => setVcListening(false),
+        onError: (msg) => {
+          setVcListening(false);
+          setVcError(msg);
+        },
+        onResult: async (transcript) => {
+          setVcListening(false);
+          setVcTranscript(transcript);
+          setVcThinking(true);
 
-        try {
-          const activeUid = user?.id || localStorage.getItem("mama_ba_active_user_id") || "guest";
-          const res = await api.askChatbot({ query: transcript, language: voiceLang, userId: activeUid });
+          try {
+            const activeUid = user?.id || localStorage.getItem("mama_ba_active_user_id") || "guest";
+            const res = await api.askChatbot({ query: transcript, language: voiceLang, userId: activeUid });
 
-          let replyEn = "I'm here to help. Please try asking again.";
-          let replyTwi = "Mewɔ ha sɛ meboa wo. Xowa bisa bio.";
+            let replyEn = "I'm here to help. Please try asking again.";
+            let replyTwi = "Mewɔ ha sɛ meboa wo. Xowa bisa bio.";
 
-          if (res && res.success && res.data) {
-            replyEn = res.data.answerEnglish || res.data.response || replyEn;
-            replyTwi = res.data.answerTwi || replyTwi;
+            if (res && res.success && res.data) {
+              replyEn = res.data.answerEnglish || res.data.response || replyEn;
+              replyTwi = res.data.answerTwi || replyTwi;
+            }
+
+            setVcThinking(false);
+            setVcReply({ en: replyEn, twi: replyTwi });
+
+            // Speak the reply in the active voice language
+            const textToSpeak = voiceLang === "twi" ? replyTwi : replyEn;
+            const langCode = voiceLang === "twi" ? "ak" : "en";
+            setVcSpeaking(true);
+            playNeuralSpeech(
+              textToSpeak,
+              langCode,
+              () => setVcSpeaking(true),
+              () => setVcSpeaking(false),
+              () => setVcSpeaking(false)
+            ).catch(() => setVcSpeaking(false));
+          } catch (err) {
+            setVcThinking(false);
+            setVcError("Connection issue. Please try again.");
           }
+        },
+      });
 
-          setVcThinking(false);
-          setVcReply({ en: replyEn, twi: replyTwi });
-
-          // Speak the reply in the active voice language
-          const textToSpeak = voiceLang === "twi" ? replyTwi : replyEn;
-          const langCode = voiceLang === "twi" ? "ak" : "en";
-          setVcSpeaking(true);
-          await playNeuralSpeech(
-            textToSpeak,
-            langCode,
-            () => setVcSpeaking(true),
-            () => setVcSpeaking(false),
-            () => setVcSpeaking(false)
-          );
-        } catch (err) {
-          setVcThinking(false);
-          setVcError("Connection issue. Please try again.");
-        }
-      },
-    });
-
-    vcRecorderRef.current = recorder;
+      vcRecorderRef.current = recorder;
+    } catch (err) {
+      setVcListening(false);
+      setVcError("Could not access microphone.");
+    }
   };
 
   const vcStopListening = () => {
@@ -434,6 +440,7 @@ export default function Dashboard() {
 
           {/* Chat Panel */}
           <div
+            onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-lg bg-surface-container-lowest rounded-t-3xl p-6 flex flex-col gap-5 shadow-2xl"
             style={{ minHeight: "56vh", maxHeight: "80vh" }}
           >
