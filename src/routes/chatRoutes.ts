@@ -79,24 +79,13 @@ router.post('/asr', async (req: Request, res: Response) => {
     const abenaLang = isEng ? 'en' : 'twi-en';
     const khayaLang = isEng ? 'eng' : 'twi';
 
-    // 1. Primary Ghanaian Neural ASR: Abena AI Engine (Cascades 8 Keys -> Anonymous)
+    // Ghanaian Neural ASR: Abena AI Engine (Anonymous Tier -> Key Pool)
     const abenaTranscription = await AbenaAiService.transcribeAudio(audioBuffer, abenaLang);
     if (abenaTranscription && abenaTranscription.trim()) {
       return res.json({
         success: true,
         transcription: abenaTranscription.trim(),
         provider: 'abena_ai'
-      });
-    }
-
-    // 2. Secondary ASR Fallback: Khaya AI ASR API v3
-    console.log('[ASR Route] Abena AI exhausted/unavailable. Triggering Khaya AI ASR fallback...');
-    const khayaTranscription = await KhayaAiService.transcribeAudio(audioBuffer, khayaLang);
-    if (khayaTranscription && khayaTranscription.trim()) {
-      return res.json({
-        success: true,
-        transcription: khayaTranscription.trim(),
-        provider: 'khaya_ai'
       });
     }
 
@@ -109,10 +98,10 @@ router.post('/asr', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/v1/chat/tts (Abena AI 8-Key Pool -> Anonymous Abena -> Khaya AI v2 -> Meta MMS Fallback)
+// POST /api/v1/chat/tts (Abena AI Neural TTS Engine)
 router.post('/tts', async (req: Request, res: Response) => {
   try {
-    const { text, language, speaker_id, speaker, voice } = req.body;
+    const { text, language, voice } = req.body;
     if (!text || !text.trim()) {
       return res.status(400).json({ success: false, error: 'text is required and must not be empty' });
     }
@@ -121,20 +110,11 @@ router.post('/tts', async (req: Request, res: Response) => {
     const isTwi = targetLang === 'tw' || targetLang === 'twi' || targetLang === 'ak';
     const preferredVoice = voice || (isTwi ? 'abena_twi_high' : 'akua_eng');
 
-    // 1. Primary Ghanaian Neural TTS: Abena AI Engine (Cascades Key 1 -> Key 8 -> Anonymous)
+    // Ghanaian Neural TTS: Abena AI Engine (Anonymous Tier -> Key Pool)
     let abenaBuffer = await AbenaAiService.synthesizeSpeech({
       text,
       voice: preferredVoice
     });
-
-    // Retry Abena AI pool once more if model was warming up on first pass
-    if (!abenaBuffer || abenaBuffer.length <= 100) {
-      console.log('[TTS Route] Retrying Abena AI 8-key pool for model warm-up...');
-      abenaBuffer = await AbenaAiService.synthesizeSpeech({
-        text,
-        voice: preferredVoice
-      });
-    }
 
     if (abenaBuffer && abenaBuffer.length > 100) {
       res.setHeader('Content-Type', 'audio/wav');
@@ -143,25 +123,7 @@ router.post('/tts', async (req: Request, res: Response) => {
       return res.send(abenaBuffer);
     }
 
-    // 2. Secondary Neural TTS Fallback: Meta MMS Akan or Cloud Speech Pipeline (No Khaya AI)
-    console.log('[TTS Route] Triggering Meta MMS Twi TTS fallback...');
-    const mmsBuffer = await MmsTtsService.synthesizeTwiAudio(text);
-    if (mmsBuffer && mmsBuffer.length > 100) {
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Content-Length', mmsBuffer.length);
-      res.setHeader('X-Speech-Provider', 'Meta MMS');
-      return res.send(mmsBuffer);
-    }
-
-    const fallbackBuffer = await MmsTtsService.synthesizeFallbackAudio(text, isTwi ? 'twi' : 'eng');
-    if (fallbackBuffer && fallbackBuffer.length > 100) {
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Content-Length', fallbackBuffer.length);
-      res.setHeader('X-Speech-Provider', 'Cloud TTS');
-      return res.send(fallbackBuffer);
-    }
-
-    res.status(500).json({ success: false, error: 'TTS synthesis unavailable' });
+    return res.status(500).json({ success: false, error: 'Abena AI TTS synthesis failed' });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
