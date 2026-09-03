@@ -77,6 +77,7 @@ export default function Profile() {
   const [dueDateInput, setDueDateInput]   = useState(user?.dueDate || "");
   const [savingDate, setSavingDate]       = useState(false);
   const [notificationMsg, setNotificationMsg] = useState("");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Update input if user object updates
   useEffect(() => {
@@ -159,7 +160,12 @@ export default function Profile() {
     updateUser({ language: l });
   };
 
-  const handleLogout = async () => {
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
     stopSpeech();
     await logout();
     navigate("/signin", { replace: true });
@@ -480,7 +486,7 @@ export default function Profile() {
 
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={handleLogoutClick}
             className="flex items-center justify-between px-4 py-4 text-left hover:bg-error-container/40 transition-colors w-full"
           >
             <div className="flex items-center gap-3">
@@ -492,6 +498,56 @@ export default function Profile() {
           </button>
         </div>
       </section>
+
+      {/* ═══ SIGN OUT CONFIRMATION MODAL ═══ */}
+      {showLogoutModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+          onClick={() => setShowLogoutModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm bg-surface-container-lowest border border-outline-variant rounded-3xl p-6 flex flex-col gap-4 shadow-2xl"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center shrink-0">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-headline font-bold text-base text-on-surface">
+                  {lang === "twi" ? "Pue Wɔ Mu (Sign Out)" : "Sign Out"}
+                </h3>
+                <p className="text-xs text-on-surface-variant">
+                  {lang === "twi" ? "Bisa Nkaebɔ" : "Confirmation Request"}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-on-surface-variant leading-relaxed">
+              {lang === "twi"
+                ? "Wo pɛ sɛ wopue firi Mama Ba mu ankasa?"
+                : "Are you sure you want to sign out of Mama Ba?"}
+            </p>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 py-3 rounded-xl border border-outline-variant text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors"
+              >
+                {lang === "twi" ? "Gyae (Cancel)" : "Cancel"}
+              </button>
+              <button
+                type="button"
+                onClick={confirmLogout}
+                className="flex-1 py-3 rounded-xl bg-error text-on-error text-xs font-semibold shadow-xs hover:bg-error/90 transition-colors"
+              >
+                {lang === "twi" ? "Aane, Pue (Sign Out)" : "Yes, Sign Out"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
