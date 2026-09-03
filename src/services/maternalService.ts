@@ -141,9 +141,32 @@ export class MaternalService {
   }
 
   /**
-   * Fetch active care schedules for a given patient.
+   * Fetch active care schedules for a given patient from Supabase Cloud / local cache.
    */
-  static getUserSchedules(userId: string) {
+  static async getUserSchedules(userId: string) {
+    if (supabaseAdmin) {
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('user_maternal_schedules')
+          .select('*')
+          .eq('user_id', userId)
+          .order('due_date', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          return data.map(s => ({
+            id: s.id,
+            user_id: s.user_id,
+            schedule_type: s.schedule_type || 'anc_visit',
+            title_english: s.title || s.title_english,
+            title_twi: s.title_twi || s.title,
+            due_date: s.due_date,
+            vaccine_code: s.vaccine_code,
+            is_completed: Boolean(s.is_completed)
+          }));
+        }
+      } catch { /* fallback to sqlite */ }
+    }
+
     const db = getOfflineDb();
     const stmt = db.prepare(`SELECT * FROM maternal_schedules WHERE user_id = ? ORDER BY due_date ASC`);
     return stmt.all(userId);

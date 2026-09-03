@@ -364,11 +364,11 @@ export class VitalsService {
       // Sync to Supabase Cloud Postgres
       if (supabaseAdmin) {
         try {
-          await supabaseAdmin.from('patient_vitals_logs').insert({
+          await supabaseAdmin.from('vitals_logs').upsert({
             id,
             user_id: entry.userId,
-            bp_systolic: entry.systolicBp || null,
-            bp_diastolic: entry.diastolicBp || null,
+            systolic_bp: entry.systolicBp || null,
+            diastolic_bp: entry.diastolicBp || null,
             body_temperature: entry.bodyTemperature || null,
             pulse_rate: entry.pulseRate || null,
             blood_glucose: entry.bloodGlucose || null,
@@ -377,7 +377,23 @@ export class VitalsService {
             notes: entry.notes || null,
             logged_at: loggedAt
           });
-        } catch { /* ignore */ }
+        } catch {
+          try {
+            await supabaseAdmin.from('patient_vitals_logs').upsert({
+              id,
+              user_id: entry.userId,
+              bp_systolic: entry.systolicBp || null,
+              bp_diastolic: entry.diastolicBp || null,
+              body_temperature: entry.bodyTemperature || null,
+              pulse_rate: entry.pulseRate || null,
+              blood_glucose: entry.bloodGlucose || null,
+              weight_kg: entry.weightKg || null,
+              vital_status: vitalStatus,
+              notes: entry.notes || null,
+              logged_at: loggedAt
+            });
+          } catch { /* ignore */ }
+        }
       }
     } catch (e) {
       console.warn('[VitalsService] Log warning:', e);
@@ -398,9 +414,24 @@ export class VitalsService {
   }
 
   /**
-   * Fetch vitals log history for a user.
+   * Fetch vitals log history for a user from Supabase Cloud / local cache.
    */
-  static getVitalsHistory(userId: string, limit: number = 10) {
+  static async getVitalsHistory(userId: string, limit: number = 10) {
+    if (supabaseAdmin) {
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('vitals_logs')
+          .select('*')
+          .eq('user_id', userId)
+          .order('logged_at', { ascending: false })
+          .limit(limit);
+
+        if (!error && data && data.length > 0) {
+          return data;
+        }
+      } catch { /* fallback */ }
+    }
+
     const db = getOfflineDb();
     try {
       const stmt = db.prepare(`SELECT * FROM vitals_logs WHERE user_id = ? ORDER BY logged_at DESC LIMIT ?`);

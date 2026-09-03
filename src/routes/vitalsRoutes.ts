@@ -61,14 +61,14 @@ router.use(optionalUser);
 router.post('/', handleLogVitals);
 router.post('/log', handleLogVitals);
 
-// GET /api/v1/vitals/history/:userId or GET /api/v1/vitals/history
-router.get('/history/:userId?', (req: AuthenticatedRequest, res: Response) => {
+// GET /api/v1/vitals/history/:userId? or GET /api/v1/vitals/history
+router.get('/history/:userId?', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.params.userId || getUserIdFromReq(req);
     if (!userId) {
       return res.json({ success: true, count: 0, data: [] });
     }
-    const history = VitalsService.getVitalsHistory(userId);
+    const history = await VitalsService.getVitalsHistory(userId);
     res.json({ success: true, count: history.length, data: history });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

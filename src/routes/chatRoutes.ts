@@ -27,13 +27,13 @@ router.post('/query', async (req: Request, res: Response) => {
 });
 
 // GET /api/v1/chat/history/:userId?
-router.get('/history/:userId?', (req: Request, res: Response) => {
+router.get('/history/:userId?', async (req: Request, res: Response) => {
   try {
     const targetUserId = req.params.userId || (req.headers['x-user-id'] as string) || (req.query.userId as string);
     if (!targetUserId) {
       return res.json({ success: true, count: 0, data: [] });
     }
-    const history = RAGChatService.getChatHistory(targetUserId);
+    const history = await RAGChatService.getChatHistory(targetUserId);
     res.json({ success: true, count: history.length, data: history });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -176,10 +176,10 @@ router.post('/tts', async (req: Request, res: Response) => {
 });
 
 // GET /api/v1/chat/history/:userId
-router.get('/history/:userId', (req: Request, res: Response) => {
+router.get('/history/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const history = RAGChatService.getChatHistory(userId || 'demo-patient-001');
+    const history = await RAGChatService.getChatHistory(userId || 'demo-patient-001');
     res.json({ success: true, count: history.length, data: history });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

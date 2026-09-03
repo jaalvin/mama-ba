@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { CONFIG, getOfflineDb } from '../config';
+import { supabaseAdmin } from '../lib/supabaseAdmin';
 
 export interface ChatRequest {
   userId: string;
@@ -235,15 +236,18 @@ JSON Output Format (Strictly valid JSON):
       matchedCategory: bestMatch ? bestMatch.category : 'Maternal Health'
     };
 
-    // Save interaction to SQLite history table
+    // Save interaction to SQLite history table & Supabase Cloud
+    const chatId = `chat-${Date.now()}`;
+    const targetUserId = req.userId || 'demo-patient-001';
+
     try {
       const saveStmt = db.prepare(`
         INSERT INTO chat_history (id, user_id, user_query, answer_english, answer_twi, source, category)
         VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       saveStmt.run(
-        `chat-${Date.now()}`,
-        req.userId || 'demo-patient-001',
+        chatId,
+        targetUserId,
         originalQuery,
         response.answerEnglish,
         response.answerTwi,
@@ -251,13 +255,54 @@ JSON Output Format (Strictly valid JSON):
         response.matchedCategory
       );
     } catch (e) {
-      console.warn('[RAG] Failed to save chat history:', e);
+      console.warn('[RAG] Failed to save local chat history:', e);
+    }
+
+    if (supabaseAdmin) {
+      try {
+        await supabaseAdmin.from('chat_history').upsert({
+          id: chatId,
+          user_id: targetUserId,
+          query: originalQuery,
+          user_query: originalQuery,
+          answer_english: response.answerEnglish,
+          answer_twi: response.answerTwi,
+          source: response.source,
+          category: response.matchedCategory
+        });
+      } catch (e) {
+        console.warn('[RAG] Supabase chat_history sync notice:', e);
+      }
     }
 
     return response;
   }
 
-  static getChatHistory(userId: string, limit: number = 50) {
+  static async getChatHistory(userId: string, limit: number = 50) {
+    if (supabaseAdmin) {
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('chat_history')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: true })
+          .limit(limit);
+
+        if (!error && data && data.length > 0) {
+          return data.map(r => ({
+            id: r.id,
+            user_id: r.user_id,
+            user_query: r.query || r.user_query,
+            answer_english: r.answer_english,
+            answer_twi: r.answer_twi,
+            source: r.source,
+            category: r.category,
+            created_at: r.created_at
+          }));
+        }
+      } catch { /* fallback to sqlite */ }
+    }
+
     const db = getOfflineDb();
     const stmt = db.prepare(`SELECT * FROM chat_history WHERE user_id = ? ORDER BY created_at ASC LIMIT ?`);
     return stmt.all(userId, limit);

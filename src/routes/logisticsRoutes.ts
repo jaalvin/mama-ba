@@ -39,10 +39,10 @@ router.post('/appointments/book', async (req: Request, res: Response) => {
 });
 
 // GET /api/v1/logistics/appointments/:userId
-router.get('/appointments/:userId', (req: Request, res: Response) => {
+router.get('/appointments/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const appointments = LogisticsService.getAppointments(userId);
+    const appointments = await LogisticsService.getAppointments(userId);
     res.json({ success: true, count: appointments.length, data: appointments });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

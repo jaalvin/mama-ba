@@ -7,8 +7,8 @@ describe('VitalsService - Health Monitoring & Journal Analytics', () => {
     seedDatabase();
   });
 
-  it('should flag HIGH_WARNING on high blood pressure (145/95 mmHg)', () => {
-    const result = VitalsService.logVitals({
+  it('should flag HIGH_WARNING on high blood pressure (145/95 mmHg)', async () => {
+    const result = await VitalsService.logVitals({
       userId: 'test-user-01',
       systolicBp: 145,
       diastolicBp: 95
@@ -19,8 +19,8 @@ describe('VitalsService - Health Monitoring & Journal Analytics', () => {
     expect(result.alertsTwi[0]).toContain('Mogya mmoroso');
   });
 
-  it('should flag HIGH_WARNING on high fever (38.5°C)', () => {
-    const result = VitalsService.logVitals({
+  it('should flag HIGH_WARNING on high fever (38.5°C)', async () => {
+    const result = await VitalsService.logVitals({
       userId: 'test-user-01',
       bodyTemperature: 38.5
     });
@@ -29,8 +29,8 @@ describe('VitalsService - Health Monitoring & Journal Analytics', () => {
     expect(result.alerts[0]).toContain('High Fever Detected');
   });
 
-  it('should log normal vitals as NORMAL', () => {
-    const result = VitalsService.logVitals({
+  it('should log normal vitals as NORMAL', async () => {
+    const result = await VitalsService.logVitals({
       userId: 'test-user-01',
       systolicBp: 118,
       diastolicBp: 78,

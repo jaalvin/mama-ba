@@ -72,9 +72,34 @@ export class RemindersService {
   }
 
   /**
-   * Get all active reminders for a user.
+   * Get all active reminders for a user from Supabase Cloud / local cache.
    */
-  static getUserReminders(userId: string) {
+  static async getUserReminders(userId: string) {
+    if (supabaseAdmin) {
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('reminders')
+          .select('*')
+          .eq('user_id', userId)
+          .order('scheduled_time', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          return data.map(r => ({
+            id: r.id,
+            userId: r.user_id,
+            title: r.title,
+            reminderType: r.reminder_type,
+            scheduledTime: r.scheduled_time,
+            recurrence: r.recurrence,
+            dosageInfo: r.dosage_info,
+            isActive: Boolean(r.is_active),
+            isCompleted: Boolean(r.is_completed),
+            createdAt: r.created_at
+          }));
+        }
+      } catch { /* fallback */ }
+    }
+
     const db = getOfflineDb();
     const stmt = db.prepare(`SELECT * FROM reminders WHERE user_id = ? ORDER BY scheduled_time ASC`);
     const rows = stmt.all(userId) as any[];
@@ -94,9 +119,9 @@ export class RemindersService {
   }
 
   /**
-   * Toggle completion or active status of a reminder.
+   * Toggle completion or active status of a reminder in local DB & Supabase Cloud.
    */
-  static toggleReminder(id: string, updates: { isCompleted?: boolean; isActive?: boolean }) {
+  static async toggleReminder(id: string, updates: { isCompleted?: boolean; isActive?: boolean }) {
     const db = getOfflineDb();
     if (updates.isCompleted !== undefined) {
       const stmt = db.prepare(`UPDATE reminders SET is_completed = ?, sync_status = 'pending' WHERE id = ?`);
@@ -106,17 +131,34 @@ export class RemindersService {
       const stmt = db.prepare(`UPDATE reminders SET is_active = ?, sync_status = 'pending' WHERE id = ?`);
       stmt.run(updates.isActive ? 1 : 0, id);
     }
+
+    if (supabaseAdmin) {
+      try {
+        const suPayload: any = {};
+        if (updates.isCompleted !== undefined) suPayload.is_completed = updates.isCompleted;
+        if (updates.isActive !== undefined) suPayload.is_active = updates.isActive;
+        await supabaseAdmin.from('reminders').update(suPayload).eq('id', id);
+      } catch { /* ignore */ }
+    }
+
     const fetchStmt = db.prepare(`SELECT * FROM reminders WHERE id = ?`);
     return fetchStmt.get(id);
   }
 
   /**
-   * Delete a reminder.
+   * Delete a reminder from local DB & Supabase Cloud.
    */
-  static deleteReminder(id: string) {
+  static async deleteReminder(id: string) {
     const db = getOfflineDb();
     const stmt = db.prepare(`DELETE FROM reminders WHERE id = ?`);
     stmt.run(id);
+
+    if (supabaseAdmin) {
+      try {
+        await supabaseAdmin.from('reminders').delete().eq('id', id);
+      } catch { /* ignore */ }
+    }
+
     return { success: true, id };
   }
 }

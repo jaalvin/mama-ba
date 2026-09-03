@@ -4,10 +4,10 @@ import { RemindersService } from '../services/remindersService';
 const router = Router();
 
 // GET /api/v1/reminders/:userId
-router.get('/:userId', (req: Request, res: Response) => {
+router.get('/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const reminders = RemindersService.getUserReminders(userId);
+    const reminders = await RemindersService.getUserReminders(userId);
     res.json({ success: true, count: reminders.length, data: reminders });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -36,11 +36,11 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/v1/reminders/:id
-router.patch('/:id', (req: Request, res: Response) => {
+router.patch('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { isCompleted, isActive } = req.body;
-    const updated = RemindersService.toggleReminder(id, { isCompleted, isActive });
+    const updated = await RemindersService.toggleReminder(id, { isCompleted, isActive });
     res.json({ success: true, data: updated });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -48,10 +48,10 @@ router.patch('/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /api/v1/reminders/:id
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = RemindersService.deleteReminder(id);
+    const result = await RemindersService.deleteReminder(id);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

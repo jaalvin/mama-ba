@@ -29,10 +29,10 @@ router.post('/immunization-schedule', (req: Request, res: Response) => {
 });
 
 // GET /api/v1/maternal/user-schedules/:userId
-router.get('/user-schedules/:userId', (req: Request, res: Response) => {
+router.get('/user-schedules/:userId', async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
-    const schedules = MaternalService.getUserSchedules(userId);
+    const schedules = await MaternalService.getUserSchedules(userId);
     res.json({ success: true, count: schedules.length, data: schedules });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -47,7 +47,7 @@ router.post('/user-schedules', async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, error: 'userId and items array are required' });
     }
     await MaternalService.saveScheduleToLocalDb(userId, items);
-    const updated = MaternalService.getUserSchedules(userId);
+    const updated = await MaternalService.getUserSchedules(userId);
     res.json({ success: true, message: 'Schedule items saved successfully', data: updated });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

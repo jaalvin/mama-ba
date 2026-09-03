@@ -165,7 +165,30 @@ export class LogisticsService {
     return stmt.all(userId);
   }
 
-  static getAppointments(userId: string) {
+  static async getAppointments(userId: string) {
+    if (supabaseAdmin) {
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('hospital_appointments')
+          .select('*')
+          .eq('user_id', userId)
+          .order('requested_date', { ascending: false });
+
+        if (!error && data && data.length > 0) {
+          return data.map(r => ({
+            id: r.id,
+            userId: r.user_id,
+            hospital: r.facility_name,
+            primaryHospital: r.facility_name,
+            visitType: r.appointment_type === 'VIRTUAL_TELEHEALTH' ? 'virtual' : 'in-person',
+            date: r.requested_date,
+            status: r.status,
+            notes: r.notes || ''
+          }));
+        }
+      } catch { /* fallback to sqlite */ }
+    }
+
     const db = getOfflineDb();
     const stmt = db.prepare(`SELECT * FROM hospital_appointments WHERE user_id = ? ORDER BY created_at DESC`);
     return stmt.all(userId);

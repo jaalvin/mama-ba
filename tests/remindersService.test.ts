@@ -7,8 +7,8 @@ describe('RemindersService - Care & Medication Reminders', () => {
     seedDatabase();
   });
 
-  it('should create a medication reminder', () => {
-    const res = RemindersService.createReminder({
+  it('should create a medication reminder', async () => {
+    const res = await RemindersService.createReminder({
       userId: 'test-user-001',
       title: 'Prenatal Iron & Folic Acid',
       reminderType: 'MEDICATION',
@@ -23,33 +23,33 @@ describe('RemindersService - Care & Medication Reminders', () => {
     expect(res.dosageInfo).toBe('1 Tablet after lunch');
   });
 
-  it('should fetch user reminders', () => {
-    const list = RemindersService.getUserReminders('test-user-001');
+  it('should fetch user reminders', async () => {
+    const list = await RemindersService.getUserReminders('test-user-001');
     expect(Array.isArray(list)).toBe(true);
     expect(list.length).toBeGreaterThan(0);
     expect(list[0].title).toBe('Prenatal Iron & Folic Acid');
   });
 
-  it('should toggle reminder completion', () => {
-    const list = RemindersService.getUserReminders('test-user-001');
+  it('should toggle reminder completion', async () => {
+    const list = await RemindersService.getUserReminders('test-user-001');
     const id = list[0].id;
 
-    const updated = RemindersService.toggleReminder(id, { isCompleted: true }) as any;
+    const updated = await RemindersService.toggleReminder(id, { isCompleted: true }) as any;
     expect(updated).toBeDefined();
     expect(updated.is_completed).toBe(1);
   });
 
-  it('should delete a reminder', () => {
-    const created = RemindersService.createReminder({
+  it('should delete a reminder', async () => {
+    const created = await RemindersService.createReminder({
       userId: 'test-user-delete',
       title: 'Temp Reminder',
       scheduledTime: '08:00'
     });
 
-    const delRes = RemindersService.deleteReminder(created.id);
+    const delRes = await RemindersService.deleteReminder(created.id);
     expect(delRes.success).toBe(true);
 
-    const list = RemindersService.getUserReminders('test-user-delete');
+    const list = await RemindersService.getUserReminders('test-user-delete');
     expect(list.length).toBe(0);
   });
 });
