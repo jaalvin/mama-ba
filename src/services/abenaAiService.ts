@@ -28,15 +28,21 @@ export class AbenaAiService {
 
   private static getApiKeys(): (string | null)[] {
     const rawKeys = [
-      null, // Priority 1: Anonymous Free Tier (verified instant HTTP 200 OK for both English & Twi)
-      process.env.ABENA_KEY_1 || CONFIG.ABENA_KEY_1 || 'sk_b66230787fc54e8ba63b3084a7370521',
-      process.env.ABENA_KEY_2 || CONFIG.ABENA_KEY_2 || 'sk_a47fce0855e54740887c863fa268e423',
-      process.env.ABENA_KEY_3 || CONFIG.ABENA_KEY_3 || 'sk_99e14864877b47f7a121313b87602aec',
-      process.env.ABENA_KEY_4 || CONFIG.ABENA_KEY_4 || 'sk_23d2b9e5b24c4ab7ae82bc2dc105491c',
-      process.env.ABENA_KEY_5 || CONFIG.ABENA_KEY_5 || 'sk_b18d6bafae8a4160bbfc8639a593051e',
-      process.env.ABENA_KEY_6 || CONFIG.ABENA_KEY_6 || 'sk_062ac4b25cc44479b6eda14e4a0f1f7d',
-      process.env.ABENA_API_KEY || CONFIG.ABENA_API_KEY || 'sk_a47fce0855e54740887c863fa268e423',
-      process.env.ABENA_FALLBACK_API_KEY || CONFIG.ABENA_FALLBACK_API_KEY || 'sk_23d2b9e5b24c4ab7ae82bc2dc105491c'
+      process.env.ABENA_KEY_1 || CONFIG.ABENA_KEY_1 || 'sk_665b78f24cb24ccab5439a267fc20d71',
+      process.env.ABENA_KEY_2 || CONFIG.ABENA_KEY_2 || 'sk_bf28e7963f0b46ff8a3d04503b3ef15f',
+      process.env.ABENA_KEY_3 || CONFIG.ABENA_KEY_3 || 'sk_6cbd8b6200b1495a8c99917e146b7bc4',
+      process.env.ABENA_KEY_4 || CONFIG.ABENA_KEY_4 || 'sk_8386b2043ef1415aa8f36e40f959cc5f',
+      process.env.ABENA_KEY_5 || CONFIG.ABENA_KEY_5 || 'sk_e2812cf49744446f9377040095eebecc',
+      process.env.ABENA_KEY_6 || CONFIG.ABENA_KEY_6 || 'sk_f43c5bf516e84e038f7b955f77d667bd',
+      process.env.ABENA_KEY_7 || CONFIG.ABENA_KEY_7 || 'sk_d953bf290d394798baa9882dc82d95f5',
+      process.env.ABENA_KEY_8 || CONFIG.ABENA_KEY_8 || 'sk_6e293b7a2f92431a85a40814a211abcb',
+      process.env.ABENA_KEY_9 || CONFIG.ABENA_KEY_9 || 'sk_48aa846f571a4786a04e363a8cd4ac22',
+      process.env.ABENA_KEY_10 || CONFIG.ABENA_KEY_10 || 'sk_da1bc3b2bbf340dd8d6482dacccf4e52',
+      process.env.ABENA_KEY_11 || CONFIG.ABENA_KEY_11 || 'sk_7b0d216cd3d64d288d05833a06930082',
+      process.env.ABENA_KEY_12 || CONFIG.ABENA_KEY_12 || 'sk_8c58e1df8a6c43dfb7f890524e0c4158',
+      process.env.ABENA_API_KEY || CONFIG.ABENA_API_KEY || 'sk_665b78f24cb24ccab5439a267fc20d71',
+      process.env.ABENA_FALLBACK_API_KEY || CONFIG.ABENA_FALLBACK_API_KEY || 'sk_bf28e7963f0b46ff8a3d04503b3ef15f',
+      null // Anonymous Free Tier as final fallback
     ];
 
     const uniqueKeys: (string | null)[] = [...new Set(rawKeys.filter(k => k === null || (typeof k === 'string' && k.length > 5)))];
