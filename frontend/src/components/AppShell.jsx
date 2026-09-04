@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
 import NotificationPanel from "./NotificationPanel.jsx";
 import PWAInstallPromptModal from "./PWAInstallPromptModal.jsx";
-import { startTipScheduler } from "../services/tipScheduler.js";
+import { startTipScheduler, syncDailyTipPushReminders } from "../services/tipScheduler.js";
 import { startPWAReminderEngine, syncMedicationPushReminders } from "../services/reminderEngine.js";
 import { subscribeToPush } from "../services/notifications.js";
 
@@ -50,7 +50,7 @@ export default function AppShell() {
     };
   }, [isAuthenticated, lang, addNotification, user?.id]);
 
-  // Subscribe to Web Push and sync medication reminders to backend scheduler
+  // Subscribe to Web Push and sync all reminders (meds + daily tips) to backend scheduler
   useEffect(() => {
     if (!isAuthenticated || !user?.id) return;
     const activeUid = user.id;
@@ -59,8 +59,9 @@ export default function AppShell() {
     // Subscribe this device to Web Push (enables background/lock-screen notifications)
     subscribeToPush(activeUid, token).catch(() => {});
 
-    // Sync all medication reminders to backend push scheduler
+    // Sync medication reminders & daily reshuffled tips to backend push scheduler
     syncMedicationPushReminders(activeUid, token).catch(() => {});
+    syncDailyTipPushReminders(activeUid, token).catch(() => {});
   }, [isAuthenticated, user?.id, accessToken]);
 
   return (

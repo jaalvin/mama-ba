@@ -378,9 +378,10 @@ export default function Ask() {
       {/* Static Fixed Bottom Panel (Input bar + Preset chips) */}
       <div
         style={{
-          bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 0.25rem), 0.25rem)",
+          bottom: 0,
+          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0.5rem)",
         }}
-        className="fixed inset-x-0 mx-auto w-full md:max-w-md px-4 pt-2 pb-2 bg-background/95 backdrop-blur-md z-30 flex flex-col gap-2 border-t border-outline-variant/30 shadow-md"
+        className="fixed inset-x-0 mx-auto w-full md:max-w-md px-4 pt-2 bg-background/95 backdrop-blur-md z-30 flex flex-col gap-2 border-t border-outline-variant/30 shadow-md"
       >
         {/* Preset Q&A Chips */}
         <div className="flex gap-2 overflow-x-auto pb-0.5 scrollbar-hide">

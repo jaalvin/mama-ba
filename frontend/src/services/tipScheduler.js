@@ -5,11 +5,13 @@
  *
  * Features:
  * - 35+ rich Ghanaian daily pregnancy tips & "Did You Know?" facts.
+ * - Reshuffles reminders uniquely for each day (seeded Fisher-Yates shuffle).
+ * - Rotates tips across sessions and hours of the day.
+ * - Schedules background Web Push reminders so notifications fire even when the app is closed.
  * - Schedules a pop notification exactly 20 seconds into using the app.
- * - Exposes `getTodayTip(lang)` for the Home screen (Dashboard) to render today's tip consistently.
  */
 
-import { showDeviceNotification } from "./notifications.js";
+import { showDeviceNotification, registerPushReminder } from "./notifications.js";
 
 const TIP_STORE_KEY = "mama_ba_last_tip_idx";
 const TIP_FIRED_KEY = "mama_ba_last_tip_ts";
@@ -227,18 +229,39 @@ export const DAILY_TIPS = [
   },
 ];
 
+// ── Deterministic Seeded Pseudo-Random Generator ──────────────────────────────
+function seededRandom(seed) {
+  const x = Math.sin(seed++) * 10000;
+  return x - Math.floor(x);
+}
+
 /**
- * Calculates today's daily tip based on the day of the year (1-365).
- * Ensures that every day of the month has a unique, fresh daily tip.
+ * Returns a reshuffled copy of DAILY_TIPS uniquely randomized for today's date.
+ */
+export function getShuffledTipsForToday() {
+  const now = new Date();
+  const dateSeed = now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate();
+  const tips = [...DAILY_TIPS];
+  let seed = dateSeed;
+  for (let i = tips.length - 1; i > 0; i--) {
+    const j = Math.floor(seededRandom(seed++) * (i + 1));
+    [tips[i], tips[j]] = [tips[j], tips[i]];
+  }
+  return tips;
+}
+
+/**
+ * Calculates today's daily tip based on today's reshuffled tip order.
+ * Rotates based on hour or session count so that multiple reminders in a day show varied tips.
  */
 export function getTodayTip(lang = "en") {
   const now = new Date();
-  const startOfYear = new Date(now.getFullYear(), 0, 0);
-  const diffMs = now - startOfYear;
-  const dayOfYear = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const currentHour = now.getHours();
+  const shuffled = getShuffledTipsForToday();
   
-  const tipIdx = dayOfYear % DAILY_TIPS.length;
-  const tip = DAILY_TIPS[tipIdx];
+  // Pick tip index from reshuffled list based on current hour & day
+  const tipIdx = (currentHour + now.getDate()) % shuffled.length;
+  const tip = shuffled[tipIdx] || shuffled[0];
   const langKey = lang === "twi" ? "twi" : "en";
 
   return {
@@ -248,8 +271,41 @@ export function getTodayTip(lang = "en") {
     titleEn: tip.en.title,
     titleTwi: tip.twi.title,
     bodyEn: tip.en.body,
-    bodyTwi: tip.twi.body
+    bodyTwi: tip.twi.body,
   };
+}
+
+/**
+ * Register background push reminders for daily reshuffled tips so they work
+ * even when the app is completely closed.
+ */
+export async function syncDailyTipPushReminders(uid = "guest", accessToken = "") {
+  if (!uid || uid === "guest") return;
+  try {
+    const shuffled = getShuffledTipsForToday();
+    // Schedule top 3 reshuffled tips for morning (09:00), afternoon (14:00), and evening (19:00)
+    const times = [
+      { time: "09:00", item: shuffled[0] },
+      { time: "14:00", item: shuffled[1] },
+      { time: "19:00", item: shuffled[2] },
+    ];
+
+    for (let i = 0; i < times.length; i++) {
+      const { time, item } = times[i];
+      if (!item) continue;
+      await registerPushReminder(
+        uid,
+        `daily_reshuffled_tip_${i + 1}`,
+        item.en.title,
+        item.en.body,
+        time,
+        "daily",
+        accessToken
+      );
+    }
+  } catch (err) {
+    console.warn("[TipScheduler] Push sync notice:", err);
+  }
 }
 
 /**
