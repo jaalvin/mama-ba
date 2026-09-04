@@ -57,17 +57,34 @@ export class AbenaAiService {
    * Prioritizes instant Anonymous Tier and rotates through API keys.
    */
   static async synthesizeSpeech(options: TtsOptions): Promise<Buffer | null> {
+    const primaryBuffer = await this.synthesizeSpeechSingle(options);
+    if (primaryBuffer) return primaryBuffer;
+
+    // Automatic Voice Fallback: If abena_twi_high timed out or failed, fallback to abena_twi_lite immediately
+    const requestedVoice = options.voice || 'abena_twi_high';
+    if (requestedVoice.includes('twi')) {
+      const fallbackVoice = requestedVoice === 'abena_twi_lite' ? 'abena_twi_high' : 'abena_twi_lite';
+      console.log(`[Abena AI TTS] Fallback to voice "${fallbackVoice}" for rapid synthesis...`);
+      return this.synthesizeSpeechSingle({ ...options, voice: fallbackVoice });
+    }
+
+    return null;
+  }
+
+  private static async synthesizeSpeechSingle(options: TtsOptions): Promise<Buffer | null> {
     let cleanText = options.text
       .replace(/<[^>]*>/g, '')
-      .replace(/[*_#`~]/g, '')
+      .replace(/[*_#`~•\-–—]/g, ' ')
+      .replace(/[^\p{L}\p{N}\s.,!?'"-]/gu, '')
+      .replace(/\s+/g, ' ')
       .trim();
 
     if (!cleanText) return null;
 
-    // Keep full response text for TTS reading (up to 500 chars per Abena API spec)
-    if (cleanText.length > 500) {
-      const match = cleanText.slice(0, 500).match(/^[\s\S]*[.!?]/);
-      cleanText = match ? match[0] : cleanText.slice(0, 500);
+    // Cap text to first ~180 characters (or 2 sentences) for ultra low-latency synthesis (<1.5s)
+    if (cleanText.length > 180) {
+      const match = cleanText.slice(0, 180).match(/^[\s\S]*?[.!?](\s|$)/);
+      cleanText = match ? match[0].trim() : cleanText.slice(0, 180).trim();
     }
 
     const voice = options.voice || 'abena_twi_high';
@@ -82,19 +99,19 @@ export class AbenaAiService {
     }
 
     const keyPool = this.getApiKeys();
-    console.log(`[Abena AI TTS] Attempting synthesis for voice "${voice}"...`);
+    console.log(`[Abena AI TTS] Synthesizing "${cleanText.slice(0, 40)}..." with voice "${voice}"...`);
 
     for (let idx = 0; idx < keyPool.length; idx++) {
       const key = keyPool[idx];
       if (key && this.exhaustedKeys.has(key)) {
-        continue; // Skip keys marked exhausted
+        continue;
       }
 
       const keyLabel = key ? `Key ${idx} (${key.slice(0, 8)}...)` : `Anonymous Free Tier`;
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // Fast 5s per-key timeout
 
         const headers: Record<string, string> = {
           'Content-Type': 'application/json'
@@ -104,7 +121,6 @@ export class AbenaAiService {
           headers['Authorization'] = `Bearer ${key}`;
         }
 
-        console.log(`[Abena AI TTS] Requesting via ${keyLabel}...`);
         const response = await fetch(`${this.baseUrl}/tts/synthesize/`, {
           method: 'POST',
           headers,
@@ -133,18 +149,16 @@ export class AbenaAiService {
           }
         } else if (response.status === 402 || response.status === 429) {
           if (key) this.exhaustedKeys.add(key);
-          const errText = await response.text().catch(() => '');
-          console.warn(`[Abena AI] ${keyLabel} limit notice (HTTP ${response.status}): ${errText}. Rotating...`);
+          console.warn(`[Abena AI] ${keyLabel} limit notice (HTTP ${response.status}). Rotating...`);
         } else {
-          const errText = await response.text().catch(() => '');
-          console.warn(`[Abena AI] ${keyLabel} TTS Error HTTP ${response.status}: ${errText}. Rotating...`);
+          console.warn(`[Abena AI] ${keyLabel} TTS Error HTTP ${response.status}. Rotating...`);
         }
       } catch (err: any) {
-        console.warn(`[Abena AI] ${keyLabel} TTS request notice:`, err.message || err);
+        console.warn(`[Abena AI] ${keyLabel} TTS request timeout/error:`, err.message || err);
       }
     }
 
-    console.warn('[Abena AI] All Abena tiers exhausted for TTS synthesis.');
+    console.warn(`[Abena AI] All Abena tiers exhausted for ${voice}.`);
     return null;
   }
 

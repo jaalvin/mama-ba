@@ -95,7 +95,9 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
 
   const cleanText = (text || "")
     .replace(/<[^>]*>/g, "")
-    .replace(/[*_#`~]/g, "")
+    .replace(/[*_#`~•\-–—]/g, " ")
+    .replace(/[^\p{L}\p{N}\s.,!?'"-]/gu, "")
+    .replace(/\s+/g, " ")
     .trim();
 
   if (!cleanText) {
@@ -197,6 +199,19 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
           if (thisRequestId === currentSpeechId && onEnd) onEnd();
         });
       }
+      return true;
+    }
+
+    // Fallback to browser WebSpeech API if server audio could not be generated
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      console.warn("[Speech] Using browser WebSpeech fallback for text:", cleanText.slice(0, 30));
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = isTwi ? "ak-GH" : "en-GH";
+      utterance.rate = 0.95;
+      utterance.onstart = () => { if (thisRequestId === currentSpeechId && onStart) onStart(); };
+      utterance.onend = () => { if (thisRequestId === currentSpeechId && onEnd) onEnd(); };
+      utterance.onerror = () => { if (thisRequestId === currentSpeechId && onEnd) onEnd(); };
+      window.speechSynthesis.speak(utterance);
       return true;
     }
   } catch (err) {
