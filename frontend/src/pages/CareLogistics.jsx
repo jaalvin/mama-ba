@@ -186,8 +186,10 @@ export default function CareLogistics() {
     : null;
 
   const formatApptDateTime = (date, time) => {
-    const dt = new Date(`${date}T${time}`);
-    if (isNaN(dt)) return `${date} ${time}`;
+    if (!date) return "";
+    const cleanTime = time && time !== "undefined" ? time : "09:00";
+    const dt = new Date(`${date}T${cleanTime}`);
+    if (isNaN(dt)) return `${date} ${cleanTime}`;
     return dt.toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
   };
 
@@ -455,17 +457,36 @@ export default function CareLogistics() {
               </div>
 
               {/* Date & Time */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">{lang === "twi" ? "Da" : "Date"}</label>
-                  <input type="date" required value={apptDate} onChange={e => setApptDate(e.target.value)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 w-full max-w-full">
+                <div className="flex flex-col min-w-0">
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-primary" />
+                    <span>{lang === "twi" ? "Da (Date)" : "Date"}</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={apptDate}
+                    onChange={e => setApptDate(e.target.value)}
                     min={new Date().toISOString().split("T")[0]}
-                    className="w-full h-11 px-3 rounded-xl bg-surface-container border border-outline-variant focus:border-primary text-on-surface text-xs" />
+                    style={{ colorScheme: "light" }}
+                    className="w-full max-w-full box-border h-12 px-3.5 rounded-xl bg-surface-container border border-outline-variant focus:border-primary text-on-surface text-xs font-medium focus:outline-none transition-colors appearance-none"
+                  />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">{lang === "twi" ? "Bere" : "Time"}</label>
-                  <input type="time" required value={apptTime} onChange={e => setApptTime(e.target.value)}
-                    className="w-full h-11 px-3 rounded-xl bg-surface-container border border-outline-variant focus:border-primary text-on-surface text-xs" />
+
+                <div className="flex flex-col min-w-0">
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-primary" />
+                    <span>{lang === "twi" ? "Bere (Time)" : "Time"}</span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={apptTime}
+                    onChange={e => setApptTime(e.target.value)}
+                    style={{ colorScheme: "light" }}
+                    className="w-full max-w-full box-border h-12 px-3.5 rounded-xl bg-surface-container border border-outline-variant focus:border-primary text-on-surface text-xs font-medium focus:outline-none transition-colors appearance-none"
+                  />
                 </div>
               </div>
 

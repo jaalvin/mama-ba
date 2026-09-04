@@ -1,28 +1,30 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, ShieldAlert, CheckCircle2, PhoneCall } from "lucide-react";
 import Navbar from "../components/Navbar.jsx";
 
 export default function HealthDisclaimer() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isInApp = location.pathname.startsWith("/app");
 
   return (
-    <div className="min-h-screen bg-background font-body text-body-md">
-      <Navbar />
+    <div className={`min-h-screen bg-background font-body text-body-md ${isInApp ? "" : "pt-4"}`}>
+      {!isInApp && <Navbar />}
 
-      <main className="pt-24 pb-16 px-4 md:px-6 max-w-3xl mx-auto flex flex-col gap-6">
+      <main className={`${isInApp ? "px-4 py-6 md:px-6 max-w-lg mx-auto pb-24" : "pt-24 pb-16 px-4 md:px-6 max-w-3xl mx-auto"} flex flex-col gap-6`}>
         <header className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => navigate(-1)}
-            className="p-2 rounded-full hover:bg-surface-container transition-colors"
+            className="p-2 rounded-full hover:bg-surface-container transition-colors shrink-0"
           >
             <ArrowLeft className="w-6 h-6 text-on-surface" />
           </button>
           <div>
-            <h1 className="font-headline text-headline-md md:text-headline-lg text-primary font-bold">
+            <h1 className="font-headline text-headline-sm md:text-headline-md text-primary font-bold tracking-tight">
               Health &amp; Medical Disclaimer
             </h1>
-            <p className="text-xs text-on-surface-variant">Important Information for Mothers &amp; Families</p>
+            <p className="text-xs text-on-surface-variant font-medium">Important Information for Mothers &amp; Families</p>
           </div>
         </header>
 

@@ -280,7 +280,7 @@ export default function Ask() {
       </div>
 
       {/* Transcript Scroll Area */}
-      <div className="flex-1 overflow-y-auto px-4 flex flex-col gap-4 py-4 pb-48">
+      <div className="flex-1 overflow-y-auto px-4 flex flex-col gap-4 py-4 pb-36">
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div
@@ -378,7 +378,7 @@ export default function Ask() {
       {/* Static Fixed Bottom Panel (Input bar + Preset chips) */}
       <div
         style={{
-          bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 3.6rem), 3.6rem)",
+          bottom: "max(calc(env(safe-area-inset-bottom, 0px) + 0.25rem), 0.25rem)",
         }}
         className="fixed inset-x-0 mx-auto w-full md:max-w-md px-4 pt-2 pb-2 bg-background/95 backdrop-blur-md z-30 flex flex-col gap-2 border-t border-outline-variant/30 shadow-md"
       >

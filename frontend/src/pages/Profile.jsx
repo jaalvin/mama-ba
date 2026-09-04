@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLang } from "../context/LanguageContext.jsx";
@@ -16,6 +16,8 @@ import {
   ChevronRight,
   CheckCircle2,
   CalendarCheck,
+  Camera,
+  Sparkles,
 } from "lucide-react";
 
 // Baby size lookup by gestational week
@@ -78,6 +80,58 @@ export default function Profile() {
   const [savingDate, setSavingDate]       = useState(false);
   const [notificationMsg, setNotificationMsg] = useState("");
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const fileInputRef = useRef(null);
+  const [avatarUrl, setAvatarUrl] = useState(() => {
+    const uid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id");
+    return user?.avatarUrl || (uid ? localStorage.getItem(`mama_ba_usr_${uid}_avatar`) : null) || null;
+  });
+
+  useEffect(() => {
+    const uid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id");
+    if (!uid) return;
+    const stored = user?.avatarUrl || localStorage.getItem(`mama_ba_usr_${uid}_avatar`);
+    if (stored) setAvatarUrl(stored);
+  }, [user?.id, user?.avatarUrl]);
+
+  const handleAvatarFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image file size should be less than 5MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      const dataUrl = evt.target.result;
+      setAvatarUrl(dataUrl);
+      const uid = user?.id || user?.userId || localStorage.getItem("mama_ba_active_user_id");
+      if (uid) {
+        localStorage.setItem(`mama_ba_usr_${uid}_avatar`, dataUrl);
+      }
+      updateUser({ avatarUrl: dataUrl });
+      setNotificationMsg(
+        lang === "twi" ? "Wo mfonini fɛfɛɛfɛ no asesa yie!" : "Profile picture updated successfully!"
+      );
+      setTimeout(() => setNotificationMsg(""), 3500);
+
+      try {
+        if (supabase && uid) {
+          await supabase.from("user_profile").upsert(
+            {
+              user_id: uid,
+              avatar_url: dataUrl,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id" }
+          );
+        }
+      } catch (err) {
+        console.warn("[Profile] Avatar Supabase notice:", err);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Update input if user object updates
   useEffect(() => {
@@ -194,15 +248,58 @@ export default function Profile() {
 
   return (
     <div className="px-4 py-6 md:px-6 max-w-lg mx-auto flex flex-col gap-6 pb-24">
-      {/* Profile Header */}
+      {/* Profile Header with Updatable Avatar */}
       <section className="flex flex-col items-center text-center">
-        <div className="w-20 h-20 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center mb-3 shadow-sm">
-          <User className="w-10 h-10 text-primary" strokeWidth={1.5} />
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleAvatarFileChange}
+          accept="image/*"
+          className="hidden"
+        />
+
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="relative group cursor-pointer mb-3"
+          title={lang === "twi" ? "Klik fa sesa wo mfonini" : "Tap to upload new profile picture"}
+        >
+          <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-primary/20 bg-primary-container text-on-primary-container flex items-center justify-center shadow-md group-hover:border-primary transition-all">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={user?.name || "User Avatar"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User className="w-12 h-12 text-primary" strokeWidth={1.5} />
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
+            className="absolute bottom-0 right-0 p-2 rounded-full bg-primary text-on-primary shadow-lg hover:scale-110 active:scale-95 transition-all border-2 border-background flex items-center justify-center"
+            aria-label="Upload profile photo"
+          >
+            <Camera className="w-4 h-4" />
+          </button>
         </div>
-        <h1 className="font-headline text-headline-lg text-primary">
+
+        <h1 className="font-headline text-headline-lg text-primary font-bold tracking-tight">
           {user?.name || (lang === "twi" ? "Wo Akawnt" : "Your Account")}
         </h1>
-        <p className="text-on-surface-variant text-sm">{user?.email}</p>
+        <p className="text-on-surface-variant text-sm font-medium">{user?.email}</p>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="text-xs font-semibold text-primary hover:underline mt-1 flex items-center gap-1"
+        >
+          <Camera className="w-3.5 h-3.5" />
+          <span>{lang === "twi" ? "Sesa Wo Mfonini" : "Change Profile Photo"}</span>
+        </button>
       </section>
 
       {/* Instant Feedback Toast */}

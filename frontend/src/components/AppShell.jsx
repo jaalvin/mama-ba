@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useLang } from "../context/LanguageContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
@@ -18,11 +18,15 @@ const navItems = [
 ];
 
 export default function AppShell() {
+  const location = useLocation();
   const { lang } = useLang();
   const { isDemoMode, isAuthenticated, user, accessToken } = useAuth();
   const { unreadCount, addNotification } = useNotifications();
   const [panelOpen, setPanelOpen] = useState(false);
   const [hideNav, setHideNav] = useState(false);
+
+  const isAskPage = location.pathname === "/app/ask";
+  const shouldHideNav = hideNav || isAskPage;
 
   useEffect(() => {
     const handleVoiceToggle = (e) => {
@@ -115,7 +119,9 @@ export default function AppShell() {
             paddingTop: isDemoMode
               ? "calc(5.75rem + env(safe-area-inset-top, 0px))"
               : "calc(4.25rem + env(safe-area-inset-top, 0px))",
-            paddingBottom: "calc(6.5rem + env(safe-area-inset-bottom, 0px))",
+            paddingBottom: isAskPage
+              ? "env(safe-area-inset-bottom, 0px)"
+              : "calc(6.5rem + env(safe-area-inset-bottom, 0px))",
           }}
           className="min-h-screen"
         >
@@ -130,7 +136,7 @@ export default function AppShell() {
               : "6px",
           }}
           className={`fixed inset-x-3.5 mx-auto w-[calc(100%-1.75rem)] md:w-[410px] z-50 flex justify-between items-center px-3 py-1.5 rounded-[26px] whatsapp-glass-nav transition-all duration-300 shadow-[0_16px_40px_rgba(0,0,0,0.6)] ${
-            hideNav ? "opacity-0 pointer-events-none translate-y-12 scale-95" : "opacity-100 translate-y-0 scale-100"
+            shouldHideNav ? "opacity-0 pointer-events-none translate-y-12 scale-95" : "opacity-100 translate-y-0 scale-100"
           }`}
         >
           {navItems.map((item) => (
