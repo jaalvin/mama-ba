@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLang } from "../context/LanguageContext.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import { supabase } from "../lib/supabase";
 import {
   User,
@@ -74,6 +75,7 @@ export default function Profile() {
     isSpeaking,
     speakingLanguage,
   } = useLang();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
 
   const [dueDateInput, setDueDateInput]   = useState(user?.dueDate || "");
@@ -408,6 +410,93 @@ export default function Profile() {
             </span>
           </button>
         </form>
+      </section>
+
+      {/* ═══ DISPLAY MODE & VISUAL THEME ═══ */}
+      <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 flex flex-col gap-4 shadow-sm">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+            <Sparkles className="w-4 h-4" />
+          </div>
+          <div>
+            <h2 className="font-headline font-bold text-sm text-on-surface">
+              {lang === "twi" ? "Ahosuo & App Nhyehyɛe (Display Theme)" : "Display Mode & Visual Theme"}
+            </h2>
+            <p className="text-xs text-on-surface-variant">
+              {lang === "twi"
+                ? "Sesa app no ahosuo kɔ Rose anaa Futuristic Glassy Blue"
+                : "Switch between Warm Rose & Futuristic Glassy Ocean Blue"}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {/* Theme Option 1: Warm Rose (Default) */}
+          <div
+            onClick={() => {
+              setTheme("rose");
+              setNotificationMsg(
+                lang === "twi" ? "Sesa kɔɔ Warm Rose ahosuo mu!" : "Switched to Warm Rose theme 🌹"
+              );
+              setTimeout(() => setNotificationMsg(""), 3000);
+            }}
+            className={`rounded-2xl border-2 p-3.5 flex flex-col items-center gap-2 cursor-pointer transition-all ${
+              theme === "rose"
+                ? "bg-[#fff3f0] border-[#9e4432] shadow-md ring-2 ring-[#9e4432]/30 scale-[1.02]"
+                : "bg-surface-container-low border-outline-variant hover:border-primary/40"
+            }`}
+          >
+            <div className="w-10 h-10 rounded-full bg-[#fde5e0] border border-[#f9c7be] flex items-center justify-center shadow-xs">
+              <span className="text-lg">🌹</span>
+            </div>
+            <div className="text-center">
+              <p className="font-headline font-bold text-xs text-[#2b2522]">
+                {lang === "twi" ? "Warm Rose" : "Warm Rose"}
+              </p>
+              <span className="text-[10px] text-on-surface-variant font-medium block mt-0.5">
+                {lang === "twi" ? "Default" : "Classic Warmth"}
+              </span>
+            </div>
+            {theme === "rose" && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#9e4432] text-white mt-1 shadow-xs">
+                Active
+              </span>
+            )}
+          </div>
+
+          {/* Theme Option 2: Futuristic Glassy Blue */}
+          <div
+            onClick={() => {
+              setTheme("ocean-blue");
+              setNotificationMsg(
+                lang === "twi" ? "Sesa kɔɔ Futuristic Glassy Blue ahosuo mu! 💎" : "Switched to Futuristic Glassy Blue theme 💎"
+              );
+              setTimeout(() => setNotificationMsg(""), 3000);
+            }}
+            className={`rounded-2xl border-2 p-3.5 flex flex-col items-center gap-2 cursor-pointer transition-all ${
+              theme === "ocean-blue"
+                ? "bg-[#e0f2fe] border-[#0284c7] shadow-md ring-2 ring-[#0284c7]/40 scale-[1.02]"
+                : "bg-surface-container-low border-outline-variant hover:border-primary/40"
+            }`}
+          >
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#0284c7] to-[#2563eb] text-white flex items-center justify-center shadow-xs">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div className="text-center">
+              <p className="font-headline font-bold text-xs text-[#0f172a]">
+                {lang === "twi" ? "Ocean Blue" : "Glassy Blue"}
+              </p>
+              <span className="text-[10px] text-on-surface-variant font-medium block mt-0.5">
+                {lang === "twi" ? "Futuristic" : "Futuristic iOS26"}
+              </span>
+            </div>
+            {theme === "ocean-blue" && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0284c7] text-white mt-1 shadow-xs">
+                Active
+              </span>
+            )}
+          </div>
+        </div>
       </section>
 
       {/* ═══ VOICE ASSISTANT & LANGUAGE SETTINGS ═══ */}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useLang } from "../context/LanguageContext.jsx";
+import { useTheme } from "../context/ThemeContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
 import { medications as medsAPI, api } from "../services/api.js";
 import { showDeviceNotification, scheduleAlarm, nextOccurrenceMs } from "../services/notifications.js";
@@ -66,6 +67,7 @@ function computeDaysRemaining(dueDate) {
 export default function Dashboard() {
   const { user, updateUser, accessToken } = useAuth();
   const { lang } = useLang();
+  const { theme } = useTheme();
   const { addNotification } = useNotifications();
   const name = user?.name || (lang === "twi" ? "Ɛho" : "there");
 
@@ -689,12 +691,20 @@ export default function Dashboard() {
           {/* Card 1: Maternal & Baby Tracker */}
           <Link
             to="/app/maternal"
-            className="rounded-2xl p-5 flex flex-col items-center gap-3 text-center bg-[#fff3f0] border border-[#fcd7cf] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+            className={`rounded-2xl p-5 flex flex-col items-center gap-3 text-center shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group ${
+              theme === "ocean-blue"
+                ? "bg-[#e0f2fe]/80 border border-[#bae6fd] backdrop-blur-md"
+                : "bg-[#fff3f0] border border-[#fcd7cf]"
+            }`}
           >
-            <div className="w-13 h-13 rounded-full bg-[#fde5e0] border border-[#f9c7be] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
-              <Baby className="w-6 h-6 text-[#c24632]" strokeWidth={1.75} />
+            <div className={`w-13 h-13 rounded-full flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform ${
+              theme === "ocean-blue"
+                ? "bg-[#bae6fd]/60 border border-[#7dd3fc]"
+                : "bg-[#fde5e0] border border-[#f9c7be]"
+            }`}>
+              <Baby className={`w-6 h-6 ${theme === "ocean-blue" ? "text-[#0284c7]" : "text-[#c24632]"}`} strokeWidth={1.75} />
             </div>
-            <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
+            <span className={`text-label-md text-sm leading-tight font-semibold ${theme === "ocean-blue" ? "text-[#0f172a]" : "text-[#2b2522]"}`}>
               {lang === "twi" ? "Maame & Ba" : "Maternal & Baby Tracker"}
             </span>
           </Link>
@@ -702,12 +712,20 @@ export default function Dashboard() {
           {/* Card 2: Herbal & Medication Safety */}
           <Link
             to="/app/safety"
-            className="rounded-2xl p-5 flex flex-col items-center gap-3 text-center bg-[#f0f7f4] border border-[#cce4d8] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+            className={`rounded-2xl p-5 flex flex-col items-center gap-3 text-center shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group ${
+              theme === "ocean-blue"
+                ? "bg-[#f0fdf4]/90 border border-[#bbf7d0] backdrop-blur-md"
+                : "bg-[#f0f7f4] border border-[#cce4d8]"
+            }`}
           >
-            <div className="w-13 h-13 rounded-full bg-[#e0f0e8] border border-[#b8dbc9] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
-              <Leaf className="w-6 h-6 text-[#2d6a4f]" strokeWidth={1.75} />
+            <div className={`w-13 h-13 rounded-full flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform ${
+              theme === "ocean-blue"
+                ? "bg-[#dcfce7] border border-[#86efac]"
+                : "bg-[#e0f0e8] border border-[#b8dbc9]"
+            }`}>
+              <Leaf className={`w-6 h-6 ${theme === "ocean-blue" ? "text-[#059669]" : "text-[#2d6a4f]"}`} strokeWidth={1.75} />
             </div>
-            <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
+            <span className={`text-label-md text-sm leading-tight font-semibold ${theme === "ocean-blue" ? "text-[#0f172a]" : "text-[#2b2522]"}`}>
               {lang === "twi" ? "Afifide & Nnuro" : "Herbal & Medication Safety"}
             </span>
           </Link>
@@ -715,12 +733,20 @@ export default function Dashboard() {
           {/* Card 3: Maternal Health FAQs */}
           <Link
             to="/app/triage"
-            className="rounded-2xl p-5 flex flex-col items-center gap-3 text-center bg-[#fff8ee] border border-[#fce4c4] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+            className={`rounded-2xl p-5 flex flex-col items-center gap-3 text-center shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group ${
+              theme === "ocean-blue"
+                ? "bg-[#fef3c7]/60 border border-[#fde68a] backdrop-blur-md"
+                : "bg-[#fff8ee] border border-[#fce4c4]"
+            }`}
           >
-            <div className="w-13 h-13 rounded-full bg-[#fdedd7] border border-[#fbd8a8] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
-              <HelpCircle className="w-6 h-6 text-[#d97706]" strokeWidth={1.75} />
+            <div className={`w-13 h-13 rounded-full flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform ${
+              theme === "ocean-blue"
+                ? "bg-[#fef3c7] border border-[#fcd34d]"
+                : "bg-[#fdedd7] border border-[#fbd8a8]"
+            }`}>
+              <HelpCircle className={`w-6 h-6 ${theme === "ocean-blue" ? "text-[#d97706]" : "text-[#d97706]"}`} strokeWidth={1.75} />
             </div>
-            <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
+            <span className={`text-label-md text-sm leading-tight font-semibold ${theme === "ocean-blue" ? "text-[#0f172a]" : "text-[#2b2522]"}`}>
               {lang === "twi" ? "Nsɛmmisa (FAQs)" : "Maternal Health FAQs"}
             </span>
           </Link>
@@ -728,12 +754,20 @@ export default function Dashboard() {
           {/* Card 4: Log Daily Vitals */}
           <Link
             to="/app/vitals"
-            className="rounded-2xl p-5 flex flex-col items-center gap-3 text-center bg-[#fdf2f8] border border-[#fbcfe8] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+            className={`rounded-2xl p-5 flex flex-col items-center gap-3 text-center shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group ${
+              theme === "ocean-blue"
+                ? "bg-[#dbeafe]/80 border border-[#bfdbfe] backdrop-blur-md"
+                : "bg-[#fdf2f8] border border-[#fbcfe8]"
+            }`}
           >
-            <div className="w-13 h-13 rounded-full bg-[#fce7f3] border border-[#f8b4d9] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
-              <HeartPulse className="w-6 h-6 text-[#db2777]" strokeWidth={1.75} />
+            <div className={`w-13 h-13 rounded-full flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform ${
+              theme === "ocean-blue"
+                ? "bg-[#bfdbfe]/60 border border-[#93c5fd]"
+                : "bg-[#fce7f3] border border-[#f8b4d9]"
+            }`}>
+              <HeartPulse className={`w-6 h-6 ${theme === "ocean-blue" ? "text-[#2563eb]" : "text-[#db2777]"}`} strokeWidth={1.75} />
             </div>
-            <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
+            <span className={`text-label-md text-sm leading-tight font-semibold ${theme === "ocean-blue" ? "text-[#0f172a]" : "text-[#2b2522]"}`}>
               {lang === "twi" ? "Gye Apomuden Nkae" : "Log Daily Vitals"}
             </span>
           </Link>
@@ -741,13 +775,21 @@ export default function Dashboard() {
           {/* Card 5 Banner: Find Nearby Pharmacy */}
           <Link
             to="/app/care"
-            className="col-span-2 rounded-2xl p-4.5 flex items-center gap-4 bg-[#faf4ee] border border-[#e8dccf] shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all group mt-1"
+            className={`col-span-2 rounded-2xl p-4.5 flex items-center gap-4 shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all group mt-1 ${
+              theme === "ocean-blue"
+                ? "bg-gradient-to-r from-[#0284c7]/15 to-[#2563eb]/15 border border-[#bae6fd] backdrop-blur-md"
+                : "bg-[#faf4ee] border border-[#e8dccf]"
+            }`}
           >
-            <div className="w-12 h-12 rounded-full bg-[#ede1d3] border border-[#dccdc0] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 transition-transform">
-              <MapPin className="w-6 h-6 text-[#a04a36]" strokeWidth={1.75} />
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 transition-transform ${
+              theme === "ocean-blue"
+                ? "bg-[#e0f2fe] border border-[#7dd3fc]"
+                : "bg-[#ede1d3] border border-[#dccdc0]"
+            }`}>
+              <MapPin className={`w-6 h-6 ${theme === "ocean-blue" ? "text-[#0284c7]" : "text-[#a04a36]"}`} strokeWidth={1.75} />
             </div>
             <div className="text-left flex-1 min-w-0">
-              <span className="text-label-md text-[#2b2522] font-semibold block leading-tight">
+              <span className={`text-label-md font-semibold block leading-tight ${theme === "ocean-blue" ? "text-[#0f172a]" : "text-[#2b2522]"}`}>
                 {lang === "twi" ? "Hwɛ Adwumakuw a Ɛbɛn Wo" : "Find Nearby Pharmacy"}
               </span>
               <span className="text-xs text-on-surface-variant/90 mt-1 block">

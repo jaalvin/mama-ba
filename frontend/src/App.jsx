@@ -1,6 +1,6 @@
-import { Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext.jsx";
+import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { LanguageProvider } from "./context/LanguageContext.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
 import { NotificationProvider } from "./context/NotificationContext.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import AppShell from "./components/AppShell.jsx";
@@ -29,10 +29,11 @@ import ClickFeedback from "./components/ClickFeedback.jsx";
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <NotificationProvider>
-          <ClickFeedback />
+    <ThemeProvider>
+      <LanguageProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <ClickFeedback />
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/signin" element={<SignInPage />} />
@@ -82,5 +83,6 @@ export default function App() {
         </NotificationProvider>
       </AuthProvider>
     </LanguageProvider>
+    </ThemeProvider>
   );
 }

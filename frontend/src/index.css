@@ -250,3 +250,84 @@ a:active,
   -webkit-backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(57, 103, 83, 0.3) !important;
 }
+
+/* ══════════════════════════════════════════════════════════════════ */
+/* FUTURISTIC OCEAN BLUE & WHITE GLASSY THEME OVERRIDES              */
+/* ══════════════════════════════════════════════════════════════════ */
+
+[data-theme="ocean-blue"],
+.theme-ocean-blue {
+  --color-primary: #0284c7;
+  --color-primary-container: #e0f2fe;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #0369a1;
+  --color-primary-fixed-dim: #bae6fd;
+
+  --color-secondary: #2563eb;
+  --color-secondary-container: #dbeafe;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #1e40af;
+
+  --color-tertiary: #0d9488;
+  --color-tertiary-container: #ccfbf1;
+
+  --color-background: #f0f6ff;
+  --color-on-background: #0f172a;
+
+  --color-surface: #ffffff;
+  --color-surface-dim: #f8fafc;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f0f6ff;
+  --color-surface-container: #e2e8f0;
+  --color-surface-container-high: #cbd5e1;
+  --color-surface-container-highest: #94a3b8;
+  --color-on-surface: #0f172a;
+  --color-on-surface-variant: #475569;
+
+  --color-outline: #94a3b8;
+  --color-outline-variant: #e2e8f0;
+
+  --color-clay-red: #0284c7;
+  --color-earthen-ochre: #0284c7;
+  --color-forest-green: #0284c7;
+}
+
+.theme-ocean-blue body,
+.theme-ocean-blue {
+  background-color: #f0f6ff !important;
+}
+
+.theme-ocean-blue .ios-liquid-header {
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(28px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8) !important;
+  box-shadow: 0 4px 24px -4px rgba(2, 132, 199, 0.08) !important;
+}
+
+.theme-ocean-blue .whatsapp-glass-nav {
+  background: rgba(240, 246, 255, 0.78) !important;
+  backdrop-filter: blur(32px) saturate(220%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(220%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.85) !important;
+  box-shadow: inset 0 1px 2px 0 rgba(255, 255, 255, 0.9), 0 14px 40px -6px rgba(2, 132, 199, 0.16) !important;
+}
+
+.theme-ocean-blue .whatsapp-glass-tab-active {
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
+  box-shadow: inset 0 1px 2px 0 rgba(255, 255, 255, 0.4), 0 6px 20px rgba(2, 132, 199, 0.35) !important;
+}
+
+.theme-ocean-blue .whatsapp-glass-tab-active span {
+  color: #ffffff !important;
+}
+
+.theme-ocean-blue .ios-glass-card {
+  background: rgba(255, 255, 255, 0.94) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  box-shadow: 0 10px 30px -5px rgba(2, 132, 199, 0.06) !important;
+}
