@@ -91,7 +91,7 @@ export default function AppShell() {
             {/* Pharmacy button */}
             <NavLink
               to="/app/care"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/60 dark:bg-black/30 backdrop-blur-md border border-white/40 text-xs font-semibold text-on-surface-variant hover:text-primary transition-all shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-white/80 text-xs font-semibold text-on-surface-variant hover:text-primary transition-all shadow-xs"
             >
               <span className="material-symbols-outlined text-[18px] text-primary">local_pharmacy</span>
               <span>{lang === "twi" ? "Nnuro Dwa" : "Pharmacy"}</span>
@@ -101,7 +101,7 @@ export default function AppShell() {
             <button
               onClick={() => setPanelOpen(true)}
               aria-label={lang === "twi" ? "Hwɛ Nkra" : "View notifications"}
-              className="relative p-2 rounded-full bg-white/60 dark:bg-black/30 backdrop-blur-md border border-white/40 text-on-surface-variant hover:text-primary transition-all flex items-center justify-center shadow-xs"
+              className="relative p-2 rounded-full bg-white/90 backdrop-blur-md border border-white/80 text-on-surface-variant hover:text-primary transition-all flex items-center justify-center shadow-xs"
             >
               <span className="material-symbols-outlined text-[20px]">
                 {unreadCount > 0 ? "notifications_active" : "notifications"}

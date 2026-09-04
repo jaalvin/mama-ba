@@ -453,9 +453,6 @@ export default function Profile() {
               <p className="font-headline font-bold text-xs text-[#2b2522]">
                 {lang === "twi" ? "Warm Rose" : "Warm Rose"}
               </p>
-              <span className="text-[10px] text-on-surface-variant font-medium block mt-0.5">
-                {lang === "twi" ? "Default" : "Classic Warmth"}
-              </span>
             </div>
             {theme === "rose" && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#9e4432] text-white mt-1 shadow-xs">
@@ -486,9 +483,6 @@ export default function Profile() {
               <p className="font-headline font-bold text-xs text-[#0f172a]">
                 {lang === "twi" ? "Ocean Blue" : "Glassy Blue"}
               </p>
-              <span className="text-[10px] text-on-surface-variant font-medium block mt-0.5">
-                {lang === "twi" ? "Futuristic" : "Futuristic iOS26"}
-              </span>
             </div>
             {theme === "ocean-blue" && (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0284c7] text-white mt-1 shadow-xs">

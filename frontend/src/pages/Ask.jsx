@@ -67,14 +67,29 @@ export default function Ask() {
     return () => clearTimeout(id);
   }, [messages]);
 
-  // Reload chat history if active user changes
+  // Reload chat history if active user changes & sync with backend API
   useEffect(() => {
+    let localMsgs = [DEFAULT_GREETING];
     try {
       const stored = localStorage.getItem(chatStoreKey);
-      setMessages(stored ? JSON.parse(stored) : [DEFAULT_GREETING]);
+      if (stored) localMsgs = JSON.parse(stored);
     } catch {
-      setMessages([DEFAULT_GREETING]);
+      localMsgs = [DEFAULT_GREETING];
     }
+    setMessages(localMsgs);
+
+    // Sync with backend persistent chat memory
+    api.getChatHistory(activeUid).then((res) => {
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        const remoteMsgs = res.data.flatMap((h) => [
+          { id: `u-${h.id || Date.now()}`, role: "user", en: h.user_query, twi: h.user_query },
+          { id: `a-${h.id || Date.now()}`, role: "assistant", en: h.answer_english || h.answer_twi, twi: h.answer_twi || h.answer_english }
+        ]);
+        if (remoteMsgs.length > 0) {
+          setMessages([DEFAULT_GREETING, ...remoteMsgs]);
+        }
+      }
+    }).catch(() => {});
   }, [activeUid, chatStoreKey]);
 
   // Persist messages to active user's storage

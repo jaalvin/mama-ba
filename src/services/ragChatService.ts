@@ -1,11 +1,13 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { CONFIG, getOfflineDb } from '../config';
 import { supabaseAdmin } from '../lib/supabaseAdmin';
+import { VitalsService } from './vitalsService';
 
 export interface ChatRequest {
   userId: string;
   query: string;
   language?: 'twi' | 'english' | 'dual';
+  sessionMemory?: string;
 }
 
 export interface ChatResponse {
@@ -66,6 +68,7 @@ export class RAGChatService {
     const db = getOfflineDb();
     const originalQuery = req.query.trim();
     const englishQuery = originalQuery;
+    const targetUserId = req.userId || 'demo-patient-001';
 
     // 1. Retrieve Gold-Standard Reference Q&A from SQLite (Ghana Maternal Dataset)
     const qaStmt = db.prepare(`SELECT * FROM offline_knowledge_qa`);
@@ -102,7 +105,52 @@ export class RAGChatService {
       }
     }
 
-    // 1b. Clean response helper to strip headers, bold, bullets, hyphens, and put question at the end
+    // 1b. Fetch patient clinical vitals logs
+    let vitalsSummary = "No recent vitals logged.";
+    try {
+      const recentVitals = await VitalsService.getVitalsHistory(targetUserId, 5);
+      if (recentVitals && recentVitals.length > 0) {
+        vitalsSummary = recentVitals.map((v: any) => {
+          const bp = (v.systolic_bp || v.bp_systolic) && (v.diastolic_bp || v.bp_diastolic) ? `BP: ${v.systolic_bp || v.bp_systolic}/${v.diastolic_bp || v.bp_diastolic} mmHg` : null;
+          const temp = v.body_temperature ? `Temp: ${v.body_temperature}°C` : null;
+          const sugar = v.blood_glucose ? `Blood Sugar: ${v.blood_glucose} mmol/L` : null;
+          const weight = v.weight_kg ? `Weight: ${v.weight_kg}kg` : null;
+          const status = v.vital_status ? `Status: ${v.vital_status}` : null;
+          return [bp, temp, sugar, weight, status].filter(Boolean).join(", ") + ` (Logged: ${v.logged_at ? String(v.logged_at).slice(0, 10) : 'Recent'})`;
+        }).join("\n");
+      }
+    } catch (e) {
+      console.warn('[RAG] Vitals history fetch notice:', e);
+    }
+
+    // 1c. Fetch patient health diary entries
+    let journalSummary = "No health diary entries.";
+    try {
+      const recentJournals = VitalsService.getJournalHistory(targetUserId);
+      if (recentJournals && recentJournals.length > 0) {
+        journalSummary = (recentJournals as any[]).slice(0, 3).map((j: any) => {
+          const symptoms = j.symptoms_noted ? (typeof j.symptoms_noted === 'string' ? j.symptoms_noted : JSON.stringify(j.symptoms_noted)) : "None";
+          return `Date: ${j.entry_date}, Mood: ${j.mood || 'N/A'}, Symptoms: ${symptoms}, Notes: ${j.notes_text || 'None'}`;
+        }).join("\n");
+      }
+    } catch (e) {
+      console.warn('[RAG] Journal history fetch notice:', e);
+    }
+
+    // 1d. Fetch persistent chat history memory
+    let historyContext = "";
+    try {
+      const pastHistory = await RAGChatService.getChatHistory(targetUserId, 8);
+      if (pastHistory && pastHistory.length > 0) {
+        historyContext = (pastHistory as any[]).map((h: any) =>
+          `User: "${h.user_query}"\nAbena AI: "${h.answer_english || h.answer_twi}"`
+        ).join("\n");
+      }
+    } catch (e) {
+      console.warn('[RAG] Chat history fetch notice:', e);
+    }
+
+    // 1e. Clean response helper to strip headers, bold, bullets, hyphens, and put question at the end
     const sanitizeText = (text: string): string => {
       if (!text) return "";
       let clean = text
@@ -145,13 +193,26 @@ export class RAGChatService {
 You are "Mama Ba" (The Guided Health Companion) — an empathetic, culturally grounded healthcare AI supporting Ghanaian mothers and caregivers.
 Keep your response concise, empathetic, and short (max 60–90 words total).
 
-STRICT OUTPUT RULES:
+PATIENT CLINICAL VITAL LOGS CONTEXT:
+${vitalsSummary}
+
+PATIENT HEALTH DIARY LOGS:
+${journalSummary}
+
+${req.sessionMemory ? `APP SESSION ACTIVITY / AI MEMORY:\n${req.sessionMemory}\n` : ''}
+
+PREVIOUS CHAT CONVERSATION HISTORY (PERSISTENT MEMORY):
+${historyContext || 'No previous chat history.'}
+
+STRICT CLINICAL & MEMORY INSTRUCTIONS:
+- You MUST consider the patient's recorded vital logs (BP, temperature, blood sugar, weight) and health diary notes to make informed, personalized decisions about what is going on with the patient.
+- Remember details from previous chat conversations above and cross-reference them with the current query.
 - Do NOT output any section headers or category titles (such as "Warm Validation", "Common Reasons", "Practical Home Measures", "Red-Flag Danger Signs", etc.).
 - Do NOT use any bolding (**), bullet points (*, -, •), or hyphens before sentences.
 - Write in plain, fluid sentences.
 - If you ask a follow-up question, put it at the VERY END of your response.
 
-User Query: "${englishQuery}"
+Current User Query: "${englishQuery}"
 
 Local Guidance Reference:
 - English: "${bestMatch ? bestMatch.answer_english : 'Eat iron-rich foods like Kontomire, stay hydrated, and rest.'}"
@@ -276,7 +337,6 @@ JSON Output Format (Strictly valid JSON):
 
     // Save interaction to SQLite history table & Supabase Cloud
     const chatId = `chat-${Date.now()}`;
-    const targetUserId = req.userId || 'demo-patient-001';
 
     try {
       const saveStmt = db.prepare(`

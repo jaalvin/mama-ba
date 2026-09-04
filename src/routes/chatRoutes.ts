@@ -9,7 +9,7 @@ const router = Router();
 // POST /api/v1/chat/query
 router.post('/query', async (req: Request, res: Response) => {
   try {
-    const { userId, query, language } = req.body;
+    const { userId, query, language, sessionMemory } = req.body;
     const activeUserId = (req.headers['x-user-id'] as string) || userId || 'anonymous-user';
 
     if (!query) {
@@ -18,7 +18,8 @@ router.post('/query', async (req: Request, res: Response) => {
     const result = await RAGChatService.processQuery({
       userId: activeUserId,
       query,
-      language: language || 'twi'
+      language: language || 'twi',
+      sessionMemory
     });
     res.json({ success: true, data: result });
   } catch (error: any) {

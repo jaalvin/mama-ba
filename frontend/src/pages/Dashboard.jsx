@@ -306,6 +306,16 @@ export default function Dashboard() {
             setVcThinking(false);
             setVcReply({ en: replyEn, twi: replyTwi });
 
+            // Persist voice turn into shared persistent chat memory
+            try {
+              const chatStoreKey = `mama_ba_usr_${activeUid}_chat_history`;
+              const existingStr = localStorage.getItem(chatStoreKey);
+              const existing = existingStr ? JSON.parse(existingStr) : [];
+              const uMsg = { id: Date.now(), role: "user", en: transcript, twi: transcript };
+              const aMsg = { id: Date.now() + 1, role: "assistant", en: replyEn, twi: replyTwi };
+              localStorage.setItem(chatStoreKey, JSON.stringify([...existing, uMsg, aMsg]));
+            } catch (e) { /* ignore */ }
+
             // Speak the reply in the active voice language
             const textToSpeak = voiceLang === "twi" ? replyTwi : replyEn;
             const langCode = voiceLang === "twi" ? "ak" : "en";

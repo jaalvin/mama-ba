@@ -572,5 +572,8 @@ export const api = {
   async getVitalsHistory(userId = "demo-patient-001") {
     return backendFetch(`/vitals/history/${encodeURIComponent(userId)}`);
   },
+  async getChatHistory(userId = "demo-patient-001") {
+    return backendFetch(`/chat/history/${encodeURIComponent(userId)}`);
+  },
 };
 
