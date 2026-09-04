@@ -341,10 +341,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="px-4 py-6 md:px-6 flex flex-col gap-6 max-w-lg mx-auto pb-24">
+    <div className="px-4 py-7 md:px-6 flex flex-col gap-9 max-w-lg mx-auto pb-28">
 
       {/* ═══ HERO PREGNANCY PROGRESS RING SECTION ═══ */}
-      <section className="flex flex-col items-center text-center gap-2">
+      <section className="flex flex-col items-center text-center gap-3">
         {/* Circular Progress Display */}
         <div
           onClick={() => !week && setShowDueDateModal(true)}
@@ -681,17 +681,17 @@ export default function Dashboard() {
       )}
 
       {/* ═══ QUICK ACTIONS ═══ */}
-      <section>
-        <h2 className="font-headline text-headline-md text-on-surface mb-3">
+      <section className="pt-2">
+        <h2 className="font-headline text-headline-md text-on-surface mb-4">
           {lang === "twi" ? "Yɛ biribi ntɛm" : "Quick Actions"}
         </h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3.5">
           {/* Card 1: Maternal & Baby Tracker */}
           <Link
             to="/app/maternal"
-            className="rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center bg-[#fff3f0] border border-[#fcd7cf] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+            className="rounded-2xl p-5 flex flex-col items-center gap-3 text-center bg-[#fff3f0] border border-[#fcd7cf] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
           >
-            <div className="w-12 h-12 rounded-full bg-[#fde5e0] border border-[#f9c7be] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
+            <div className="w-13 h-13 rounded-full bg-[#fde5e0] border border-[#f9c7be] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
               <Baby className="w-6 h-6 text-[#c24632]" strokeWidth={1.75} />
             </div>
             <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
@@ -702,9 +702,9 @@ export default function Dashboard() {
           {/* Card 2: Herbal & Medication Safety */}
           <Link
             to="/app/safety"
-            className="rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center bg-[#f0f7f4] border border-[#cce4d8] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+            className="rounded-2xl p-5 flex flex-col items-center gap-3 text-center bg-[#f0f7f4] border border-[#cce4d8] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
           >
-            <div className="w-12 h-12 rounded-full bg-[#e0f0e8] border border-[#b8dbc9] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
+            <div className="w-13 h-13 rounded-full bg-[#e0f0e8] border border-[#b8dbc9] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
               <Leaf className="w-6 h-6 text-[#2d6a4f]" strokeWidth={1.75} />
             </div>
             <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
@@ -715,9 +715,9 @@ export default function Dashboard() {
           {/* Card 3: Maternal Health FAQs */}
           <Link
             to="/app/triage"
-            className="rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center bg-[#fff8ee] border border-[#fce4c4] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+            className="rounded-2xl p-5 flex flex-col items-center gap-3 text-center bg-[#fff8ee] border border-[#fce4c4] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
           >
-            <div className="w-12 h-12 rounded-full bg-[#fdedd7] border border-[#fbd8a8] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
+            <div className="w-13 h-13 rounded-full bg-[#fdedd7] border border-[#fbd8a8] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
               <HelpCircle className="w-6 h-6 text-[#d97706]" strokeWidth={1.75} />
             </div>
             <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
@@ -728,9 +728,9 @@ export default function Dashboard() {
           {/* Card 4: Log Daily Vitals */}
           <Link
             to="/app/vitals"
-            className="rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center bg-[#fdf2f8] border border-[#fbcfe8] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+            className="rounded-2xl p-5 flex flex-col items-center gap-3 text-center bg-[#fdf2f8] border border-[#fbcfe8] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
           >
-            <div className="w-12 h-12 rounded-full bg-[#fce7f3] border border-[#f8b4d9] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
+            <div className="w-13 h-13 rounded-full bg-[#fce7f3] border border-[#f8b4d9] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
               <HeartPulse className="w-6 h-6 text-[#db2777]" strokeWidth={1.75} />
             </div>
             <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
@@ -741,7 +741,7 @@ export default function Dashboard() {
           {/* Card 5 Banner: Find Nearby Pharmacy */}
           <Link
             to="/app/care"
-            className="col-span-2 rounded-2xl p-4 flex items-center gap-4 bg-[#faf4ee] border border-[#e8dccf] shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all group"
+            className="col-span-2 rounded-2xl p-4.5 flex items-center gap-4 bg-[#faf4ee] border border-[#e8dccf] shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all group mt-1"
           >
             <div className="w-12 h-12 rounded-full bg-[#ede1d3] border border-[#dccdc0] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 transition-transform">
               <MapPin className="w-6 h-6 text-[#a04a36]" strokeWidth={1.75} />
@@ -750,7 +750,7 @@ export default function Dashboard() {
               <span className="text-label-md text-[#2b2522] font-semibold block leading-tight">
                 {lang === "twi" ? "Hwɛ Adwumakuw a Ɛbɛn Wo" : "Find Nearby Pharmacy"}
               </span>
-              <span className="text-xs text-on-surface-variant/90 mt-0.5 block">
+              <span className="text-xs text-on-surface-variant/90 mt-1 block">
                 {lang === "twi" ? "Ayaresabea ne Adwumakuw" : "Book appointments & order meds"}
               </span>
             </div>
@@ -760,22 +760,22 @@ export default function Dashboard() {
       </section>
 
       {/* ═══ TODAY'S MEDICATIONS ═══ */}
-      <section>
-        <div className="flex items-center justify-between mb-3">
+      <section className="pt-2">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="font-headline text-headline-md text-on-surface">
             {lang === "twi" ? "Nnuro Ɛnnɛ" : "Today's Medications"}
           </h2>
           <button
             onClick={() => setAddOpen(o => !o)}
             aria-label={lang === "twi" ? "Fa nnuro" : "Add medication"}
-            className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors"
+            className="p-2 rounded-full text-primary hover:bg-primary/10 transition-colors"
           >
             <Plus className="w-5 h-5" />
           </button>
         </div>
 
         {addOpen && (
-          <form onSubmit={handleAddMed} className="mb-3 ios-glass-card rounded-2xl p-4 flex flex-col gap-3">
+          <form onSubmit={handleAddMed} className="mb-4 ios-glass-card rounded-2xl p-4.5 flex flex-col gap-3">
             <p className="text-sm font-semibold text-on-surface">{lang === "twi" ? "Fa Nnuro Foforo" : "Add Medication"}</p>
             <input
               type="text" required
@@ -805,11 +805,11 @@ export default function Dashboard() {
         )}
 
         <div className="ios-glass-card rounded-2xl overflow-hidden shadow-sm">
-          {medsLoading && <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>}
+          {medsLoading && <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>}
 
           {!medsLoading && meds.length === 0 && (
-            <div className="flex flex-col items-center gap-2 py-8 text-on-surface-variant">
-              <span className="material-symbols-outlined text-3xl opacity-40">medication</span>
+            <div className="flex flex-col items-center gap-2.5 py-10 text-on-surface-variant">
+              <span className="material-symbols-outlined text-4xl opacity-40">medication</span>
               <p className="text-sm">{lang === "twi" ? "Nnuro biara nni hɔ" : "No medications added yet"}</p>
               <button onClick={() => setAddOpen(true)} className="text-xs text-primary font-semibold mt-1">
                 + {lang === "twi" ? "Fa nnuro" : "Add one"}
@@ -818,9 +818,9 @@ export default function Dashboard() {
           )}
 
           {!medsLoading && meds.length > 0 && (
-            <div className="divide-y divide-outline-variant">
+            <div className="divide-y divide-outline-variant/60">
               {meds.map(med => (
-                <div key={med.id} className="flex items-center gap-3 px-4 py-4">
+                <div key={med.id} className="flex items-center gap-3.5 px-5 py-4.5">
                   <button onClick={() => toggleMed(med.id)}
                     className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
                       checked.includes(med.id) ? "bg-forest-green border-forest-green" : "border-outline-variant"
@@ -831,13 +831,13 @@ export default function Dashboard() {
                     <p className={`font-semibold text-sm ${checked.includes(med.id) ? "line-through text-on-surface-variant" : "text-on-surface"}`}>
                       {med.label}
                     </p>
-                    <p className="text-xs text-on-surface-variant mt-0.5 flex items-center gap-1">
+                    <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-1.5">
                       <Clock className="w-3.5 h-3.5" strokeWidth={1.5} />
                       {lang === "twi" ? `Gye ${med.time}` : `Take at ${med.time}`}
                     </p>
                   </div>
                   <button onClick={() => handleDeleteMed(med.id)} aria-label="Remove medication"
-                    className="p-1.5 text-outline hover:text-error transition-colors rounded-full hover:bg-error/10">
+                    className="p-2 text-outline hover:text-error transition-colors rounded-full hover:bg-error/10">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -851,17 +851,17 @@ export default function Dashboard() {
       {(() => {
         const todayTip = getTodayTip(lang);
         return (
-          <section>
-            <div className="flex items-center justify-between mb-3">
+          <section className="pt-2">
+            <div className="flex items-center justify-between mb-4">
               <h2 className="font-headline text-headline-md text-on-surface">
                 {lang === "twi" ? "Afotu ma Wo Ɛnnɛ" : "Today's Daily Tip for You"}
               </h2>
             </div>
             <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden flex flex-col shadow-sm">
-              <div className="w-full h-44 bg-[#F8EFE6] relative overflow-hidden">
+              <div className="w-full h-48 bg-[#F8EFE6] relative overflow-hidden">
                 <img src="https://media.istockphoto.com/id/2229743222/photo/pregnant-woman-in-therapy-session-mental-health-care.webp?a=1&b=1&s=612x612&w=0&k=20&c=SpsvNV36yQOW7rVv4C00R8KP8XiBzW8RVZwohmUKhOQ=" alt="Daily Wellness Tip" className="w-full h-full object-cover mix-blend-multiply opacity-90" />
               </div>
-              <div className="p-4 flex flex-col gap-2">
+              <div className="p-5 flex flex-col gap-2.5">
                 <span className="text-sm font-bold text-[#964B22] flex items-center gap-1.5">
                   <span>{todayTip.title}</span>
                 </span>
