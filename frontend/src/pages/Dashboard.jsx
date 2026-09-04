@@ -7,6 +7,7 @@ import { medications as medsAPI, api } from "../services/api.js";
 import { showDeviceNotification, scheduleAlarm, nextOccurrenceMs } from "../services/notifications.js";
 import { playNeuralSpeech, stopNeuralSpeech } from "../services/speech.js";
 import { startVoiceRecording, stopVoiceRecording } from "../services/voiceRecorder.js";
+import { getTodayTip } from "../services/tipScheduler.js";
 import { supabase } from "../lib/supabase.js";
 import {
   Baby, Leaf, HelpCircle, HeartPulse, MapPin,
@@ -800,27 +801,35 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* ═══ THIS WEEK TIP ═══ */}
-      {week && (
-        <section>
-          <h2 className="font-headline text-headline-md text-on-surface mb-3">
-            {lang === "twi" ? "Nnawɔtwe Yi Mu Afotu" : "This Week for You"}
-          </h2>
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden flex flex-col shadow-sm">
-            <div className="w-full h-48 bg-[#F8EFE6] relative overflow-hidden">
-              <img src="https://media.istockphoto.com/id/2229743222/photo/pregnant-woman-in-therapy-session-mental-health-care.webp?a=1&b=1&s=612x612&w=0&k=20&c=SpsvNV36yQOW7rVv4C00R8KP8XiBzW8RVZwohmUKhOQ=" alt="Weekly Wellness Tip" className="w-full h-full object-cover mix-blend-multiply opacity-90" />
+      {/* ═══ TODAY'S DAILY TIP ═══ */}
+      {(() => {
+        const todayTip = getTodayTip(lang);
+        return (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-headline text-headline-md text-on-surface">
+                {lang === "twi" ? "Afotu ma Wo Ɛnnɛ" : "Today's Daily Tip for You"}
+              </h2>
+              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {lang === "twi" ? `Da ${new Date().getDate()}` : `Day ${new Date().getDate()}`}
+              </span>
             </div>
-            <div className="p-4 flex flex-col gap-2">
-              <span className="text-sm font-bold text-[#964B22]">{lang === "twi" ? "Ahomegye ne Nsuonom" : "Rest & Hydration"}</span>
-              <p className="text-sm text-on-surface-variant leading-relaxed">
-                {lang === "twi"
-                  ? "Sɛ wo ba no renyini ntɛmntɛm nnawɔtwe yi a, wubetumi atumi abrɛ paa. Bɔ mmɔden nom nsuo kuruwa 8 da biara na ma wo nan so..."
-                  : "As your baby grows rapidly this week, you might feel more fatigued. Aim for 8 glasses of water a day and elevate your feet when resting..."}
-              </p>
+            <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden flex flex-col shadow-sm">
+              <div className="w-full h-44 bg-[#F8EFE6] relative overflow-hidden">
+                <img src="https://media.istockphoto.com/id/2229743222/photo/pregnant-woman-in-therapy-session-mental-health-care.webp?a=1&b=1&s=612x612&w=0&k=20&c=SpsvNV36yQOW7rVv4C00R8KP8XiBzW8RVZwohmUKhOQ=" alt="Daily Wellness Tip" className="w-full h-full object-cover mix-blend-multiply opacity-90" />
+              </div>
+              <div className="p-4 flex flex-col gap-2">
+                <span className="text-sm font-bold text-[#964B22] flex items-center gap-1.5">
+                  <span>{todayTip.title}</span>
+                </span>
+                <p className="text-sm text-on-surface-variant leading-relaxed">
+                  {todayTip.body}
+                </p>
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        );
+      })()}
 
       {/* ═══ QUICK DUE DATE MODAL ═══ */}
       {showDueDateModal && (

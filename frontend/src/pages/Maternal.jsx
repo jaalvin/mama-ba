@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
 import { ancAppointments as ancApptAPI, vaccines as vaccAPI } from "../services/api.js";
 import { scheduleAlarm } from "../services/notifications.js";
-import { Plus, Trash2, Check, ChevronDown, ChevronUp, Loader2, CalendarClock } from "lucide-react";
+import { Plus, Trash2, Check, ChevronDown, ChevronUp, Loader2, CalendarClock, Video, UserCheck, ExternalLink } from "lucide-react";
 
 // ── WHO/GHS ANC Visit Definitions — Reference Guide (frontend-owned) ─────────
 const WHO_VISITS = [
@@ -74,6 +74,14 @@ export default function Maternal() {
   const [apptDate,     setApptDate]     = useState("");
   const [apptTime,     setApptTime]     = useState("");
   const [apptNotes,    setApptNotes]    = useState("");
+  const [visitType,    setVisitType]    = useState("inperson");
+  const [zoomUrl,      setZoomUrl]      = useState("https://zoom.us/join");
+  const [now,          setNow]          = useState(Date.now());
+
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(tick);
+  }, []);
 
   // WHO guide toggle
   const [guideOpen, setGuideOpen] = useState(false);
@@ -126,6 +134,8 @@ export default function Maternal() {
         hospital: apptHospital.trim(),
         date:     apptDate,
         time:     apptTime,
+        visitType,
+        zoomUrl:  zoomUrl.trim() || "https://zoom.us/join",
         notes:    apptNotes.trim(),
       };
       const item = await ancApptAPI.create(accessToken, payload);
@@ -144,6 +154,7 @@ export default function Maternal() {
       });
 
       setApptTitle(""); setApptHospital(""); setApptDate(""); setApptTime(""); setApptNotes("");
+      setVisitType("inperson"); setZoomUrl("https://zoom.us/join");
       setFormOpen(false);
     } finally {
       setSaving(false);
@@ -249,6 +260,50 @@ export default function Maternal() {
             className="w-full bg-surface-container border border-outline-variant rounded-xl px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary"
           />
 
+          {/* Consultation Type */}
+          <div>
+            <label className="text-xs text-on-surface-variant mb-1 block font-semibold">
+              {lang === "twi" ? "Nhyiam Sɛn?" : "Consultation Mode"}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setVisitType("inperson")}
+                className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                  visitType === "inperson" ? "bg-primary text-on-primary border-primary" : "bg-surface-container text-on-surface-variant border-outline-variant"
+                }`}
+              >
+                <UserCheck className="w-3.5 h-3.5" />
+                <span>{lang === "twi" ? "Kɔ Ananmu" : "In-Person"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisitType("virtual")}
+                className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                  visitType === "virtual" ? "bg-primary text-on-primary border-primary" : "bg-surface-container text-on-surface-variant border-outline-variant"
+                }`}
+              >
+                <Video className="w-3.5 h-3.5" />
+                <span>Virtual (Zoom)</span>
+              </button>
+            </div>
+          </div>
+
+          {visitType === "virtual" && (
+            <div>
+              <label className="text-xs text-on-surface-variant mb-1 block font-semibold">
+                {lang === "twi" ? "Zoom Link (Optional)" : "Zoom Meeting Link"}
+              </label>
+              <input
+                type="url"
+                placeholder="https://zoom.us/j/123456789"
+                value={zoomUrl}
+                onChange={e => setZoomUrl(e.target.value)}
+                className="w-full bg-surface-container border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-primary"
+              />
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-on-surface-variant mb-1 block">{lang === "twi" ? "Da" : "Date"}</label>
@@ -305,28 +360,57 @@ export default function Maternal() {
         </div>
       ) : (
         <div className="flex flex-col gap-3 mb-6">
-          {upcomingAppts.map(appt => (
-            <div key={appt.id} className="bg-surface-container-lowest border border-primary/20 rounded-2xl p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1">
-                  <p className="font-semibold text-sm text-on-surface">{appt.title}</p>
-                  {appt.hospital && <p className="text-xs text-on-surface-variant mt-0.5">{appt.hospital}</p>}
-                  <p className="text-xs text-primary font-semibold mt-1">{formatDateTime(appt.date, appt.time)}</p>
-                  {appt.notes && <p className="text-xs text-on-surface-variant mt-1 italic">{appt.notes}</p>}
+          {upcomingAppts.map(appt => {
+            const apptMs = new Date(`${appt.date}T${appt.time}`).getTime();
+            const isVirtual = appt.visitType === "virtual" || appt.appointmentType === "VIRTUAL";
+            // Show Zoom join button ONLY when the virtual appointment time is up / reached (now >= apptMs)
+            const isTimeUp = isVirtual && !isNaN(apptMs) && now >= apptMs;
+            return (
+              <div key={appt.id} className="bg-surface-container-lowest border border-primary/20 rounded-2xl p-4 flex flex-col gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <p className="font-semibold text-sm text-on-surface">{appt.title}</p>
+                    {appt.hospital && <p className="text-xs text-on-surface-variant mt-0.5">{appt.hospital}</p>}
+                    <p className="text-xs text-primary font-semibold mt-1">{formatDateTime(appt.date, appt.time)}</p>
+                    <p className="text-xs text-on-surface-variant font-medium mt-0.5">
+                      {isVirtual ? "💻 Virtual Consult (Zoom)" : "🏥 In-Person Visit"}
+                    </p>
+                    {appt.notes && <p className="text-xs text-on-surface-variant mt-1 italic">{appt.notes}</p>}
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button onClick={() => handleToggleDone(appt.id, appt.done)}
+                      className="w-7 h-7 rounded-full border-2 border-forest-green flex items-center justify-center hover:bg-forest-green/10 transition-colors">
+                      <Check className="w-4 h-4 text-forest-green" strokeWidth={2.5} />
+                    </button>
+                    <button onClick={() => handleDeleteAppt(appt.id)}
+                      className="w-7 h-7 rounded-full text-outline hover:text-error hover:bg-error/10 flex items-center justify-center transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-1.5 shrink-0">
-                  <button onClick={() => handleToggleDone(appt.id, appt.done)}
-                    className="w-7 h-7 rounded-full border-2 border-forest-green flex items-center justify-center hover:bg-forest-green/10 transition-colors">
-                    <Check className="w-4 h-4 text-forest-green" strokeWidth={2.5} />
-                  </button>
-                  <button onClick={() => handleDeleteAppt(appt.id)}
-                    className="w-7 h-7 rounded-full text-outline hover:text-error hover:bg-error/10 flex items-center justify-center transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+
+                {isVirtual && isTimeUp && (
+                  <a
+                    href={appt.zoomUrl || "https://zoom.us/join"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full mt-1.5 bg-primary text-on-primary font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm hover:bg-primary/90 active:scale-95 transition-all shadow-md animate-pulse"
+                  >
+                    <Video className="w-4 h-4" />
+                    <span>{lang === "twi" ? "Kɔ Virtual Zoom Nhyiam No Mu" : "Join Zoom Meeting Now"}</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+
+                {isVirtual && !isTimeUp && (
+                  <div className="mt-1 px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/40 flex items-center gap-2 text-xs text-on-surface-variant">
+                    <Video className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <span>{lang === "twi" ? "Virtual Nhyiam — Zoom bɛbue bere a bere no aso" : "Virtual Consult — Zoom Join button activates at appointment time"}</span>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {doneAppts.length > 0 && (
             <div className="flex flex-col gap-2 opacity-60">

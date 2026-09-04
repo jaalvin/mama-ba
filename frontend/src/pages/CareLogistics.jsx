@@ -349,9 +349,9 @@ export default function CareLogistics() {
               {appts.map(appt => {
                 const now = Date.now();
                 const apptMs = new Date(`${appt.date}T${appt.time}`).getTime();
-                const isVirtual = appt.visitType === "virtual";
-                // Show Zoom join window: -15 min before to +60 min after
-                const canJoin = isVirtual && !isNaN(apptMs) && now >= apptMs - 15 * 60 * 1000 && now <= apptMs + 60 * 60 * 1000;
+                const isVirtual = appt.visitType === "virtual" || appt.appointmentType === "VIRTUAL";
+                // Show Zoom join button ONLY when the virtual appointment time is up / reached (now >= apptMs)
+                const isTimeUp = isVirtual && !isNaN(apptMs) && now >= apptMs;
                 return (
                   <div key={appt.id} className="bg-surface-container-lowest border border-primary/20 rounded-2xl p-4 flex flex-col gap-2">
                     <div className="flex items-start justify-between gap-2">
@@ -362,24 +362,32 @@ export default function CareLogistics() {
                           <p className="text-xs text-on-surface-variant">Backup: {appt.backupHospital}</p>
                         )}
                         <p className="text-xs text-primary font-semibold mt-1">{formatApptDateTime(appt.date, appt.time)}</p>
-                        <p className="text-xs text-on-surface-variant capitalize">{appt.visitType === "virtual" ? "Virtual" : "In-Person"}</p>
+                        <p className="text-xs text-on-surface-variant font-medium mt-0.5">
+                          {isVirtual ? "💻 Virtual Consult (Zoom)" : "🏥 In-Person Visit"}
+                        </p>
                       </div>
                       <button onClick={() => handleDeleteAppt(appt.id)}
                         className="p-1.5 text-outline hover:text-error hover:bg-error/10 rounded-full transition-colors shrink-0">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
-                    {canJoin && (
+                    {isVirtual && isTimeUp && (
                       <a
-                        href="https://zoom.us/join"
+                        href={appt.zoomUrl || "https://zoom.us/join"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="w-full bg-primary text-on-primary font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm hover:bg-primary/90 active:scale-95 transition-all animate-pulse"
+                        className="w-full mt-1 bg-primary text-on-primary font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm hover:bg-primary/90 active:scale-95 transition-all shadow-md animate-pulse"
                       >
                         <Video className="w-4 h-4" />
-                        <span>{lang === "twi" ? "Bra Wɔ Virtual Nhyiam No Mu" : "Join Virtual Appointment Now"}</span>
+                        <span>{lang === "twi" ? "Kɔ Virtual Zoom Nhyiam No Mu" : "Join Zoom Meeting Now"}</span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
+                    )}
+                    {isVirtual && !isTimeUp && (
+                      <div className="mt-1 px-3 py-2 rounded-xl bg-surface-container border border-outline-variant/40 flex items-center gap-2 text-xs text-on-surface-variant">
+                        <Video className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span>{lang === "twi" ? "Virtual Nhyiam — Zoom bɛbue bere a bere no aso" : "Virtual Consult — Zoom Join button activates at appointment time"}</span>
+                      </div>
                     )}
                   </div>
                 );
