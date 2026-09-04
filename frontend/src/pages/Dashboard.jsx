@@ -856,9 +856,6 @@ export default function Dashboard() {
               <h2 className="font-headline text-headline-md text-on-surface">
                 {lang === "twi" ? "Afotu ma Wo Ɛnnɛ" : "Today's Daily Tip for You"}
               </h2>
-              <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-                {lang === "twi" ? `Da ${new Date().getDate()}` : `Day ${new Date().getDate()}`}
-              </span>
             </div>
             <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden flex flex-col shadow-sm">
               <div className="w-full h-44 bg-[#F8EFE6] relative overflow-hidden">
