@@ -16,7 +16,7 @@
   --color-tertiary: #845311;
   --color-tertiary-container: #b3731d;
 
-  --color-background: #fafafa;
+  --color-background: #ffffff;
   --color-on-background: #18181b;
 
   --color-surface: #ffffff;
@@ -213,11 +213,11 @@ a:active,
 }
 
 .ios-liquid-header {
-  background: rgba(255, 255, 255, 0.92) !important;
-  backdrop-filter: blur(24px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
-  border-bottom: 1px solid rgba(229, 231, 235, 0.6) !important;
-  box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.03) !important;
+  background: #ffffff !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(244, 244, 245, 0.8) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
 }
 
 .ios-glass-pill-active {

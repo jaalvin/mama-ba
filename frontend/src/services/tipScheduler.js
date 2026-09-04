@@ -308,20 +308,40 @@ export async function syncDailyTipPushReminders(uid = "guest", accessToken = "")
   }
 }
 
+let _activeTipTimer = null;
+
 /**
  * Starts the Daily Tip Scheduler.
  * Triggers an in-app pop notification + browser device notification
  * EXACTLY 20 SECONDS into using the app!
  */
 export function startTipScheduler(lang = "en", addNotification) {
+  if (_activeTipTimer) {
+    clearTimeout(_activeTipTimer);
+    _activeTipTimer = null;
+  }
+
   if (!addNotification) return () => {};
 
+  // Check if a tip pop notification was already shown within the last 1 hour
+  const lastFiredStr = localStorage.getItem(TIP_FIRED_KEY);
+  if (lastFiredStr) {
+    const elapsed = Date.now() - Number(lastFiredStr);
+    if (elapsed < 60 * 60 * 1000) {
+      return () => {};
+    }
+  }
+
   // Pop notification exactly 20 seconds (20,000 ms) into using the app
-  const timer20s = setTimeout(() => {
+  _activeTipTimer = setTimeout(() => {
+    _activeTipTimer = null;
     const todayTip = getTodayTip(lang);
 
     try {
-      // 1. Add to in-app notification panel / unread badge
+      localStorage.setItem(TIP_STORE_KEY, String(Date.now()));
+      localStorage.setItem(TIP_FIRED_KEY, String(Date.now()));
+
+      // Add to in-app notification panel (addNotification internally fires device notification)
       addNotification({
         type: todayTip.type === "did_you_know" ? "info" : "reminder",
         titleEn: todayTip.titleEn,
@@ -329,19 +349,15 @@ export function startTipScheduler(lang = "en", addNotification) {
         bodyEn: todayTip.bodyEn,
         bodyTwi: todayTip.bodyTwi,
       });
-
-      // 2. Trigger active device notification pop banner
-      showDeviceNotification(
-        lang === "twi" ? todayTip.titleTwi : todayTip.titleEn,
-        lang === "twi" ? todayTip.bodyTwi : todayTip.bodyEn
-      );
-
-      localStorage.setItem(TIP_STORE_KEY, String(Date.now()));
-      localStorage.setItem(TIP_FIRED_KEY, String(Date.now()));
     } catch (err) {
       /* ignore context errors if unmounted */
     }
   }, 20000); // 20 seconds into using the app
 
-  return () => clearTimeout(timer20s);
+  return () => {
+    if (_activeTipTimer) {
+      clearTimeout(_activeTipTimer);
+      _activeTipTimer = null;
+    }
+  };
 }

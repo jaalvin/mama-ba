@@ -127,9 +127,10 @@ export function startPWAReminderEngine(addNotification, activeUid = "guest") {
           const titleTwi = "💊 Nnuro Bere!";
           const bodyTwi = `Bere a wubegye wo nnuro – ${m.label}`;
 
-          showDeviceNotification(titleEn, bodyEn, { tag: eventId });
           if (addNotification) {
             addNotification({ type: "reminder", titleEn, titleTwi, bodyEn, bodyTwi });
+          } else {
+            showDeviceNotification(titleEn, bodyEn, { tag: eventId });
           }
         }
       });
@@ -152,9 +153,10 @@ export function startPWAReminderEngine(addNotification, activeUid = "guest") {
           const titleTwi = "🏥 ANC Nhyiam Kae";
           const bodyTwi = `${a.title} wɔ ${a.hospital || "ayaresabea"} bere a aso (${a.time})`;
 
-          showDeviceNotification(titleEn, bodyEn, { tag: eventId });
           if (addNotification) {
             addNotification({ type: "warning", titleEn, titleTwi, bodyEn, bodyTwi });
+          } else {
+            showDeviceNotification(titleEn, bodyEn, { tag: eventId });
           }
         }
       });

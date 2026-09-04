@@ -57,8 +57,18 @@ export async function requestNotificationPermission() {
  * Uses ServiceWorker.showNotification for mobile (required for iOS PWA).
  * Falls back to window.Notification for desktop.
  */
+const _recentlyPoppedNotifs = new Map();
+
 export async function showDeviceNotification(title, body, options = {}) {
   if (typeof window === "undefined" || !("Notification" in window)) return false;
+
+  // Deduplicate identical notifications popping within 10 seconds
+  const notifKey = `${title}:::${body}`;
+  const lastPop = _recentlyPoppedNotifs.get(notifKey);
+  if (lastPop && Date.now() - lastPop < 10000) {
+    return false;
+  }
+  _recentlyPoppedNotifs.set(notifKey, Date.now());
 
   let permission = Notification.permission;
   if (permission === "default") {
