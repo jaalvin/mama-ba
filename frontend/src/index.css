@@ -1,47 +1,47 @@
 @import "tailwindcss";
 
 @theme {
-  /* Colors */
-  --color-primary: #84250f;
-  --color-primary-container: #a43c24;
+  /* Colors — Soothing, light, gentle warm palette safe for pregnant women */
+  --color-primary: #9e4432;
+  --color-primary-container: #be5945;
   --color-on-primary: #ffffff;
-  --color-on-primary-container: #ffcdc2;
-  --color-primary-fixed-dim: #ffb4a3;
+  --color-on-primary-container: #ffe5df;
+  --color-primary-fixed-dim: #ffbba9;
 
-  --color-secondary: #994531;
-  --color-secondary-container: #fe947b;
+  --color-secondary: #aa5542;
+  --color-secondary-container: #ffa38d;
   --color-on-secondary: #ffffff;
-  --color-on-secondary-container: #762b19;
+  --color-on-secondary-container: #833322;
 
-  --color-tertiary: #673e00;
-  --color-tertiary-container: #865305;
+  --color-tertiary: #845311;
+  --color-tertiary-container: #a66a1a;
 
-  --color-background: #fdf9f3;
-  --color-on-background: #1c1c18;
+  --color-background: #fffdf9;
+  --color-on-background: #2b2522;
 
-  --color-surface: #fdf9f3;
-  --color-surface-dim: #dddad4;
-  --color-surface-bright: #fdf9f3;
+  --color-surface: #fffdf9;
+  --color-surface-dim: #e8e3dc;
+  --color-surface-bright: #fffdf9;
   --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f7f3ed;
-  --color-surface-container: #f1ede7;
-  --color-surface-container-high: #ebe8e2;
-  --color-surface-container-highest: #e6e2dc;
-  --color-on-surface: #1c1c18;
-  --color-on-surface-variant: #57423d;
+  --color-surface-container-low: #faf6f0;
+  --color-surface-container: #f5f0e8;
+  --color-surface-container-high: #efe9e0;
+  --color-surface-container-highest: #e8e1d7;
+  --color-on-surface: #2b2522;
+  --color-on-surface-variant: #6b524c;
 
-  --color-outline: #8a716c;
-  --color-outline-variant: #dec0b9;
+  --color-outline: #9c837d;
+  --color-outline-variant: #e8cfc9;
 
-  --color-error: #ba1a1a;
-  --color-error-container: #ffdad6;
+  --color-error: #c92a2a;
+  --color-error-container: #ffe3e3;
   --color-on-error: #ffffff;
-  --color-on-error-container: #93000a;
+  --color-on-error-container: #910007;
 
-  --color-clay-red: #8c3b28;
-  --color-earthen-ochre: #b67b30;
-  --color-forest-green: #396753;
-  --color-charcoal-green: #12261e;
+  --color-clay-red: #a24a37;
+  --color-earthen-ochre: #c4873c;
+  --color-forest-green: #2d6a4f;
+  --color-charcoal-green: #1a3328;
 
   /* Border radius */
   --radius-lg: 0.5rem;

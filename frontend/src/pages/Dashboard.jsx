@@ -686,29 +686,75 @@ export default function Dashboard() {
           {lang === "twi" ? "Yɛ biribi ntɛm" : "Quick Actions"}
         </h2>
         <div className="grid grid-cols-2 gap-3">
-          <Link to="/app/maternal" className="ios-glass-card rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:scale-[1.02] transition-all">
-            <Baby className="w-7 h-7 text-primary" strokeWidth={1.5} />
-            <span className="text-label-md text-on-surface text-sm leading-tight font-semibold">{lang === "twi" ? "Maame & Ba" : "Maternal & Baby Tracker"}</span>
-          </Link>
-          <Link to="/app/safety" className="ios-glass-card rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:scale-[1.02] transition-all">
-            <Leaf className="w-7 h-7 text-forest-green" strokeWidth={1.5} />
-            <span className="text-label-md text-on-surface text-sm leading-tight font-semibold">{lang === "twi" ? "Afifide & Nnuro" : "Herbal & Medication Safety"}</span>
-          </Link>
-          <Link to="/app/triage" className="ios-glass-card rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:scale-[1.02] transition-all">
-            <HelpCircle className="w-7 h-7 text-secondary" strokeWidth={1.5} />
-            <span className="text-label-md text-on-surface text-sm leading-tight font-semibold">{lang === "twi" ? "Nsɛmmisa (FAQs)" : "Maternal Health FAQs"}</span>
-          </Link>
-          <Link to="/app/vitals" className="ios-glass-card rounded-2xl p-4 flex flex-col items-center gap-2 text-center hover:scale-[1.02] transition-all">
-            <HeartPulse className="w-7 h-7 text-tertiary" strokeWidth={1.5} />
-            <span className="text-label-md text-on-surface text-sm leading-tight font-semibold">{lang === "twi" ? "Gye Apomuden Nkae" : "Log Daily Vitals"}</span>
-          </Link>
-          <Link to="/app/care" className="col-span-2 ios-glass-card rounded-2xl p-4 flex items-center gap-4 hover:scale-[1.01] transition-all">
-            <MapPin className="w-7 h-7 text-secondary shrink-0" strokeWidth={1.5} />
-            <div className="text-left flex-1">
-              <span className="text-label-md text-on-surface font-semibold block">{lang === "twi" ? "Hwɛ Adwumakuw a Ɛbɛn Wo" : "Find Nearby Pharmacy"}</span>
-              <span className="text-sm text-on-surface-variant">{lang === "twi" ? "Ayaresabea ne Adwumakuw" : "Book appointments & order meds"}</span>
+          {/* Card 1: Maternal & Baby Tracker */}
+          <Link
+            to="/app/maternal"
+            className="rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center bg-[#fff3f0] border border-[#fcd7cf] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+          >
+            <div className="w-12 h-12 rounded-full bg-[#fde5e0] border border-[#f9c7be] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
+              <Baby className="w-6 h-6 text-[#c24632]" strokeWidth={1.75} />
             </div>
-            <ChevronRight className="ml-auto text-outline w-6 h-6" strokeWidth={1.5} />
+            <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
+              {lang === "twi" ? "Maame & Ba" : "Maternal & Baby Tracker"}
+            </span>
+          </Link>
+
+          {/* Card 2: Herbal & Medication Safety */}
+          <Link
+            to="/app/safety"
+            className="rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center bg-[#f0f7f4] border border-[#cce4d8] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+          >
+            <div className="w-12 h-12 rounded-full bg-[#e0f0e8] border border-[#b8dbc9] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
+              <Leaf className="w-6 h-6 text-[#2d6a4f]" strokeWidth={1.75} />
+            </div>
+            <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
+              {lang === "twi" ? "Afifide & Nnuro" : "Herbal & Medication Safety"}
+            </span>
+          </Link>
+
+          {/* Card 3: Maternal Health FAQs */}
+          <Link
+            to="/app/triage"
+            className="rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center bg-[#fff8ee] border border-[#fce4c4] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+          >
+            <div className="w-12 h-12 rounded-full bg-[#fdedd7] border border-[#fbd8a8] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
+              <HelpCircle className="w-6 h-6 text-[#d97706]" strokeWidth={1.75} />
+            </div>
+            <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
+              {lang === "twi" ? "Nsɛmmisa (FAQs)" : "Maternal Health FAQs"}
+            </span>
+          </Link>
+
+          {/* Card 4: Log Daily Vitals */}
+          <Link
+            to="/app/vitals"
+            className="rounded-2xl p-4 flex flex-col items-center gap-2.5 text-center bg-[#fdf2f8] border border-[#fbcfe8] shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all group"
+          >
+            <div className="w-12 h-12 rounded-full bg-[#fce7f3] border border-[#f8b4d9] flex items-center justify-center shadow-2xs group-hover:scale-110 transition-transform">
+              <HeartPulse className="w-6 h-6 text-[#db2777]" strokeWidth={1.75} />
+            </div>
+            <span className="text-label-md text-[#2b2522] text-sm leading-tight font-semibold">
+              {lang === "twi" ? "Gye Apomuden Nkae" : "Log Daily Vitals"}
+            </span>
+          </Link>
+
+          {/* Card 5 Banner: Find Nearby Pharmacy */}
+          <Link
+            to="/app/care"
+            className="col-span-2 rounded-2xl p-4 flex items-center gap-4 bg-[#faf4ee] border border-[#e8dccf] shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all group"
+          >
+            <div className="w-12 h-12 rounded-full bg-[#ede1d3] border border-[#dccdc0] flex items-center justify-center shrink-0 shadow-2xs group-hover:scale-110 transition-transform">
+              <MapPin className="w-6 h-6 text-[#a04a36]" strokeWidth={1.75} />
+            </div>
+            <div className="text-left flex-1 min-w-0">
+              <span className="text-label-md text-[#2b2522] font-semibold block leading-tight">
+                {lang === "twi" ? "Hwɛ Adwumakuw a Ɛbɛn Wo" : "Find Nearby Pharmacy"}
+              </span>
+              <span className="text-xs text-on-surface-variant/90 mt-0.5 block">
+                {lang === "twi" ? "Ayaresabea ne Adwumakuw" : "Book appointments & order meds"}
+              </span>
+            </div>
+            <ChevronRight className="ml-auto text-outline w-6 h-6 group-hover:translate-x-1 transition-transform" strokeWidth={1.5} />
           </Link>
         </div>
       </section>
