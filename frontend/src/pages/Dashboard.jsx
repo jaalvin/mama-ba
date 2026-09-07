@@ -6,7 +6,7 @@ import { useTheme } from "../context/ThemeContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
 import { medications as medsAPI, api } from "../services/api.js";
 import { showDeviceNotification, scheduleAlarm, nextOccurrenceMs } from "../services/notifications.js";
-import { playNeuralSpeech, stopNeuralSpeech } from "../services/speech.js";
+import { playNeuralSpeech, stopNeuralSpeech, primeSpeechAudio } from "../services/speech.js";
 import { startVoiceRecording, stopVoiceRecording } from "../services/voiceRecorder.js";
 import { getTodayTip } from "../services/tipScheduler.js";
 import { supabase } from "../lib/supabase.js";
@@ -271,6 +271,7 @@ export default function Dashboard() {
   const vcStartListening = async () => {
     if (vcListening || vcThinking || vcSpeaking) return;
     stopNeuralSpeech();
+    primeSpeechAudio(); // Prime HTML5 audio synchronously during user click event
     setVcError("");
     setVcTranscript("");
     setVcReply({ en: "", twi: "" });

@@ -151,6 +151,21 @@ function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
   }
 }
 
+let primedAudioElement = null;
+
+export function primeSpeechAudio() {
+  if (typeof window === "undefined") return;
+  try {
+    if (!primedAudioElement) {
+      primedAudioElement = new Audio();
+    }
+    primedAudioElement.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+    primedAudioElement.play().catch(() => {});
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 /**
  * Synthesizes and plays fluent Ghanaian speech with instant persistent caching
  * to guarantee zero delay on repeat playback.
@@ -180,9 +195,10 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
   // Instantly trigger onStart so UI immediately displays active speaking state
   if (onStart) onStart();
 
-  // 1. Prime the HTML5 Audio element synchronously inside user click event frame
+  // 1. Reuse or create primed audio element synchronously inside user click event frame
   // This bypasses browser Autoplay restrictions when async fetch completes later!
-  const primedAudio = new Audio();
+  const primedAudio = primedAudioElement || new Audio();
+  primedAudioElement = null; // Consume primed element
   activeAudioElement = primedAudio;
   try {
     primedAudio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";

@@ -1,9 +1,13 @@
 import { api } from "./api.js";
+import { primeSpeechAudio } from "./speech.js";
 
 let activeRecorderInstance = null;
 let activeStream = null;
 
 export async function startVoiceRecording({ voiceLang, onStart, onResult, onError, onEnd }) {
+  // Prime audio synchronously within user click event handler to bypass autoplay restrictions for voice replies
+  primeSpeechAudio();
+
   const isEnglish = voiceLang === "en" || voiceLang === "english";
   const asrLanguage = isEnglish ? "en" : "twi";
 
