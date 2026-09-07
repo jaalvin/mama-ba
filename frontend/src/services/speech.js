@@ -444,3 +444,30 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
   }
 }
 
+/**
+ * Instant Fast Browser Speech Synthesis (0ms delay, instant local speech)
+ * Uses browser WebSpeech API directly for Ghanaian English & Akan Twi.
+ */
+export function playFastBrowserSpeech(text, langCode = "twi", onStart, onEnd, onError) {
+  stopNeuralSpeech();
+  const thisRequestId = currentSpeechId;
+
+  const cleanText = (text || "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/[*_#`~•\-–—]/g, " ")
+    .replace(/[^\p{L}\p{N}\s.,!?'"-]/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleanText) {
+    if (onEnd) onEnd();
+    return false;
+  }
+
+  const normalizedLang = (langCode || "").toLowerCase().trim();
+  const isTwi = normalizedLang === "twi" || normalizedLang === "tw" || normalizedLang === "ak" || normalizedLang === "twi_only" || normalizedLang === "akan";
+
+  return playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
+}
+
+
