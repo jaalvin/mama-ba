@@ -6,7 +6,7 @@ import { useTheme } from "../context/ThemeContext.jsx";
 import { useNotifications } from "../context/NotificationContext.jsx";
 import { medications as medsAPI, api } from "../services/api.js";
 import { showDeviceNotification, scheduleAlarm, nextOccurrenceMs } from "../services/notifications.js";
-import { playNeuralSpeech, playFastBrowserSpeech, stopNeuralSpeech, primeSpeechAudio } from "../services/speech.js";
+import { playNeuralSpeech, stopNeuralSpeech, primeSpeechAudio } from "../services/speech.js";
 import { startVoiceRecording, stopVoiceRecording } from "../services/voiceRecorder.js";
 import { getTodayTip } from "../services/tipScheduler.js";
 import { supabase } from "../lib/supabase.js";
@@ -317,16 +317,16 @@ export default function Dashboard() {
               localStorage.setItem(chatStoreKey, JSON.stringify([...existing, uMsg, aMsg]));
             } catch (e) { /* ignore */ }
 
-            // Speak the reply in active voice language using fast browser TTS
+            // Speak the reply in active voice language (Primary: Abena AI Neural TTS, Fallback: Khaya AI / Browser)
             const textToSpeak = voiceLang === "twi" ? replyTwi : replyEn;
             const langCode = voiceLang === "twi" ? "ak" : "en";
-            playFastBrowserSpeech(
+            playNeuralSpeech(
               textToSpeak,
               langCode,
               () => setVcSpeaking(true),
               () => setVcSpeaking(false),
               () => setVcSpeaking(false)
-            );
+            ).catch(() => setVcSpeaking(false));
           } catch (err) {
             setVcThinking(false);
             setVcError("Connection issue. Please try again.");
@@ -577,13 +577,13 @@ export default function Dashboard() {
                         onClick={() => {
                           const textToSpeak = voiceLang === "twi" ? vcReply.twi : vcReply.en;
                           const langCode = voiceLang === "twi" ? "ak" : "en";
-                          playFastBrowserSpeech(
+                          playNeuralSpeech(
                             textToSpeak,
                             langCode,
                             () => setVcSpeaking(true),
                             () => setVcSpeaking(false),
                             () => setVcSpeaking(false)
-                          );
+                          ).catch(() => setVcSpeaking(false));
                         }}
                         className="self-start flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant border border-outline-variant hover:border-primary transition-colors"
                       >
