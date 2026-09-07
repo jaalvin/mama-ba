@@ -88,13 +88,8 @@ export default function Dashboard() {
   const [vcTranscript, setVcTranscript] = useState("");
   const [vcReply, setVcReply] = useState({ en: "", twi: "" });
   const [vcError, setVcError] = useState("");
+  const vcRecorderRef = useRef(null);
   const { voiceLang } = useLang();
-  const voiceChatOpenRef = useRef(voiceChatOpen);
-  const autoListenEnabledRef = useRef(true);
-
-  useEffect(() => {
-    voiceChatOpenRef.current = voiceChatOpen;
-  }, [voiceChatOpen]);
 
   // Medications
   const activeUid = user?.id || localStorage.getItem("mama_ba_active_user_id") || "guest";
@@ -261,8 +256,6 @@ export default function Dashboard() {
     };
   }, [voiceChatOpen]);
   const closeVoiceChat = () => {
-    voiceChatOpenRef.current = false;
-    autoListenEnabledRef.current = false;
     stopNeuralSpeech();
     stopVoiceRecording(vcRecorderRef.current);
     vcRecorderRef.current = null;
@@ -284,8 +277,6 @@ export default function Dashboard() {
     setVcReply({ en: "", twi: "" });
     setVcSpeaking(false);
     setVcListening(true);
-    voiceChatOpenRef.current = true;
-    autoListenEnabledRef.current = true;
 
     try {
       const recorder = await startVoiceRecording({
@@ -333,17 +324,7 @@ export default function Dashboard() {
               textToSpeak,
               langCode,
               () => setVcSpeaking(true),
-              () => {
-                setVcSpeaking(false);
-                // Continuous conversation loop: automatically re-arm mic for user's next question!
-                if (voiceChatOpenRef.current && autoListenEnabledRef.current) {
-                  setTimeout(() => {
-                    if (voiceChatOpenRef.current && autoListenEnabledRef.current) {
-                      vcStartListening();
-                    }
-                  }, 400);
-                }
-              },
+              () => setVcSpeaking(false),
               () => setVcSpeaking(false)
             );
           } catch (err) {
@@ -367,7 +348,6 @@ export default function Dashboard() {
   };
 
   const vcStopSpeaking = () => {
-    autoListenEnabledRef.current = false;
     stopNeuralSpeech();
     setVcSpeaking(false);
   };
@@ -595,23 +575,13 @@ export default function Dashboard() {
                     {!vcSpeaking && (vcReply.en || vcReply.twi) && (
                       <button
                         onClick={() => {
-                          autoListenEnabledRef.current = true;
                           const textToSpeak = voiceLang === "twi" ? vcReply.twi : vcReply.en;
                           const langCode = voiceLang === "twi" ? "ak" : "en";
                           playFastBrowserSpeech(
                             textToSpeak,
                             langCode,
                             () => setVcSpeaking(true),
-                            () => {
-                              setVcSpeaking(false);
-                              if (voiceChatOpenRef.current && autoListenEnabledRef.current) {
-                                setTimeout(() => {
-                                  if (voiceChatOpenRef.current && autoListenEnabledRef.current) {
-                                    vcStartListening();
-                                  }
-                                }, 400);
-                              }
-                            },
+                            () => setVcSpeaking(false),
                             () => setVcSpeaking(false)
                           );
                         }}
