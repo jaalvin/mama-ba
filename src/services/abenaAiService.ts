@@ -28,10 +28,12 @@ export class AbenaAiService {
 
   private static getApiKeys(): (string | null)[] {
     const rawKeys = [
-      process.env.ABENA_KEY_1 || CONFIG.ABENA_KEY_1 || 'sk_d953bf290d394798baa9882dc82d95f5',
-      process.env.ABENA_KEY_2 || CONFIG.ABENA_KEY_2 || 'sk_6e293b7a2f92431a85a40814a211abcb',
-      process.env.ABENA_API_KEY || CONFIG.ABENA_API_KEY || 'sk_d953bf290d394798baa9882dc82d95f5',
-      process.env.ABENA_FALLBACK_API_KEY || CONFIG.ABENA_FALLBACK_API_KEY || 'sk_6e293b7a2f92431a85a40814a211abcb',
+      process.env.ABENA_KEY_1 || CONFIG.ABENA_KEY_1 || 'sk_dd2ff64591ce480dab9a23db4388b7e3',
+      process.env.ABENA_KEY_2 || CONFIG.ABENA_KEY_2 || 'sk_97455e7a1c014464b09fc104546c3bcb',
+      process.env.ABENA_KEY_3 || CONFIG.ABENA_KEY_3 || 'sk_d953bf290d394798baa9882dc82d95f5',
+      process.env.ABENA_KEY_4 || CONFIG.ABENA_KEY_4 || 'sk_6e293b7a2f92431a85a40814a211abcb',
+      process.env.ABENA_API_KEY || CONFIG.ABENA_API_KEY || 'sk_dd2ff64591ce480dab9a23db4388b7e3',
+      process.env.ABENA_FALLBACK_API_KEY || CONFIG.ABENA_FALLBACK_API_KEY || 'sk_97455e7a1c014464b09fc104546c3bcb',
       null // Anonymous Free Tier as final fallback
     ];
 
