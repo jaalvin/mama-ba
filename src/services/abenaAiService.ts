@@ -25,24 +25,36 @@ export interface AbenaAsrResponse {
 
 export class AbenaAiService {
   private static baseUrl = process.env.ABENA_API_BASE_URL || CONFIG.ABENA_API_BASE_URL || 'https://abena.mobobi.com/playground/api/v1';
+  private static invalidKeys = new Set<string>();
 
   private static getApiKeys(): (string | null)[] {
-    const rawKeys = [
-      process.env.ABENA_KEY_1 || CONFIG.ABENA_KEY_1 || 'sk_ac48c6291c3f4dc6a53215b95b27dcc4',
-      process.env.ABENA_KEY_2 || CONFIG.ABENA_KEY_2 || 'sk_48bd65660abb44b3b9d7a0ece4d508c8',
-      process.env.ABENA_KEY_3 || CONFIG.ABENA_KEY_3 || 'sk_aa31a37e254e44fdae7e7f94b72ae067',
-      process.env.ABENA_KEY_4 || CONFIG.ABENA_KEY_4 || 'sk_4cba491a678a43daa3c18415addfded4',
-      process.env.ABENA_API_KEY || CONFIG.ABENA_API_KEY || 'sk_ac48c6291c3f4dc6a53215b95b27dcc4',
-      process.env.ABENA_FALLBACK_API_KEY || CONFIG.ABENA_FALLBACK_API_KEY || 'sk_48bd65660abb44b3b9d7a0ece4d508c8',
-      null // Anonymous Free Tier as final fallback
+    const hardcodedFreshKeys = [
+      'sk_ac48c6291c3f4dc6a53215b95b27dcc4',
+      'sk_48bd65660abb44b3b9d7a0ece4d508c8',
+      'sk_aa31a37e254e44fdae7e7f94b72ae067',
+      'sk_4cba491a678a43daa3c18415addfded4'
     ];
 
-    const uniqueKeys: (string | null)[] = [...new Set(rawKeys.filter(k => k === null || (typeof k === 'string' && k.length > 5)))];
-    return uniqueKeys;
+    const envKeys = [
+      process.env.ABENA_KEY_1,
+      process.env.ABENA_KEY_2,
+      process.env.ABENA_KEY_3,
+      process.env.ABENA_KEY_4,
+      process.env.ABENA_API_KEY,
+      process.env.ABENA_FALLBACK_API_KEY
+    ].filter((k): k is string => typeof k === 'string' && k.length > 5);
+
+    // Prioritize fresh active working keys FIRST, then env keys, then null (Anonymous Free Tier)
+    const rawKeys = [...hardcodedFreshKeys, ...envKeys, null];
+
+    const validKeys = [...new Set(rawKeys)].filter(
+      (k) => k === null || (!this.invalidKeys.has(k) && k.length > 5)
+    );
+
+    return validKeys;
   }
 
   private static ttsMemoryCache = new Map<string, Buffer>();
-  private static exhaustedKeys = new Set<string>();
 
   /**
    * Synthesizes text into high-quality fluent Ghanaian speech (Twi or Ghanaian English WAV)
@@ -94,7 +106,7 @@ export class AbenaAiService {
     }
 
     const keyPool = this.getApiKeys();
-    console.log(`[Abena AI TTS] Synthesizing "${cleanText.slice(0, 40)}..." with voice "${voice}"...`);
+    console.log(`[Abena AI TTS] Synthesizing "${cleanText.slice(0, 40)}..." with voice "${voice}" across ${keyPool.length} keys...`);
 
     for (let idx = 0; idx < keyPool.length; idx++) {
       const key = keyPool[idx];
@@ -141,8 +153,9 @@ export class AbenaAiService {
             this.ttsMemoryCache.set(cacheKey, buffer);
             return buffer;
           }
-        } else if (response.status === 402 || response.status === 429) {
-          console.warn(`[Abena AI] ${keyLabel} limit notice (HTTP ${response.status}). Rotating to next key...`);
+        } else if (response.status === 401 || response.status === 402 || response.status === 429) {
+          if (key) this.invalidKeys.add(key);
+          console.warn(`[Abena AI] ${keyLabel} auth/limit notice (HTTP ${response.status}). Blacklisting key & rotating...`);
         } else {
           console.warn(`[Abena AI] ${keyLabel} TTS Error HTTP ${response.status}. Rotating to next key...`);
         }
