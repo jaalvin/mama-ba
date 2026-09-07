@@ -119,8 +119,13 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
       const storedBase64 = localStorage.getItem(lsKey);
       if (storedBase64) {
         try {
-          audioBlob = base64ToBlob(storedBase64);
-          clientBlobCache.set(cacheKey, audioBlob);
+          const parsedBlob = base64ToBlob(storedBase64);
+          if (parsedBlob && parsedBlob.size > 200) {
+            audioBlob = parsedBlob;
+            clientBlobCache.set(cacheKey, audioBlob);
+          } else {
+            localStorage.removeItem(lsKey);
+          }
         } catch (e) {
           localStorage.removeItem(lsKey);
         }

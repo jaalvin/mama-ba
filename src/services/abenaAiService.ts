@@ -28,14 +28,12 @@ export class AbenaAiService {
 
   private static getApiKeys(): (string | null)[] {
     const rawKeys = [
-      process.env.ABENA_KEY_1 || CONFIG.ABENA_KEY_1 || 'sk_6cbd8b6200b1495a8c99917e146b7bc4',
-      process.env.ABENA_KEY_2 || CONFIG.ABENA_KEY_2 || 'sk_8386b2043ef1415aa8f36e40f959cc5f',
-      process.env.ABENA_KEY_3 || CONFIG.ABENA_KEY_3 || 'sk_e2812cf49744446f9377040095eebecc',
-      process.env.ABENA_KEY_4 || CONFIG.ABENA_KEY_4 || 'sk_f43c5bf516e84e038f7b955f77d667bd',
-      process.env.ABENA_KEY_5 || CONFIG.ABENA_KEY_5 || 'sk_d953bf290d394798baa9882dc82d95f5',
-      process.env.ABENA_KEY_6 || CONFIG.ABENA_KEY_6 || 'sk_6e293b7a2f92431a85a40814a211abcb',
-      process.env.ABENA_API_KEY || CONFIG.ABENA_API_KEY || 'sk_6cbd8b6200b1495a8c99917e146b7bc4',
-      process.env.ABENA_FALLBACK_API_KEY || CONFIG.ABENA_FALLBACK_API_KEY || 'sk_8386b2043ef1415aa8f36e40f959cc5f',
+      process.env.ABENA_KEY_1 || CONFIG.ABENA_KEY_1 || 'sk_e2812cf49744446f9377040095eebecc',
+      process.env.ABENA_KEY_2 || CONFIG.ABENA_KEY_2 || 'sk_f43c5bf516e84e038f7b955f77d667bd',
+      process.env.ABENA_KEY_3 || CONFIG.ABENA_KEY_3 || 'sk_d953bf290d394798baa9882dc82d95f5',
+      process.env.ABENA_KEY_4 || CONFIG.ABENA_KEY_4 || 'sk_6e293b7a2f92431a85a40814a211abcb',
+      process.env.ABENA_API_KEY || CONFIG.ABENA_API_KEY || 'sk_e2812cf49744446f9377040095eebecc',
+      process.env.ABENA_FALLBACK_API_KEY || CONFIG.ABENA_FALLBACK_API_KEY || 'sk_f43c5bf516e84e038f7b955f77d667bd',
       null // Anonymous Free Tier as final fallback
     ];
 
@@ -54,12 +52,15 @@ export class AbenaAiService {
     const primaryBuffer = await this.synthesizeSpeechSingle(options);
     if (primaryBuffer) return primaryBuffer;
 
-    // Automatic Voice Fallback: If abena_twi_high timed out or failed, fallback to abena_twi_lite immediately
+    // Automatic Voice Fallback: If requested voice timed out or failed, try secondary voice immediately
     const requestedVoice = options.voice || 'abena_twi_high';
     if (requestedVoice.includes('twi')) {
       const fallbackVoice = requestedVoice === 'abena_twi_lite' ? 'abena_twi_high' : 'abena_twi_lite';
-      console.log(`[Abena AI TTS] Fallback to voice "${fallbackVoice}" for rapid synthesis...`);
+      console.log(`[Abena AI TTS] Fallback to Twi voice "${fallbackVoice}" for rapid synthesis...`);
       return this.synthesizeSpeechSingle({ ...options, voice: fallbackVoice });
+    } else if (requestedVoice === 'akua_eng') {
+      console.log(`[Abena AI TTS] Fallback to English voice "kwabena_eng"...`);
+      return this.synthesizeSpeechSingle({ ...options, voice: 'kwabena_eng' });
     }
 
     return null;
@@ -97,15 +98,12 @@ export class AbenaAiService {
 
     for (let idx = 0; idx < keyPool.length; idx++) {
       const key = keyPool[idx];
-      if (key && this.exhaustedKeys.has(key)) {
-        continue;
-      }
 
       const keyLabel = key ? `Key ${idx} (${key.slice(0, 8)}...)` : `Anonymous Free Tier`;
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // Fast 5s per-key timeout
+        const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s per-key timeout for neural TTS
 
         const headers: Record<string, string> = {
           'Content-Type': 'application/json'
@@ -142,10 +140,9 @@ export class AbenaAiService {
             return buffer;
           }
         } else if (response.status === 402 || response.status === 429) {
-          if (key) this.exhaustedKeys.add(key);
-          console.warn(`[Abena AI] ${keyLabel} limit notice (HTTP ${response.status}). Rotating...`);
+          console.warn(`[Abena AI] ${keyLabel} limit notice (HTTP ${response.status}). Rotating to next key...`);
         } else {
-          console.warn(`[Abena AI] ${keyLabel} TTS Error HTTP ${response.status}. Rotating...`);
+          console.warn(`[Abena AI] ${keyLabel} TTS Error HTTP ${response.status}. Rotating to next key...`);
         }
       } catch (err: any) {
         console.warn(`[Abena AI] ${keyLabel} TTS request timeout/error:`, err.message || err);
