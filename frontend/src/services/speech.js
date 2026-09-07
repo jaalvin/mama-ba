@@ -164,15 +164,17 @@ function getBestBrowserVoice(isTwi) {
       voices.find((v) => v.lang.toLowerCase().includes("gh")) ||
       voices.find((v) => v.lang.toLowerCase().includes("ng")) ||
       voices.find((v) => v.lang.toLowerCase().startsWith("en")) ||
-      voices[0]
+      voices[0] ||
+      null
     );
   } else {
     return (
       voices.find((v) => v.lang === "en-US" || v.lang === "en_US") ||
-      voices.find((v) => v.lang.toLowerCase().startsWith("en-gb") || v.lang.toLowerCase().startsWith("en-us")) ||
+      voices.find((v) => v.lang.toLowerCase().startsWith("en-us") || v.lang.toLowerCase().startsWith("en-gb")) ||
       voices.find((v) => v.lang.toLowerCase().includes("gh")) ||
       voices.find((v) => v.lang.toLowerCase().startsWith("en")) ||
-      voices[0]
+      voices[0] ||
+      null
     );
   }
 }
@@ -184,11 +186,11 @@ function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
   }
 
   try {
-    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-      window.speechSynthesis.cancel();
-    }
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
+    }
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
@@ -216,6 +218,10 @@ function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
     };
 
     window.speechSynthesis.speak(utterance);
+
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
 
     // Safety fallback for browsers where onstart event does not trigger immediately
     setTimeout(() => {

@@ -526,7 +526,9 @@ export const api = {
         body: JSON.stringify(params),
       });
       const contentType = (response.headers.get("content-type") || "").toLowerCase();
-      if (response.ok && (contentType.includes("audio") || contentType.includes("mpeg") || contentType.includes("wav") || contentType.includes("octet-stream") || response.status === 200)) {
+      const isAudio = contentType.includes("audio") || contentType.includes("mpeg") || contentType.includes("wav") || contentType.includes("octet-stream");
+
+      if (response.ok && isAudio) {
         const blob = await response.blob();
         if (blob && blob.size > 200) {
           return { success: true, blob };
