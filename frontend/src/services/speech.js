@@ -85,6 +85,29 @@ export function stopNeuralSpeech() {
   }
 }
 
+function getBestBrowserVoice(isTwi) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return null;
+  const voices = window.speechSynthesis.getVoices() || [];
+  if (voices.length === 0) return null;
+
+  if (isTwi) {
+    return (
+      voices.find((v) => v.lang.toLowerCase().includes("ak") || v.lang.toLowerCase().includes("tw")) ||
+      voices.find((v) => v.lang.toLowerCase().includes("gh")) ||
+      voices.find((v) => v.lang.toLowerCase().includes("ng")) ||
+      voices.find((v) => v.lang.toLowerCase().startsWith("en")) ||
+      voices[0]
+    );
+  } else {
+    return (
+      voices.find((v) => v.lang === "en-US" || v.lang === "en_US") ||
+      voices.find((v) => v.lang.toLowerCase().includes("gh")) ||
+      voices.find((v) => v.lang.toLowerCase().startsWith("en")) ||
+      voices[0]
+    );
+  }
+}
+
 function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
   if (typeof window === "undefined" || !window.speechSynthesis) {
     if (thisRequestId === currentSpeechId && onEnd) onEnd();
@@ -98,7 +121,13 @@ function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = isTwi ? "ak-GH" : "en-US";
+    const bestVoice = getBestBrowserVoice(isTwi);
+    if (bestVoice) {
+      utterance.voice = bestVoice;
+      utterance.lang = bestVoice.lang;
+    } else {
+      utterance.lang = isTwi ? "en-US" : "en-US";
+    }
     utterance.rate = 0.95;
     utterance.pitch = 1.0;
 
@@ -150,6 +179,17 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
 
   // Instantly trigger onStart so UI immediately displays active speaking state
   if (onStart) onStart();
+
+  // 1. Prime the HTML5 Audio element synchronously inside user click event frame
+  // This bypasses browser Autoplay restrictions when async fetch completes later!
+  const primedAudio = new Audio();
+  activeAudioElement = primedAudio;
+  try {
+    primedAudio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+    primedAudio.play().catch(() => {});
+  } catch (e) {
+    /* ignore */
+  }
 
   try {
     let audioBlob = clientBlobCache.get(cacheKey);
@@ -203,44 +243,41 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
     if (audioBlob) {
       const audioUrl = URL.createObjectURL(audioBlob);
       activeObjectUrl = audioUrl;
-      const audio = new Audio(audioUrl);
-      activeAudioElement = audio;
 
-      audio.onplay = () => {
+      primedAudio.onplay = () => {
         if (thisRequestId === currentSpeechId && onStart) {
           onStart();
         }
       };
-      audio.onended = () => {
+      primedAudio.onended = () => {
         if (activeObjectUrl === audioUrl) {
           URL.revokeObjectURL(audioUrl);
           activeObjectUrl = null;
         }
-        if (activeAudioElement === audio) {
+        if (activeAudioElement === primedAudio) {
           activeAudioElement = null;
         }
         if (thisRequestId === currentSpeechId && onEnd) {
           onEnd();
         }
       };
-      audio.onerror = () => {
+      primedAudio.onerror = () => {
         if (activeObjectUrl === audioUrl) {
           URL.revokeObjectURL(audioUrl);
           activeObjectUrl = null;
         }
-        if (activeAudioElement === audio) {
+        if (activeAudioElement === primedAudio) {
           activeAudioElement = null;
         }
         console.warn("[Speech] HTML5 Audio element error. Falling back to browser WebSpeech...");
         playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
       };
 
-      const playPromise = audio.play();
+      primedAudio.src = audioUrl;
+      const playPromise = primedAudio.play();
       if (playPromise !== undefined) {
         await playPromise.catch((err) => {
           console.warn("[Speech] HTML5 Audio play promise blocked/failed:", err);
-          // If browser blocked audio play (e.g. autoplay policy restriction):
-          // Fallback seamlessly to browser WebSpeech API!
           playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
         });
       }
