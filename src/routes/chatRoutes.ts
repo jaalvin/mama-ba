@@ -55,7 +55,7 @@ router.post('/translate', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/v1/chat/asr (Abena AI 8-Key Pool -> Anonymous Abena -> Khaya AI ASR v3 Fallback)
+// POST /api/v1/chat/asr (Primary Khaya AI ASR v3 -> Abena AI ASR Fallback)
 router.post('/asr', async (req: Request, res: Response) => {
   try {
     const { audio_base64, language } = req.body;
@@ -77,12 +77,25 @@ router.post('/asr', async (req: Request, res: Response) => {
 
     const reqLang = (language || 'twi').toLowerCase();
     const isEng = reqLang === 'en' || reqLang === 'eng' || reqLang === 'english';
-    const abenaLang = isEng ? 'en' : 'twi-en';
     const khayaLang = isEng ? 'eng' : 'twi';
+    const abenaLang = isEng ? 'en' : 'twi-en';
 
-    // Ghanaian Neural ASR: Abena AI Engine (Anonymous Tier -> Key Pool)
+    // 1. PRIMARY ASR: Khaya AI ASR Engine (Preserves Abena AI credits for TTS)
+    const khayaTranscription = await KhayaAiService.transcribeAudio(audioBuffer, khayaLang);
+    if (khayaTranscription && khayaTranscription.trim()) {
+      console.log(`[ASR Router] Transcribed via Khaya AI ASR Primary (${khayaLang}): "${khayaTranscription.trim()}"`);
+      return res.json({
+        success: true,
+        transcription: khayaTranscription.trim(),
+        provider: 'khaya_ai'
+      });
+    }
+
+    // 2. FALLBACK ASR: Abena AI ASR Engine
+    console.log('[ASR Router] Khaya AI ASR produced no result. Falling back to Abena AI ASR...');
     const abenaTranscription = await AbenaAiService.transcribeAudio(audioBuffer, abenaLang);
     if (abenaTranscription && abenaTranscription.trim()) {
+      console.log(`[ASR Router] Transcribed via Abena AI ASR Fallback (${abenaLang}): "${abenaTranscription.trim()}"`);
       return res.json({
         success: true,
         transcription: abenaTranscription.trim(),
@@ -92,14 +105,18 @@ router.post('/asr', async (req: Request, res: Response) => {
 
     return res.json({
       success: false,
-      error: 'Twi voice not clearly recognized. Please speak closer to microphone.'
+      language: isEng ? 'english' : 'twi',
+      fallbackToBrowser: isEng,
+      error: isEng
+        ? 'English voice not recognized via cloud ASR. Please speak again or use keyboard.'
+        : 'Twi voice not clearly recognized. Please speak closer to the microphone.'
     });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// POST /api/v1/chat/tts (Abena AI Neural TTS Engine)
+// POST /api/v1/chat/tts (Primary Abena AI TTS -> Twi: Khaya AI TTS, English: Browser Default Fallback)
 router.post('/tts', async (req: Request, res: Response) => {
   try {
     const { text, language, voice } = req.body;
@@ -108,10 +125,10 @@ router.post('/tts', async (req: Request, res: Response) => {
     }
 
     const targetLang = (language || 'tw').toLowerCase();
-    const isTwi = targetLang === 'tw' || targetLang === 'twi' || targetLang === 'ak';
+    const isTwi = targetLang === 'tw' || targetLang === 'twi' || targetLang === 'ak' || targetLang === 'akan';
     const preferredVoice = voice || (isTwi ? 'abena_twi_high' : 'akua_eng');
 
-    // Ghanaian Neural TTS: Abena AI Engine (Anonymous Tier -> Key Pool)
+    // 1. PRIMARY TTS: Abena AI Neural TTS Engine (Ghanaian English & Twi)
     let abenaBuffer = await AbenaAiService.synthesizeSpeech({
       text,
       voice: preferredVoice
@@ -124,7 +141,31 @@ router.post('/tts', async (req: Request, res: Response) => {
       return res.send(abenaBuffer);
     }
 
-    return res.status(500).json({ success: false, error: 'Abena AI TTS synthesis failed' });
+    // 2. FALLBACK for Twi ONLY: Khaya AI TTS Engine (Female Ghanaian Twi Voice)
+    if (isTwi) {
+      console.log('[TTS Router] Abena AI TTS unavailable. Falling back to Khaya AI TTS for Twi...');
+      const khayaBuffer = await KhayaAiService.synthesizeSpeech({
+        text,
+        language: 'twi',
+        speaker_id: 'female'
+      });
+
+      if (khayaBuffer && khayaBuffer.length > 100) {
+        res.setHeader('Content-Type', 'audio/mp3');
+        res.setHeader('Content-Length', khayaBuffer.length);
+        res.setHeader('X-Speech-Provider', 'Khaya AI');
+        return res.send(khayaBuffer);
+      }
+    }
+
+    // 3. FALLBACK for English or if both Twi cloud engines fail: Browser Default Speech
+    console.warn(`[TTS Router] Cloud TTS unavailable for ${isTwi ? 'Twi' : 'English'}. Signaling browser fallback.`);
+    return res.status(200).json({
+      success: false,
+      fallbackToBrowser: true,
+      language: isTwi ? 'twi' : 'english',
+      message: 'Cloud TTS unavailable. Using browser default speech synthesis.'
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -525,13 +525,20 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
       });
-      if (response.ok) {
+      const contentType = response.headers.get("content-type") || "";
+      if (response.ok && (contentType.includes("audio") || contentType.includes("mpeg") || contentType.includes("wav"))) {
         const blob = await response.blob();
         return { success: true, blob };
       }
-      return { success: false };
+      const json = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        fallbackToBrowser: true,
+        language: json.language,
+        error: json.message || json.error
+      };
     } catch (e) {
-      return { success: false, error: e.message };
+      return { success: false, fallbackToBrowser: true, error: e.message };
     }
   },
   async checkHerbalSafety(params) {

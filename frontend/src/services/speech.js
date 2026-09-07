@@ -202,11 +202,11 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
       return true;
     }
 
-    // Fallback to browser WebSpeech API if server audio could not be generated
+    // Fallback to browser WebSpeech API if server audio could not be generated (Abena AI & Khaya AI unavailable)
     if (typeof window !== "undefined" && window.speechSynthesis) {
-      console.warn("[Speech] Using browser WebSpeech fallback for text:", cleanText.slice(0, 30));
+      console.warn(`[Speech] Using browser WebSpeech fallback for ${isTwi ? "Twi (ak-GH)" : "English (en-US)"}:`, cleanText.slice(0, 30));
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = isTwi ? "ak-GH" : "en-GH";
+      utterance.lang = isTwi ? "ak-GH" : "en-US";
       utterance.rate = 0.95;
       utterance.onstart = () => { if (thisRequestId === currentSpeechId && onStart) onStart(); };
       utterance.onend = () => { if (thisRequestId === currentSpeechId && onEnd) onEnd(); };
