@@ -169,6 +169,7 @@ function getBestBrowserVoice(isTwi) {
   } else {
     return (
       voices.find((v) => v.lang === "en-US" || v.lang === "en_US") ||
+      voices.find((v) => v.lang.toLowerCase().startsWith("en-gb") || v.lang.toLowerCase().startsWith("en-us")) ||
       voices.find((v) => v.lang.toLowerCase().includes("gh")) ||
       voices.find((v) => v.lang.toLowerCase().startsWith("en")) ||
       voices[0]
@@ -183,7 +184,9 @@ function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
   }
 
   try {
-    window.speechSynthesis.cancel();
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+      window.speechSynthesis.cancel();
+    }
     if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
     }
@@ -194,12 +197,14 @@ function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
       utterance.voice = bestVoice;
       utterance.lang = bestVoice.lang;
     } else {
-      utterance.lang = "en-US";
+      utterance.lang = isTwi ? "en-US" : "en-US";
     }
     utterance.rate = 0.95;
     utterance.pitch = 1.0;
 
+    let hasStarted = false;
     utterance.onstart = () => {
+      hasStarted = true;
       if (thisRequestId === currentSpeechId && onStart) onStart();
     };
     utterance.onend = () => {
@@ -211,6 +216,14 @@ function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
     };
 
     window.speechSynthesis.speak(utterance);
+
+    // Safety fallback for browsers where onstart event does not trigger immediately
+    setTimeout(() => {
+      if (!hasStarted && thisRequestId === currentSpeechId && onStart) {
+        onStart();
+      }
+    }, 150);
+
     return true;
   } catch (err) {
     console.warn("[Speech] Browser WebSpeech exception:", err);
