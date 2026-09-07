@@ -525,10 +525,12 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
       });
-      const contentType = response.headers.get("content-type") || "";
-      if (response.ok && (contentType.includes("audio") || contentType.includes("mpeg") || contentType.includes("wav"))) {
+      const contentType = (response.headers.get("content-type") || "").toLowerCase();
+      if (response.ok && (contentType.includes("audio") || contentType.includes("mpeg") || contentType.includes("wav") || contentType.includes("octet-stream") || response.status === 200)) {
         const blob = await response.blob();
-        return { success: true, blob };
+        if (blob && blob.size > 200) {
+          return { success: true, blob };
+        }
       }
       const json = await response.json().catch(() => ({}));
       return {

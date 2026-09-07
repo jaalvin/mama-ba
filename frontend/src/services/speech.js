@@ -85,6 +85,43 @@ export function stopNeuralSpeech() {
   }
 }
 
+function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
+  if (typeof window === "undefined" || !window.speechSynthesis) {
+    if (thisRequestId === currentSpeechId && onEnd) onEnd();
+    return false;
+  }
+
+  try {
+    window.speechSynthesis.cancel();
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = isTwi ? "ak-GH" : "en-US";
+    utterance.rate = 0.95;
+    utterance.pitch = 1.0;
+
+    utterance.onstart = () => {
+      if (thisRequestId === currentSpeechId && onStart) onStart();
+    };
+    utterance.onend = () => {
+      if (thisRequestId === currentSpeechId && onEnd) onEnd();
+    };
+    utterance.onerror = (e) => {
+      console.warn("[Speech] Browser WebSpeech error:", e);
+      if (thisRequestId === currentSpeechId && onEnd) onEnd();
+    };
+
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch (err) {
+    console.warn("[Speech] Browser WebSpeech exception:", err);
+    if (thisRequestId === currentSpeechId && onEnd) onEnd();
+    return false;
+  }
+}
+
 /**
  * Synthesizes and plays fluent Ghanaian speech with instant persistent caching
  * to guarantee zero delay on repeat playback.
@@ -110,6 +147,9 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
   const voice = isTwi ? "abena_twi_high" : "akua_eng";
   const cacheKey = `${voice}:${cleanText.toLowerCase()}`;
   const lsKey = getStorageKey(cacheKey);
+
+  // Instantly trigger onStart so UI immediately displays active speaking state
+  if (onStart) onStart();
 
   try {
     let audioBlob = clientBlobCache.get(cacheKey);
@@ -191,40 +231,26 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
         if (activeAudioElement === audio) {
           activeAudioElement = null;
         }
-        if (thisRequestId === currentSpeechId) {
-          if (onError) onError();
-          else if (onEnd) onEnd();
-        }
+        console.warn("[Speech] HTML5 Audio element error. Falling back to browser WebSpeech...");
+        playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
       };
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         await playPromise.catch((err) => {
-          console.warn("[Speech] Playback promise notice:", err);
-          if (thisRequestId === currentSpeechId && onEnd) onEnd();
+          console.warn("[Speech] HTML5 Audio play promise blocked/failed:", err);
+          // If browser blocked audio play (e.g. autoplay policy restriction):
+          // Fallback seamlessly to browser WebSpeech API!
+          playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
         });
       }
       return true;
     }
 
     // Fallback to browser WebSpeech API if server audio could not be generated (Abena AI & Khaya AI unavailable)
-    if (typeof window !== "undefined" && window.speechSynthesis) {
-      console.warn(`[Speech] Using browser WebSpeech fallback for ${isTwi ? "Twi (ak-GH)" : "English (en-US)"}:`, cleanText.slice(0, 30));
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = isTwi ? "ak-GH" : "en-US";
-      utterance.rate = 0.95;
-      utterance.onstart = () => { if (thisRequestId === currentSpeechId && onStart) onStart(); };
-      utterance.onend = () => { if (thisRequestId === currentSpeechId && onEnd) onEnd(); };
-      utterance.onerror = () => { if (thisRequestId === currentSpeechId && onEnd) onEnd(); };
-      window.speechSynthesis.speak(utterance);
-      return true;
-    }
+    return playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
   } catch (err) {
     console.warn("[Speech] Abena AI synthesis notice:", err);
+    return playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
   }
-
-  if (thisRequestId === currentSpeechId && onEnd) {
-    onEnd();
-  }
-  return false;
 }
