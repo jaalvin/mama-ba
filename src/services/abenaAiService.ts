@@ -103,7 +103,9 @@ export class AbenaAiService {
 
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s per-key timeout for neural TTS
+        // 20s timeout for first call to allow Abena AI server model warmup (~10-15s), 10s for subsequent attempts
+        const timeoutMs = idx === 0 ? 20000 : 10000;
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         const headers: Record<string, string> = {
           'Content-Type': 'application/json'
