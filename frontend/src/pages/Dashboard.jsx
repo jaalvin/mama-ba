@@ -320,7 +320,6 @@ export default function Dashboard() {
             // Speak the reply in the active voice language
             const textToSpeak = voiceLang === "twi" ? replyTwi : replyEn;
             const langCode = voiceLang === "twi" ? "ak" : "en";
-            setVcSpeaking(true);
             playNeuralSpeech(
               textToSpeak,
               langCode,
@@ -578,7 +577,6 @@ export default function Dashboard() {
                         onClick={() => {
                           const textToSpeak = voiceLang === "twi" ? vcReply.twi : vcReply.en;
                           const langCode = voiceLang === "twi" ? "ak" : "en";
-                          setVcSpeaking(true);
                           playNeuralSpeech(textToSpeak, langCode, () => setVcSpeaking(true), () => setVcSpeaking(false), () => setVcSpeaking(false));
                         }}
                         className="self-start flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant border border-outline-variant hover:border-primary transition-colors"

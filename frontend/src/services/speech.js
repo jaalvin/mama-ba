@@ -2,18 +2,75 @@
  * Neural Speech Service
  * Routes speech synthesis to Abena AI Neural TTS API (/api/v1/chat/tts)
  * for Ghanaian Akan Twi (abena_twi_high) and Ghanaian English (akua_eng).
- * Features 0ms instant persistent audio caching (memory + localStorage)
- * so playing a phrase for the second time is instant with zero delay.
+ * Uses Web Audio API (AudioContext) for reliable playback on mobile/iOS Safari,
+ * with HTML5 Audio and WebSpeech API fallbacks.
+ * Features 0ms instant persistent audio caching (memory + localStorage).
  */
 
 import { api } from "./api.js";
 
+let globalAudioCtx = null;
+let activeSourceNode = null;
 let activeAudioElement = null;
 let activeObjectUrl = null;
 let currentSpeechId = 0;
+let primedAudioElement = null;
 
 // Client-side Blob cache for instant 0ms audio playback
 const clientBlobCache = new Map();
+
+/**
+ * Gets or creates the global AudioContext instance.
+ * Must be resumed inside a user gesture for iOS Safari compatibility.
+ */
+export function getAudioContext() {
+  if (typeof window === "undefined") return null;
+  if (!globalAudioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      globalAudioCtx = new AudioContextClass();
+    }
+  }
+  if (globalAudioCtx && globalAudioCtx.state === "suspended") {
+    globalAudioCtx.resume().catch(() => {});
+  }
+  return globalAudioCtx;
+}
+
+/**
+ * Convert a Blob to ArrayBuffer safely across all browser versions.
+ */
+async function blobToArrayBuffer(blob) {
+  if (blob.arrayBuffer) {
+    return await blob.arrayBuffer();
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(blob);
+  });
+}
+
+/**
+ * Decode AudioData asynchronously supporting both Promise and callback implementations.
+ */
+function decodeAudioDataAsync(ctx, arrayBuffer) {
+  return new Promise((resolve, reject) => {
+    try {
+      const promiseResult = ctx.decodeAudioData(
+        arrayBuffer,
+        (decoded) => resolve(decoded),
+        (err) => reject(err)
+      );
+      if (promiseResult && typeof promiseResult.then === "function") {
+        promiseResult.then(resolve).catch(reject);
+      }
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
 
 /** Convert a Blob to Base64 string for persistent caching */
 function blobToBase64(blob) {
@@ -50,11 +107,22 @@ function getStorageKey(cacheKey) {
 }
 
 /**
- * Stop any active audio element and browser speech synthesis.
- * Invalidates all in-flight async TTS requests to prevent echo.
+ * Stop any active audio playback (Web Audio source node, HTML5 Audio, WebSpeech).
+ * Invalidates all in-flight async TTS requests to prevent overlapping audio.
  */
 export function stopNeuralSpeech() {
   currentSpeechId++; // Invalidate any in-flight async fetches!
+
+  if (activeSourceNode) {
+    try {
+      activeSourceNode.onended = null;
+      activeSourceNode.stop(0);
+      activeSourceNode.disconnect();
+    } catch (e) {
+      /* ignore */
+    }
+    activeSourceNode = null;
+  }
 
   if (activeAudioElement) {
     try {
@@ -126,7 +194,7 @@ function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
       utterance.voice = bestVoice;
       utterance.lang = bestVoice.lang;
     } else {
-      utterance.lang = isTwi ? "en-US" : "en-US";
+      utterance.lang = "en-US";
     }
     utterance.rate = 0.95;
     utterance.pitch = 1.0;
@@ -151,11 +219,18 @@ function playBrowserSpeech(text, isTwi, thisRequestId, onStart, onEnd) {
   }
 }
 
-let primedAudioElement = null;
-
+/**
+ * Prime audio engines (Web Audio API context + silent HTML5 element)
+ * synchronously inside a user gesture handler (click/touch).
+ */
 export function primeSpeechAudio() {
   if (typeof window === "undefined") return;
   try {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
     if (!primedAudioElement) {
       primedAudioElement = new Audio();
     }
@@ -163,6 +238,113 @@ export function primeSpeechAudio() {
     primedAudioElement.play().catch(() => {});
   } catch (e) {
     /* ignore */
+  }
+}
+
+/**
+ * Plays audio using Web Audio API (AudioBufferSourceNode).
+ * Decodes audio buffer asynchronously and plays it without iOS autoplay blocks.
+ */
+async function playWithWebAudio(audioBlob, thisRequestId, onStart, onEnd) {
+  const ctx = getAudioContext();
+  if (!ctx) return false;
+
+  try {
+    if (ctx.state === "suspended") {
+      await ctx.resume().catch(() => {});
+    }
+
+    const arrayBuffer = await blobToArrayBuffer(audioBlob);
+    const audioBuffer = await decodeAudioDataAsync(ctx, arrayBuffer);
+
+    if (thisRequestId !== currentSpeechId) {
+      return true; // Request cancelled by user
+    }
+
+    const sourceNode = ctx.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+    sourceNode.connect(ctx.destination);
+    activeSourceNode = sourceNode;
+
+    sourceNode.onended = () => {
+      if (activeSourceNode === sourceNode) {
+        activeSourceNode = null;
+      }
+      if (thisRequestId === currentSpeechId && onEnd) {
+        onEnd();
+      }
+    };
+
+    // Start audio playback
+    sourceNode.start(0);
+
+    // Only notify UI that speaking started once audio actually starts playing!
+    if (thisRequestId === currentSpeechId && onStart) {
+      onStart();
+    }
+    return true;
+  } catch (err) {
+    console.warn("[Speech] WebAudio playback failed, trying HTML5 fallback:", err);
+    return false;
+  }
+}
+
+/**
+ * Plays audio using standard HTML5 Audio element fallback.
+ */
+async function playWithHtml5Audio(audioBlob, thisRequestId, onStart, onEnd) {
+  if (thisRequestId !== currentSpeechId) return false;
+
+  const audioUrl = URL.createObjectURL(audioBlob);
+  activeObjectUrl = audioUrl;
+
+  const audio = primedAudioElement || new Audio();
+  primedAudioElement = null;
+  activeAudioElement = audio;
+
+  audio.onplay = () => {
+    if (thisRequestId === currentSpeechId && onStart) {
+      onStart();
+    }
+  };
+
+  audio.onended = () => {
+    if (activeObjectUrl === audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+      activeObjectUrl = null;
+    }
+    if (activeAudioElement === audio) {
+      activeAudioElement = null;
+    }
+    if (thisRequestId === currentSpeechId && onEnd) {
+      onEnd();
+    }
+  };
+
+  audio.onerror = () => {
+    if (activeObjectUrl === audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+      activeObjectUrl = null;
+    }
+    if (activeAudioElement === audio) {
+      activeAudioElement = null;
+    }
+  };
+
+  audio.src = audioUrl;
+  try {
+    await audio.play();
+    return true;
+  } catch (err) {
+    console.warn("[Speech] HTML5 Audio play promise failed:", err);
+    if (activeObjectUrl === audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+      activeObjectUrl = null;
+    }
+    if (activeAudioElement === audio) {
+      activeAudioElement = null;
+    }
+    return false;
   }
 }
 
@@ -192,20 +374,8 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
   const cacheKey = `${voice}:${cleanText.toLowerCase()}`;
   const lsKey = getStorageKey(cacheKey);
 
-  // Instantly trigger onStart so UI immediately displays active speaking state
-  if (onStart) onStart();
-
-  // 1. Reuse or create primed audio element synchronously inside user click event frame
-  // This bypasses browser Autoplay restrictions when async fetch completes later!
-  const primedAudio = primedAudioElement || new Audio();
-  primedAudioElement = null; // Consume primed element
-  activeAudioElement = primedAudio;
-  try {
-    primedAudio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
-    primedAudio.play().catch(() => {});
-  } catch (e) {
-    /* ignore */
-  }
+  // Prime Web Audio and HTML5 elements
+  primeSpeechAudio();
 
   try {
     let audioBlob = clientBlobCache.get(cacheKey);
@@ -257,53 +427,20 @@ export async function playNeuralSpeech(text, langCode = "twi", onStart, onEnd, o
     }
 
     if (audioBlob) {
-      const audioUrl = URL.createObjectURL(audioBlob);
-      activeObjectUrl = audioUrl;
+      // 1. Primary: Web Audio API (AudioBufferSourceNode) - Works 100% on mobile/iOS Safari after async fetch
+      const webAudioSuccess = await playWithWebAudio(audioBlob, thisRequestId, onStart, onEnd);
+      if (webAudioSuccess) return true;
 
-      primedAudio.onplay = () => {
-        if (thisRequestId === currentSpeechId && onStart) {
-          onStart();
-        }
-      };
-      primedAudio.onended = () => {
-        if (activeObjectUrl === audioUrl) {
-          URL.revokeObjectURL(audioUrl);
-          activeObjectUrl = null;
-        }
-        if (activeAudioElement === primedAudio) {
-          activeAudioElement = null;
-        }
-        if (thisRequestId === currentSpeechId && onEnd) {
-          onEnd();
-        }
-      };
-      primedAudio.onerror = () => {
-        if (activeObjectUrl === audioUrl) {
-          URL.revokeObjectURL(audioUrl);
-          activeObjectUrl = null;
-        }
-        if (activeAudioElement === primedAudio) {
-          activeAudioElement = null;
-        }
-        console.warn("[Speech] HTML5 Audio element error. Falling back to browser WebSpeech...");
-        playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
-      };
-
-      primedAudio.src = audioUrl;
-      const playPromise = primedAudio.play();
-      if (playPromise !== undefined) {
-        await playPromise.catch((err) => {
-          console.warn("[Speech] HTML5 Audio play promise blocked/failed:", err);
-          playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
-        });
-      }
-      return true;
+      // 2. Secondary: HTML5 Audio fallback
+      const html5Success = await playWithHtml5Audio(audioBlob, thisRequestId, onStart, onEnd);
+      if (html5Success) return true;
     }
 
-    // Fallback to browser WebSpeech API if server audio could not be generated (Abena AI & Khaya AI unavailable)
+    // 3. Fallback: Browser WebSpeech API
     return playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
   } catch (err) {
     console.warn("[Speech] Abena AI synthesis notice:", err);
     return playBrowserSpeech(cleanText, isTwi, thisRequestId, onStart, onEnd);
   }
 }
+
