@@ -88,10 +88,17 @@ export class AbenaAiService {
 
     if (!cleanText) return null;
 
-    // Cap text to first ~180 characters (or 2 sentences) for ultra low-latency synthesis (<1.5s)
-    if (cleanText.length > 180) {
-      const match = cleanText.slice(0, 180).match(/^[\s\S]*?[.!?](\s|$)/);
-      cleanText = match ? match[0].trim() : cleanText.slice(0, 180).trim();
+    // Abena AI API supports up to 500 characters per TTS request.
+    // Allow full natural responses up to 490 characters without truncating after first sentence.
+    if (cleanText.length > 490) {
+      const truncated = cleanText.slice(0, 490);
+      const lastPunctuation = Math.max(truncated.lastIndexOf('.'), truncated.lastIndexOf('!'), truncated.lastIndexOf('?'));
+      if (lastPunctuation > 150) {
+        cleanText = truncated.slice(0, lastPunctuation + 1).trim();
+      } else {
+        const lastSpace = truncated.lastIndexOf(' ');
+        cleanText = (lastSpace > 150 ? truncated.slice(0, lastSpace) : truncated).trim() + '.';
+      }
     }
 
     const voice = options.voice || 'abena_twi_high';
