@@ -48,7 +48,7 @@
  |
 | **Speech & AI** | Khaya AI (ASR/TTS), Abena AI, Google Gemini 2.5 Flash
 
- |
+ 
 
 ---
 
@@ -142,7 +142,7 @@ npm test
  |
 | `POST` | `/api/v1/sync/push` | Synchronizes queued offline mutations to cloud Supabase
 
- |
+ 
 
 ---
 
