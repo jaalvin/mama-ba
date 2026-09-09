@@ -33,19 +33,19 @@
 | --- | --- |
 | **Frontend** | React 18, Vite, Tailwind CSS, Lucide Icons, HTML5 Canvas
 
- |
+ 
 | **Offline Runtime** | Workbox Service Worker, PWA Manifest, LocalStorage
 
- |
+ 
 | **Edge Storage** | SQLite (`better-sqlite3`, pre-seeded `lily_offline.db`)
 
- |
+ 
 | **Backend** | Node.js, Express, TypeScript
 
- |
+ 
 | **Cloud Database** | Supabase (PostgreSQL with `pgvector`)
 
- |
+ 
 | **Speech & AI** | Khaya AI (ASR/TTS), Abena AI, Google Gemini 2.5 Flash
 
  
