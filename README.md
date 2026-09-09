@@ -122,25 +122,13 @@ npm test
 
 | Method | Route | Description |
 | --- | --- | --- |
-| `POST` | `/api/v1/chat/asr` | Transcribes 16kHz audio buffer to text (Twi/English)
-
- |
-| `POST` | `/api/v1/chat/query` | Executes RAG clinical consultation prompt
-
- |
-| `POST` | `/api/v1/chat/tts` | Synthesizes neural Asante Twi audio
-
- |
-| `POST` | `/api/v1/herbal/check` | Evaluates botanical-drug contraindications offline
-
- |
-| `POST` | `/api/v1/triage/evaluate` | Evaluates symptom inputs against risk rules offline
-
- |
-| `POST` | `/api/v1/vitals/log` | Records vitals and computes daily deltas
-
- |
-| `POST` | `/api/v1/sync/push` | Synchronizes queued offline mutations to cloud Supabase
+| `POST` | `/api/v1/chat/asr` | Transcribes 16kHz audio buffer to text (Twi/English)|
+| `POST` | `/api/v1/chat/query` | Executes RAG clinical consultation prompt|
+| `POST` | `/api/v1/chat/tts` | Synthesizes neural Asante Twi audio|
+| `POST` | `/api/v1/herbal/check` | Evaluates botanical-drug contraindications offline|
+| `POST` | `/api/v1/triage/evaluate` | Evaluates symptom inputs against risk rules offline|
+| `POST` | `/api/v1/vitals/log` | Records vitals and computes daily deltas|
+| `POST` | `/api/v1/sync/push` | Synchronizes queued offline mutations to cloud Supabase|
 
  
 
